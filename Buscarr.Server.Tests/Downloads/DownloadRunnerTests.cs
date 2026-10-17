@@ -1,5 +1,7 @@
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
+using Buscarr.Server.Import;
+using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
 using Buscarr.Server.Tests.Fakes;
 using Microsoft.Data.Sqlite;
@@ -36,7 +38,17 @@ public sealed class DownloadRunnerTests : IDisposable
         _runner = new DownloadRunner(
             _provider.GetRequiredService<IServiceScopeFactory>(),
             new AlbumDownload(client, _time),
-            _time);
+            _time,
+            DisabledPipeline());
+    }
+
+    internal static ImportPipeline DisabledPipeline()
+    {
+        var musicBrainz = new MusicBrainzClient(
+            new HttpClient(new FakeHttpMessageHandler(_ => throw new HttpRequestException("não deveria ser chamado"))),
+            new FakeTimeProvider());
+
+        return new ImportPipeline(musicBrainz, new FakeAudioTools(), new ImportOptions(null, null, null));
     }
 
     public void Dispose()
@@ -121,7 +133,8 @@ public sealed class DownloadRunnerTests : IDisposable
         var runner = new DownloadRunner(
             _provider.GetRequiredService<IServiceScopeFactory>(),
             new AlbumDownload(client, _time),
-            _time);
+            _time,
+            DisabledPipeline());
         var request = await AddRequestAsync("g1");
 
         runner.Start(request.Id, [Folder("fulano")]);

@@ -2,6 +2,7 @@ using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
+using Buscarr.Server.Import;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
@@ -34,6 +35,12 @@ builder.Services.AddSingleton<GeneratorTrigger>();
 builder.Services.AddScoped<RequestGenerator>();
 builder.Services.AddSingleton<AlbumSearch>();
 builder.Services.AddSingleton<AlbumDownload>();
+builder.Services.AddSingleton<AudioTools>(new FfmpegAudioTools());
+builder.Services.AddSingleton(new ImportOptions(
+    builder.Configuration["Library:Path"],
+    builder.Configuration["Slskd:DownloadsPath"],
+    builder.Configuration["Library:RejectedPath"]));
+builder.Services.AddSingleton<ImportPipeline>();
 builder.Services.AddSingleton<DownloadRunner>();
 builder.Services.AddScoped<SearchQueue>();
 builder.Services.AddHostedService<GeneratorWorker>();

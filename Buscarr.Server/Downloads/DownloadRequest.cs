@@ -9,6 +9,8 @@ public enum DownloadState
     Downloaded,
     Failed,
     Cancelled,
+    Importing,
+    Imported,
 }
 
 public class DownloadRequest

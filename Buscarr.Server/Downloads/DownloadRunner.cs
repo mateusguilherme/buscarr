@@ -1,10 +1,16 @@
 using System.Collections.Concurrent;
 using Buscarr.Server.Data;
+using Buscarr.Server.Import;
 using Buscarr.Server.Slskd;
+using Microsoft.EntityFrameworkCore;
 
 namespace Buscarr.Server.Downloads;
 
-public sealed class DownloadRunner(IServiceScopeFactory scopes, AlbumDownload download, TimeProvider time)
+public sealed class DownloadRunner(
+    IServiceScopeFactory scopes,
+    AlbumDownload download,
+    TimeProvider time,
+    ImportPipeline pipeline)
 {
     private const int MaxConcurrent = 3;
 
@@ -42,11 +48,24 @@ public sealed class DownloadRunner(IServiceScopeFactory scopes, AlbumDownload do
 
             try
             {
+                var snapshot = await SnapshotAsync(requestId);
+                var tracks = snapshot is null ? null : await pipeline.TracksAsync(snapshot);
+                var verify = tracks is null
+                    ? null
+                    : (Func<SoulseekFolder, Task<string?>>)(folder => pipeline.VerifyAsync(snapshot!, tracks, folder));
                 var result = await download.DownloadAsync(
                     folders,
                     new RowProgress(this, requestId),
-                    cancellation: cancellation);
+                    verify,
+                    cancellation);
                 Persist(requestId, request => Finish(request, result));
+
+                if (result.Outcome == AlbumDownloadOutcome.Downloaded && tracks is not null)
+                {
+                    Persist(requestId, request => request.State = DownloadState.Importing);
+                    var failure = await pipeline.ImportAsync(snapshot!, tracks, result.Folder!);
+                    Persist(requestId, request => FinishImport(request, failure));
+                }
             }
             finally
             {
@@ -91,10 +110,34 @@ public sealed class DownloadRunner(IServiceScopeFactory scopes, AlbumDownload do
         else
         {
             request.State = DownloadState.Failed;
-            request.Failure = result.Failures.Count > 0 ? Reason(result.Failures[^1].Reason) : "transfer-failed";
+            request.Failure = result.Failures.Count > 0 ? Reason(result.Failures[^1]) : "transfer-failed";
             request.Attempts++;
             request.NextAttemptAt = RetrySchedule.NextRetry(time.GetUtcNow(), request.Attempts);
         }
+    }
+
+    private void FinishImport(DownloadRequest request, string? failure)
+    {
+        if (failure is null)
+        {
+            request.State = DownloadState.Imported;
+            request.Failure = null;
+
+            return;
+        }
+
+        request.State = DownloadState.Failed;
+        request.Failure = failure;
+        request.Attempts++;
+        request.NextAttemptAt = RetrySchedule.NextRetry(time.GetUtcNow(), request.Attempts);
+    }
+
+    private async Task<DownloadRequest?> SnapshotAsync(int requestId)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+
+        return await db.DownloadRequests.AsNoTracking().SingleOrDefaultAsync(r => r.Id == requestId);
     }
 
     private void Report(int requestId, DownloadProgress value) =>
@@ -126,11 +169,12 @@ public sealed class DownloadRunner(IServiceScopeFactory scopes, AlbumDownload do
         }
     }
 
-    private static string Reason(FolderFailureReason reason) =>
-        reason switch
+    private static string Reason(FolderFailure failure) =>
+        failure.Reason switch
         {
             FolderFailureReason.Refused => "refused",
             FolderFailureReason.Stalled => "stalled",
+            FolderFailureReason.Rejected => failure.Detail ?? "rejected",
             _ => "transfer-failed",
         };
 
