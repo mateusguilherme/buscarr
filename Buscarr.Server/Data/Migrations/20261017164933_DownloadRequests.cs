@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -30,7 +29,7 @@ namespace Buscarr.Server.Data.Migrations
                     State = table.Column<int>(type: "INTEGER", nullable: false),
                     Failure = table.Column<string>(type: "TEXT", nullable: true),
                     Attempts = table.Column<int>(type: "INTEGER", nullable: false),
-                    NextAttemptAt = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
+                    NextAttemptAt = table.Column<long>(type: "INTEGER", nullable: false),
                     Username = table.Column<string>(type: "TEXT", nullable: true),
                     Directory = table.Column<string>(type: "TEXT", nullable: true),
                     TracksDone = table.Column<int>(type: "INTEGER", nullable: false),

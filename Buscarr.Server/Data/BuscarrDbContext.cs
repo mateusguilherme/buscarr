@@ -30,6 +30,9 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
         modelBuilder.Entity<DownloadRequest>(request =>
         {
             request.HasIndex(r => new { r.ReleaseGroupId, r.TrackCount, r.Quality }).IsUnique();
+            request.Property(r => r.NextAttemptAt).HasConversion(
+                value => value.ToUnixTimeMilliseconds(),
+                value => DateTimeOffset.FromUnixTimeMilliseconds(value));
         });
     }
 }
