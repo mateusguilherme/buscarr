@@ -10,6 +10,8 @@ public sealed class Release
     [JsonPropertyName("release-group")]
     public ReleaseGroup? ReleaseGroup { get; init; }
 
+    public string? Type => ReleaseGroup?.PrimaryType?.ToLowerInvariant();
+
     public bool IsLive => ReleaseGroup?.SecondaryTypes.Contains("Live") == true;
 
     public bool IsOriginalRelease =>

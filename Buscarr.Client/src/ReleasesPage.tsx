@@ -28,6 +28,7 @@ export function ReleasesPage() {
   const type = searchParams.get('type') ?? 'album';
   const [data, setData] = useState<ArtistReleases | null>(null);
   const [error, setError] = useState<string>();
+  const shown = data && (type === 'all' ? data.releases : data.releases.filter((release) => release.type === type));
 
   useEffect(() => {
     let ignore = false;
@@ -37,7 +38,7 @@ export function ReleasesPage() {
       setError(undefined);
 
       try {
-        const result = await getArtistReleases(id, type);
+        const result = await getArtistReleases(id);
 
         if (!ignore) {
           setData(result);
@@ -54,7 +55,7 @@ export function ReleasesPage() {
     return () => {
       ignore = true;
     };
-  }, [id, type]);
+  }, [id]);
 
   return (
     <>
@@ -94,11 +95,11 @@ export function ReleasesPage() {
             {t.releases.loading}
           </p>
         )}
-        {data && data.releases.length === 0 && <p className="status">{t.releases.empty}</p>}
-        {data && (
+        {shown && shown.length === 0 && <p className="status">{t.releases.empty}</p>}
+        {shown && (
           <>
-            <ReleaseSection title={t.releases.studio} releases={data.releases.filter((r) => !r.live)} />
-            <ReleaseSection title={t.releases.live} releases={data.releases.filter((r) => r.live)} />
+            <ReleaseSection title={t.releases.studio} releases={shown.filter((r) => !r.live)} />
+            <ReleaseSection title={t.releases.live} releases={shown.filter((r) => r.live)} />
           </>
         )}
       </main>

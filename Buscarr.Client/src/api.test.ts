@@ -77,17 +77,17 @@ describe('findArtists', () => {
 });
 
 describe('getArtistReleases', () => {
-  it('pede os releases do artista com o tipo escolhido', async () => {
+  it('pede todos os releases do artista', async () => {
     const fetchMock = mockFetch({ status: 200, body: { name: 'Nirvana', releases: [] } });
 
-    await getArtistReleases('abc-123', 'ep');
+    await getArtistReleases('abc-123');
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases?type=ep');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases');
   });
 
   it('lança erro quando a API falha', async () => {
     mockFetch({ status: 502 });
 
-    await expect(getArtistReleases('abc-123', 'album')).rejects.toThrow('Erro 502 ao carregar os releases.');
+    await expect(getArtistReleases('abc-123')).rejects.toThrow('Erro 502 ao carregar os releases.');
   });
 });

@@ -29,6 +29,13 @@ public static class MusicBrainzJson
             ["releases"] = releases,
         });
 
+    public static Dictionary<string, object> WithPrimaryType(Dictionary<string, object> release, string primaryType)
+    {
+        ((Dictionary<string, object>)release["release-group"])["primary-type"] = primaryType;
+
+        return release;
+    }
+
     public static Dictionary<string, object> Release(
         string title,
         string date,
@@ -40,6 +47,7 @@ public static class MusicBrainzJson
             ["date"] = date,
             ["release-group"] = new Dictionary<string, object>
             {
+                ["primary-type"] = "Album",
                 ["first-release-date"] = firstReleaseDate,
                 ["secondary-types"] = secondaryTypes,
             },

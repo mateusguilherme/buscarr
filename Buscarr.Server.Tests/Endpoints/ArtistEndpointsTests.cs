@@ -41,19 +41,20 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
     }
 
     [Fact]
-    public async Task GetArtistReleases_ReturnsArtistNameAndReleasesMarkedAsLive()
+    public async Task GetArtistReleases_ReturnsArtistNameAndReleasesOfEveryTypeMarkedAsLive()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
         var result = await client.GetFromJsonAsync<ArtistReleases>(
-            $"/api/artists/{BuscarrApiFactory.NirvanaId}/releases?type=album");
+            $"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
 
         Assert.NotNull(result);
         Assert.Equal("Nirvana", result.Name);
         Assert.Equal(
             [
-                new ReleaseItem("Nevermind", "1991-09-24", false),
-                new ReleaseItem("MTV Unplugged in New York", "1994-11-01", true),
+                new ReleaseItem("Smells Like Teen Spirit", "1991-09-10", false, "single"),
+                new ReleaseItem("Nevermind", "1991-09-24", false, "album"),
+                new ReleaseItem("MTV Unplugged in New York", "1994-11-01", true, "album"),
             ],
             result.Releases);
     }
@@ -66,16 +67,6 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
         var response = await client.GetAsync("/api/artists/not-an-mbid!/releases");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetArtistReleases_WithInvalidType_Returns400()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync($"/api/artists/{BuscarrApiFactory.NirvanaId}/releases?type=bootleg");
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

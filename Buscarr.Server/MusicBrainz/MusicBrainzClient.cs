@@ -29,7 +29,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     public Task<Artist> ArtistAsync(string contact, string id) =>
         GetAsync<Artist>(contact, $"artist/{id}", []);
 
-    public async Task<List<Release>> ReleasesAsync(string contact, string artistId, string? releaseType)
+    public async Task<List<Release>> ReleasesAsync(string contact, string artistId)
     {
         var releases = new List<Release>();
 
@@ -44,11 +44,6 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
                 ("offset", releases.Count.ToString()),
             ];
 
-            if (releaseType is not null)
-            {
-                parameters.Add(("type", releaseType));
-            }
-
             var page = await GetAsync<ReleaseBrowse>(contact, "release", parameters);
             releases.AddRange(page.Releases);
 
@@ -60,7 +55,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
 
         return releases
             .Where(release => release.IsOriginalRelease)
-            .GroupBy(release => Names.Normalize(release.Title))
+            .GroupBy(release => (release.Type, Names.Normalize(release.Title)))
             .Select(group => group.OrderBy(release => release.Date, StringComparer.Ordinal).First())
             .OrderBy(release => release.Date, StringComparer.Ordinal)
             .ThenBy(release => Names.Normalize(release.Title), StringComparer.Ordinal)

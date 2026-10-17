@@ -51,6 +51,17 @@ public class ReleaseTests
         Assert.Equal(expected, release.IsLive);
     }
 
+    [Theory]
+    [InlineData("Album", "album")]
+    [InlineData("EP", "ep")]
+    [InlineData(null, null)]
+    public void Type_IsThePrimaryTypeOfTheReleaseGroupInLowercase(string? primaryType, string? expected)
+    {
+        var release = new Release { Title = "Nevermind", ReleaseGroup = new ReleaseGroup { PrimaryType = primaryType } };
+
+        Assert.Equal(expected, release.Type);
+    }
+
     private static Release CreateRelease(string date, string firstReleaseDate, string[]? secondaryTypes = null) =>
         new()
         {

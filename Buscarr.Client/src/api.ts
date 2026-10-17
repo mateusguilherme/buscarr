@@ -2,7 +2,7 @@ import { t } from './i18n';
 
 export type User = { email: string; name: string };
 export type Artist = { id: string; name: string; disambiguation: string | null; area: string | null };
-export type Release = { title: string; date: string; live: boolean };
+export type Release = { title: string; date: string; live: boolean; type: string | null };
 export type ArtistReleases = { name: string; releases: Release[] };
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -77,10 +77,8 @@ export async function findArtists(query: string): Promise<Artist[]> {
   return res.json();
 }
 
-export async function getArtistReleases(id: string, type: string): Promise<ArtistReleases> {
-  const res = await fetch(
-    `/api/artists/${encodeURIComponent(id)}/releases?type=${encodeURIComponent(type)}`,
-  );
+export async function getArtistReleases(id: string): Promise<ArtistReleases> {
+  const res = await fetch(`/api/artists/${encodeURIComponent(id)}/releases`);
 
   if (!res.ok) {
     throw new Error(t.api.releasesError(res.status));

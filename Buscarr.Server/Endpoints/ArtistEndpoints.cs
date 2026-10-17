@@ -1,20 +1,17 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Buscarr.Server.MusicBrainz;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Buscarr.Server.Endpoints;
 
 public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area);
 
-public record ReleaseItem(string Title, string Date, bool Live);
+public record ReleaseItem(string Title, string Date, bool Live, string? Type);
 
 public record ArtistReleases(string Name, List<ReleaseItem> Releases);
 
 public static class ArtistEndpoints
 {
-    private static readonly string[] ReleaseTypes = ["album", "ep", "single", "all"];
-
     public static void MapArtistEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/artists").RequireAuthorization();
@@ -47,19 +44,11 @@ public static class ArtistEndpoints
     private static async Task<IResult> GetArtistReleases(
         MusicBrainzClient musicBrainz,
         ClaimsPrincipal user,
-        string id,
-        [FromQuery(Name = "type")] string? releaseType)
+        string id)
     {
         if (!id.All(c => char.IsAsciiHexDigit(c) || c == '-'))
         {
             return Results.NotFound();
-        }
-
-        var selectedType = releaseType ?? "album";
-
-        if (!ReleaseTypes.Contains(selectedType))
-        {
-            return Results.BadRequest();
         }
 
         Artist artist;
@@ -68,10 +57,7 @@ public static class ArtistEndpoints
         try
         {
             artist = await musicBrainz.ArtistAsync(Contact(user), id);
-            releases = await musicBrainz.ReleasesAsync(
-                Contact(user),
-                id,
-                selectedType == "all" ? null : selectedType);
+            releases = await musicBrainz.ReleasesAsync(Contact(user), id);
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
@@ -79,7 +65,7 @@ public static class ArtistEndpoints
         }
 
         var items = releases
-            .Select(release => new ReleaseItem(release.Title, release.Date ?? "", release.IsLive))
+            .Select(release => new ReleaseItem(release.Title, release.Date ?? "", release.IsLive, release.Type))
             .ToList();
 
         return Results.Json(new ArtistReleases(artist.Name, items));

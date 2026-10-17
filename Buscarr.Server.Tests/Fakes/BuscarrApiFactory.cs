@@ -81,7 +81,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         if (path == "/ws/2/release")
         {
             return FakeHttpMessageHandler.Json(Releases(
-                2,
+                3,
+                WithPrimaryType(Release("Smells Like Teen Spirit", "1991-09-10", "1991-09-10"), "Single"),
                 Release("Nevermind", "1991-09-24", "1991-09-24"),
                 Release("MTV Unplugged in New York", "1994-11-01", "1994-11-01", "Live")));
         }

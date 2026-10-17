@@ -48,8 +48,9 @@ const rancoreReleases = { name: 'Rancore', releases: [] };
 const nirvana = {
   name: 'Nirvana',
   releases: [
-    { title: 'Nevermind', date: '1991-09-24', live: false },
-    { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true },
+    { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single' },
+    { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album' },
+    { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album' },
   ],
 };
 
@@ -77,26 +78,45 @@ describe('ReleasesPage', () => {
     expect(date.getAttribute('datetime')).toBe('1991-09-24');
   });
 
-  it('pede os álbuns e marca o tipo quando a URL não escolhe um', async () => {
+  it('pede todos os releases e mostra os álbuns quando a URL não escolhe um tipo', async () => {
     const fetchMock = mockFetch({ status: 200, body: nirvana });
     renderReleasesPage();
 
     await screen.findByRole('heading', { name: 'Nirvana' });
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases?type=album');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases');
     expect(screen.getByRole('link', { name: 'Álbuns', current: 'page' })).toBeDefined();
+    expect(screen.getByText('Nevermind')).toBeDefined();
+    expect(screen.queryByText('Smells Like Teen Spirit')).toBeNull();
   });
 
-  it('busca de novo ao trocar o tipo', async () => {
-    const fetchMock = mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvana });
+  it('troca o tipo filtrando na página, sem buscar de novo', async () => {
+    const fetchMock = mockFetch({ status: 200, body: nirvana });
     renderReleasesPage();
     await screen.findByRole('heading', { name: 'Nirvana' });
 
     await userEvent.click(screen.getByRole('link', { name: 'Singles' }));
+
+    expect(screen.getByRole('link', { name: 'Singles', current: 'page' })).toBeDefined();
+    expect(screen.getByText('Smells Like Teen Spirit')).toBeDefined();
+    expect(screen.queryByText('Nevermind')).toBeNull();
+
+    await userEvent.click(screen.getByRole('link', { name: 'Todos' }));
+
+    expect(screen.getByText('Smells Like Teen Spirit')).toBeDefined();
+    expect(screen.getByText('Nevermind')).toBeDefined();
+    expect(screen.getByText('MTV Unplugged in New York')).toBeDefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('avisa quando não há releases do tipo escolhido', async () => {
+    mockFetch({ status: 200, body: nirvana });
+    renderReleasesPage();
     await screen.findByRole('heading', { name: 'Nirvana' });
 
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/artists/abc-123/releases?type=single');
-    expect(screen.getByRole('link', { name: 'Singles', current: 'page' })).toBeDefined();
+    await userEvent.click(screen.getByRole('link', { name: 'EPs' }));
+
+    expect(screen.getByText('Nenhum release oficial encontrado.')).toBeDefined();
   });
 
   it('volta para a busca pela marca', async () => {
@@ -109,11 +129,7 @@ describe('ReleasesPage', () => {
   });
 
   it('volta para a busca de onde veio sem buscar de novo, mesmo depois de trocar o tipo', async () => {
-    const fetchMock = mockFetch(
-      { status: 200, body: rancore },
-      { status: 200, body: rancoreReleases },
-      { status: 200, body: rancoreReleases },
-    );
+    const fetchMock = mockFetch({ status: 200, body: rancore }, { status: 200, body: rancoreReleases });
     await openArtistFromSearch();
 
     await userEvent.click(screen.getByRole('link', { name: 'Singles' }));
@@ -123,7 +139,7 @@ describe('ReleasesPage', () => {
     expect(await screen.findByRole('link', { name: 'Rancore' })).toBeDefined();
     expect(screen.getByText('Brazillian Rock Band')).toBeDefined();
     expect((screen.getByPlaceholderText('Nome do artista') as HTMLInputElement).value).toBe('rancore');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('volta pelo navegador sem buscar de novo', async () => {
@@ -139,11 +155,7 @@ describe('ReleasesPage', () => {
   });
 
   it('troca o tipo sem criar entrada no histórico do navegador', async () => {
-    const fetchMock = mockFetch(
-      { status: 200, body: rancore },
-      { status: 200, body: rancoreReleases },
-      { status: 200, body: rancoreReleases },
-    );
+    const fetchMock = mockFetch({ status: 200, body: rancore }, { status: 200, body: rancoreReleases });
     await openArtistFromSearch();
 
     await userEvent.click(screen.getByRole('link', { name: 'Singles' }));
@@ -151,7 +163,7 @@ describe('ReleasesPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Voltar do navegador' }));
 
     expect(await screen.findByRole('link', { name: 'Rancore' })).toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('busca de novo ao repetir a busca depois de voltar', async () => {

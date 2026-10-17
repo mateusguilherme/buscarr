@@ -1,4 +1,5 @@
 using System.Net;
+using System.Web;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Tests.Fakes;
 using Microsoft.Extensions.Time.Testing;
@@ -111,7 +112,7 @@ public class MusicBrainzClientTests
         ]);
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(pages.Dequeue()));
 
-        var releases = await client.ReleasesAsync(Contact, "artist-id", null);
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
 
         Assert.Equal(["Bleach", "Nevermind"], releases.Select(r => r.Title));
         Assert.Contains("offset=0", handler.Requests[0].Uri.Query);
@@ -131,24 +132,36 @@ public class MusicBrainzClientTests
             Release("NEVERMIND", "1991-09-24", "1991-09-24"),
             Release("Sliver", "1990", "1990"))));
 
-        var releases = await client.ReleasesAsync(Contact, "artist-id", null);
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
 
         Assert.Equal(
             ["Bleach", "Nevermind", "MTV Unplugged in New York"],
             releases.Select(r => r.Title));
     }
 
-    [Theory]
-    [InlineData("album", true)]
-    [InlineData(null, false)]
-    public async Task ReleasesAsync_SendsTypeFilterOnlyWhenGiven(string? releaseType, bool sendsType)
+    [Fact]
+    public async Task ReleasesAsync_KeepsReleasesOfDifferentTypesWithTheSameTitle()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            2,
+            Release("Master of Puppets", "1986-03-03", "1986-03-03"),
+            WithPrimaryType(Release("Master of Puppets", "1986-07-02", "1986-07-02"), "Single"))));
+
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
+
+        Assert.Equal(["album", "single"], releases.Select(r => r.Type));
+    }
+
+    [Fact]
+    public async Task ReleasesAsync_AsksForOfficialReleasesOfEveryType()
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(0)));
 
-        await client.ReleasesAsync(Contact, "artist-id", releaseType);
+        await client.ReleasesAsync(Contact, "artist-id");
 
-        var request = Assert.Single(handler.Requests);
-        Assert.Equal(sendsType, request.Uri.Query.Contains("type=album"));
+        var parameters = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        Assert.Equal("official", parameters["status"]);
+        Assert.Null(parameters["type"]);
     }
 
     private static (MusicBrainzClient Client, FakeHttpMessageHandler Handler) CreateClient(
