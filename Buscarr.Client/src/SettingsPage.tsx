@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { getSettings, saveSettings, type Edition, type Settings } from './api';
+import { getSettings, saveSettings, type Settings } from './api';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { t } from './i18n';
-import { editionOptions } from './options';
+import { editionOptions, qualityOptions } from './options';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -35,14 +35,14 @@ export function SettingsPage() {
     };
   }, []);
 
-  async function choose(edition: Edition) {
+  async function choose(chosen: Settings) {
     const previous = settings;
-    setSettings({ edition });
+    setSettings(chosen);
     setMessage('');
     setError(undefined);
 
     try {
-      await saveSettings({ edition });
+      await saveSettings(chosen);
       setMessage(t.settings.saved);
     } catch (err) {
       setSettings(previous);
@@ -73,27 +73,27 @@ export function SettingsPage() {
           </p>
         )}
         {settings && (
-          <div className="card settings">
-            <fieldset>
-              <legend>{t.settings.edition}</legend>
-              {editionOptions.map((option) => (
-                <label key={option.value} className="option">
-                  <input
-                    type="radio"
-                    name="edition"
-                    value={option.value}
-                    checked={settings.edition === option.value}
-                    onChange={() => choose(option.value)}
-                  />
-                  <span>
-                    <span className="option-label">{option.label}</span>
-                    <span className="option-hint">{option.hint}</span>
-                  </span>
-                </label>
-              ))}
-            </fieldset>
-            <p className="settings-note">{t.settings.fallback}</p>
-          </div>
+          <>
+            <div className="card settings">
+              <Choices
+                legend={t.settings.edition}
+                name="edition"
+                options={editionOptions}
+                value={settings.edition}
+                onChoose={(edition) => choose({ ...settings, edition })}
+              />
+              <p className="settings-note">{t.settings.fallback}</p>
+            </div>
+            <div className="card settings">
+              <Choices
+                legend={t.settings.quality}
+                name="quality"
+                options={qualityOptions}
+                value={settings.quality}
+                onChoose={(quality) => choose({ ...settings, quality })}
+              />
+            </div>
+          </>
         )}
         {message && (
           <p className="status" role="status">
@@ -102,5 +102,40 @@ export function SettingsPage() {
         )}
       </main>
     </>
+  );
+}
+
+function Choices<T extends string>({
+  legend,
+  name,
+  options,
+  value,
+  onChoose,
+}: {
+  legend: string;
+  name: string;
+  options: { value: T; label: string; hint: string }[];
+  value: T;
+  onChoose: (value: T) => void;
+}) {
+  return (
+    <fieldset>
+      <legend>{legend}</legend>
+      {options.map((option) => (
+        <label key={option.value} className="option">
+          <input
+            type="radio"
+            name={name}
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChoose(option.value)}
+          />
+          <span>
+            <span className="option-label">{option.label}</span>
+            <span className="option-hint">{option.hint}</span>
+          </span>
+        </label>
+      ))}
+    </fieldset>
   );
 }

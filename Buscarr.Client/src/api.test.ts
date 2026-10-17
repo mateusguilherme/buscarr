@@ -156,9 +156,9 @@ describe('removeFromList', () => {
 
 describe('getSettings', () => {
   it('pede as configurações do usuário', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { edition: 'deluxe' } });
+    const fetchMock = mockFetch({ status: 200, body: { edition: 'deluxe', quality: 'flac' } });
 
-    expect(await getSettings()).toEqual({ edition: 'deluxe' });
+    expect(await getSettings()).toEqual({ edition: 'deluxe', quality: 'flac' });
     expect(fetchMock.mock.calls[0][0]).toBe('/api/settings');
   });
 
@@ -173,18 +173,20 @@ describe('saveSettings', () => {
   it('envia as configurações do usuário', async () => {
     const fetchMock = mockFetch({ status: 204 });
 
-    await saveSettings({ edition: 'remastered' });
+    await saveSettings({ edition: 'remastered', quality: 'flac' });
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/settings');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       method: 'PUT',
-      body: JSON.stringify({ edition: 'remastered' }),
+      body: JSON.stringify({ edition: 'remastered', quality: 'flac' }),
     });
   });
 
   it('lança erro quando a API falha', async () => {
     mockFetch({ status: 400 });
 
-    await expect(saveSettings({ edition: 'remastered' })).rejects.toThrow('Erro 400 ao salvar as configurações.');
+    await expect(saveSettings({ edition: 'remastered', quality: 'mp3-320' })).rejects.toThrow(
+      'Erro 400 ao salvar as configurações.',
+    );
   });
 });

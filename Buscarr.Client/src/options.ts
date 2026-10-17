@@ -1,10 +1,15 @@
-import type { Edition, ReleaseType } from './api';
+import type { Edition, Quality, ReleaseType } from './api';
 import { t } from './i18n';
 
 export const editionOptions: { value: Edition; label: string; hint: string }[] = [
   { value: 'original', label: t.settings.original, hint: t.settings.originalHint },
   { value: 'remastered', label: t.settings.remastered, hint: t.settings.remasteredHint },
   { value: 'deluxe', label: t.settings.deluxe, hint: t.settings.deluxeHint },
+];
+
+export const qualityOptions: { value: Quality; label: string; hint: string }[] = [
+  { value: 'mp3-320', label: t.settings.mp3, hint: t.settings.mp3Hint },
+  { value: 'flac', label: t.settings.flac, hint: t.settings.flacHint },
 ];
 
 export const releaseTypeOptions: { value: ReleaseType; label: string }[] = [

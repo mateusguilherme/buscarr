@@ -7,4 +7,5 @@ public class User
     public required string Name { get; set; }
     public string PasswordHash { get; set; } = "";
     public string? EditionPreference { get; set; }
+    public string? QualityPreference { get; set; }
 }

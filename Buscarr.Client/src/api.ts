@@ -10,7 +10,8 @@ export type Artist = {
   listed: boolean;
 };
 export type Edition = 'original' | 'remastered' | 'deluxe';
-export type Settings = { edition: Edition };
+export type Quality = 'mp3-320' | 'flac';
+export type Settings = { edition: Edition; quality: Quality };
 export type ReleaseType = 'album' | 'ep' | 'single' | 'live' | 'compilation' | 'soundtrack' | 'remix' | 'demo';
 export type ListSettings = { releaseTypes: ReleaseType[] };
 

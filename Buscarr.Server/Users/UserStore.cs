@@ -1,5 +1,6 @@
 using Buscarr.Server.Data;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Slskd;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,6 +34,17 @@ public class UserStore(BuscarrDbContext db)
         await db.Users
             .Where(u => u.Id == userId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.EditionPreference, edition));
+    }
+
+    public async Task<string> QualityPreferenceAsync(int userId) =>
+        await db.Users.Where(u => u.Id == userId).Select(u => u.QualityPreference).SingleAsync()
+            ?? Qualities.Mp3320;
+
+    public async Task SetQualityPreferenceAsync(int userId, string quality)
+    {
+        await db.Users
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.QualityPreference, quality));
     }
 
     public async Task<User?> VerifyAsync(string email, string password)
