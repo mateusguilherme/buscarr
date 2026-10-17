@@ -153,6 +153,24 @@ public class MusicBrainzClientTests
     }
 
     [Fact]
+    public async Task ReleasesAsync_ReadsTheCoverArtOfEachRelease()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            2,
+            WithCoverArt(Release("Bleach", "1989-06-15", "1989"), "r1", "g1", front: true),
+            WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: false))));
+
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
+
+        Assert.Equal(
+            [
+                "https://coverartarchive.org/release/r1/front-250",
+                "https://coverartarchive.org/release-group/g2/front-250",
+            ],
+            releases.Select(r => r.CoverUrl));
+    }
+
+    [Fact]
     public async Task ReleasesAsync_AsksForOfficialReleasesOfEveryType()
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(0)));

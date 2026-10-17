@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { getArtist, getArtistReleases, type Artist, type Release } from './api';
 import { Avatar } from './Avatar';
+import { Cover } from './Cover';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { locale, t } from './i18n';
@@ -140,9 +141,10 @@ function ReleaseSection({ title, releases }: { title: string; releases: Release[
   return (
     <section className="release-section">
       <h2>{title}</h2>
-      <ul className="card release-list">
+      <ul className="release-grid">
         {releases.map((release) => (
-          <li key={release.title} className="release">
+          <li key={`${release.type}:${release.title}`} className="release">
+            <Cover src={release.cover} />
             <span className="release-title">{release.title}</span>
             <time dateTime={release.date}>{dateFormat.format(new Date(release.date))}</time>
           </li>

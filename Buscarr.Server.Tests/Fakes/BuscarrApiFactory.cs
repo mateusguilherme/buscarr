@@ -98,9 +98,17 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         {
             return FakeHttpMessageHandler.Json(Releases(
                 3,
-                WithPrimaryType(Release("Smells Like Teen Spirit", "1991-09-10", "1991-09-10"), "Single"),
-                Release("Nevermind", "1991-09-24", "1991-09-24"),
-                Release("MTV Unplugged in New York", "1994-11-01", "1994-11-01", "Live")));
+                WithCoverArt(
+                    WithPrimaryType(Release("Smells Like Teen Spirit", "1991-09-10", "1991-09-10"), "Single"),
+                    "r1",
+                    "g1",
+                    front: true),
+                WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: true),
+                WithCoverArt(
+                    Release("MTV Unplugged in New York", "1994-11-01", "1994-11-01", "Live"),
+                    "r3",
+                    "g3",
+                    front: false)));
         }
 
         return FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);

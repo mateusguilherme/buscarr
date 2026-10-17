@@ -7,7 +7,7 @@ namespace Buscarr.Server.Endpoints;
 
 public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area, string? Image);
 
-public record ReleaseItem(string Title, string Date, bool Live, string? Type);
+public record ReleaseItem(string Title, string Date, bool Live, string? Type, string? Cover);
 
 public static class ArtistEndpoints
 {
@@ -90,7 +90,12 @@ public static class ArtistEndpoints
         }
 
         return Results.Json(releases
-            .Select(release => new ReleaseItem(release.Title, release.Date ?? "", release.IsLive, release.Type))
+            .Select(release => new ReleaseItem(
+                release.Title,
+                release.Date ?? "",
+                release.IsLive,
+                release.Type,
+                release.CoverUrl))
             .ToList());
     }
 

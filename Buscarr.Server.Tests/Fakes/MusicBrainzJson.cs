@@ -29,6 +29,19 @@ public static class MusicBrainzJson
             ["releases"] = releases,
         });
 
+    public static Dictionary<string, object> WithCoverArt(
+        Dictionary<string, object> release,
+        string id,
+        string releaseGroupId,
+        bool front)
+    {
+        release["id"] = id;
+        release["cover-art-archive"] = new { front };
+        ((Dictionary<string, object>)release["release-group"])["id"] = releaseGroupId;
+
+        return release;
+    }
+
     public static Dictionary<string, object> WithPrimaryType(Dictionary<string, object> release, string primaryType)
     {
         ((Dictionary<string, object>)release["release-group"])["primary-type"] = primaryType;

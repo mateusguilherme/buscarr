@@ -8,7 +8,7 @@ export type Artist = {
   area: string | null;
   image: string | null;
 };
-export type Release = { title: string; date: string; live: boolean; type: string | null };
+export type Release = { title: string; date: string; live: boolean; type: string | null; cover: string | null };
 
 export async function getCurrentUser(): Promise<User | null> {
   const res = await fetch('/api/auth/me');

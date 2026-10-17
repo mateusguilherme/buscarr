@@ -51,6 +51,42 @@ public class ReleaseTests
         Assert.Equal(expected, release.IsLive);
     }
 
+    [Fact]
+    public void CoverUrl_IsTheFrontOfTheReleaseWhenItHasOne()
+    {
+        var release = new Release
+        {
+            Id = "r1",
+            Title = "Nevermind",
+            CoverArtArchive = new CoverArtArchive { Front = true },
+            ReleaseGroup = new ReleaseGroup { Id = "g1" },
+        };
+
+        Assert.Equal("https://coverartarchive.org/release/r1/front-250", release.CoverUrl);
+    }
+
+    [Fact]
+    public void CoverUrl_IsTheFrontOfTheReleaseGroupWhenTheReleaseHasNone()
+    {
+        var release = new Release
+        {
+            Id = "r1",
+            Title = "Nevermind",
+            CoverArtArchive = new CoverArtArchive { Front = false },
+            ReleaseGroup = new ReleaseGroup { Id = "g1" },
+        };
+
+        Assert.Equal("https://coverartarchive.org/release-group/g1/front-250", release.CoverUrl);
+    }
+
+    [Fact]
+    public void CoverUrl_IsNullWithoutTheReleaseGroup()
+    {
+        var release = new Release { Id = "r1", Title = "Nevermind" };
+
+        Assert.Null(release.CoverUrl);
+    }
+
     [Theory]
     [InlineData("Album", "album")]
     [InlineData("EP", "ep")]

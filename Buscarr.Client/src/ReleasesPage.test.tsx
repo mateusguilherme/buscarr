@@ -116,6 +116,36 @@ describe('ReleasesPage', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('/api/artists/83048ffe/releases');
   });
 
+  it('mostra os releases numa grade, cada um com capa, título e data', async () => {
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
+    renderReleasesPage();
+
+    const [studio] = await screen.findAllByRole('list');
+    const [nevermind] = within(studio).getAllByRole('listitem');
+
+    expect(studio.className).toBe('release-grid');
+    expect(nevermind.querySelector('.cover')).not.toBeNull();
+    expect(nevermind.textContent).toBe('Nevermind24 de set. de 1991');
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('mostra a capa de cada release, com a imagem padrão quando não há uma', async () => {
+    const cover = 'https://coverartarchive.org/release/r2/front-250';
+    const releases = [
+      { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album', cover },
+      { title: 'Bleach', date: '1989-06-15', live: false, type: 'album', cover: null },
+    ];
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: releases });
+    renderReleasesPage();
+
+    const nevermind = (await screen.findByText('Nevermind')).closest('li')!;
+    const bleach = screen.getByText('Bleach').closest('li')!;
+
+    expect(nevermind.querySelector('img')?.getAttribute('src')).toBe(cover);
+    expect(bleach.querySelector('img')).toBeNull();
+    expect(bleach.querySelector('.cover svg')).not.toBeNull();
+  });
+
   it('mostra a data no formato do idioma, com a data completa no datetime', async () => {
     mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();

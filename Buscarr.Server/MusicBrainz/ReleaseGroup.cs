@@ -4,6 +4,8 @@ namespace Buscarr.Server.MusicBrainz;
 
 public sealed class ReleaseGroup
 {
+    public string? Id { get; init; }
+
     [JsonPropertyName("primary-type")]
     public string? PrimaryType { get; init; }
 
