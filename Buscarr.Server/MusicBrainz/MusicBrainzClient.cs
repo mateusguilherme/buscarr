@@ -60,13 +60,14 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             .Where(release => release.ReleaseGroup?.Id is not null)
             .GroupBy(release => release.ReleaseGroup!.Id)
             .Select(group => (
-                First: group.Where(release => release.IsOriginalRelease).MinBy(release => release.Date, StringComparer.Ordinal),
+                First: group.Where(release => release.IsOriginalRelease).MinBy(release => release.Date, StringComparer.Ordinal)
+                    ?? group.MinBy(release => release.Date ?? "9999", StringComparer.Ordinal)!,
                 Editions: group.ToList()))
-            .Where(album => album.First is not null)
-            .Select(album => new Album(album.First!, album.Editions));
+            .Where(album => album.First.Category is not null)
+            .Select(album => new Album(album.First, album.Editions));
 
         return albums
-            .GroupBy(album => (album.First.Type, Names.Normalize(album.First.Title)))
+            .GroupBy(album => (album.First.Category, Names.Normalize(album.First.Title)))
             .Select(group => group.MinBy(album => album.First.Date, StringComparer.Ordinal)!)
             .OrderBy(album => album.First.Date, StringComparer.Ordinal)
             .ThenBy(album => Names.Normalize(album.First.Title), StringComparer.Ordinal)

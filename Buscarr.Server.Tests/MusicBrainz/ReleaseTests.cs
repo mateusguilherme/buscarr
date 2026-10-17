@@ -21,15 +21,50 @@ public class ReleaseTests
     }
 
     [Theory]
-    [InlineData(new string[0], true)]
-    [InlineData(new[] { "Live" }, true)]
-    [InlineData(new[] { "Compilation" }, false)]
-    [InlineData(new[] { "Compilation", "Live" }, false)]
-    public void IsOriginalRelease_AcceptsOnlyStudioAndLiveAlbums(string[] secondaryTypes, bool expected)
+    [InlineData((object)new string[0])]
+    [InlineData((object)new[] { "Live" })]
+    [InlineData((object)new[] { "Compilation" })]
+    [InlineData((object)new[] { "Compilation", "Live" })]
+    public void IsOriginalRelease_DoesNotDependOnSecondaryTypes(string[] secondaryTypes)
     {
         var release = CreateRelease("1994-11-01", "1994-11-01", secondaryTypes);
 
-        Assert.Equal(expected, release.IsOriginalRelease);
+        Assert.True(release.IsOriginalRelease);
+    }
+
+    [Theory]
+    [InlineData("Album", new string[0], "album")]
+    [InlineData("EP", new string[0], "ep")]
+    [InlineData("Single", new string[0], "single")]
+    [InlineData("Broadcast", new string[0], null)]
+    [InlineData(null, new string[0], null)]
+    [InlineData("Album", new[] { "Live" }, "live")]
+    [InlineData("Album", new[] { "Compilation", "Live" }, "compilation")]
+    [InlineData("Album", new[] { "Soundtrack", "Remix" }, "soundtrack")]
+    [InlineData("Album", new[] { "Remix" }, "remix")]
+    [InlineData("Single", new[] { "Demo" }, "demo")]
+    [InlineData("Album", new[] { "DJ-mix" }, "album")]
+    [InlineData("Broadcast", new[] { "Live" }, "live")]
+    public void Category_ComesFromTheSecondaryTypesAndThenThePrimaryType(
+        string? primaryType,
+        string[] secondaryTypes,
+        string? expected)
+    {
+        var release = new Release
+        {
+            Title = "Nevermind",
+            ReleaseGroup = new ReleaseGroup { PrimaryType = primaryType, SecondaryTypes = [.. secondaryTypes] },
+        };
+
+        Assert.Equal(expected, release.Category);
+    }
+
+    [Fact]
+    public void Category_IsNullWithoutReleaseGroup()
+    {
+        var release = new Release { Title = "Nevermind" };
+
+        Assert.Null(release.Category);
     }
 
     [Fact]

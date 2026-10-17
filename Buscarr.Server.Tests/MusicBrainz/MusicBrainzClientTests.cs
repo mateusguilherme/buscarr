@@ -193,8 +193,39 @@ public class MusicBrainzClientTests
         var releases = await client.ReleasesAsync(Contact, "artist-id");
 
         Assert.Equal(
-            ["Bleach", "Nevermind", "MTV Unplugged in New York"],
+            ["Bleach", "Sliver", "Nevermind", "Incesticide", "MTV Unplugged in New York"],
             releases.Select(r => r.First.Title));
+        Assert.Equal(
+            ["album", "album", "album", "compilation", "live"],
+            releases.Select(r => r.First.Category));
+    }
+
+    [Fact]
+    public async Task ReleasesAsync_KeepsADemoApartFromAnAlbumWithTheSameTitle()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            2,
+            Release("Nevermind", "1991-09-24", "1991-09-24"),
+            Release("Nevermind", "1991-01-01", "1991-01-01", "Demo"))));
+
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
+
+        Assert.Equal(
+            [("Nevermind", "demo"), ("Nevermind", "album")],
+            releases.Select(r => (r.First.Title, r.First.Category)));
+    }
+
+    [Fact]
+    public async Task ReleasesAsync_LeavesOutReleasesWithoutACategory()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            2,
+            WithPrimaryType(Release("Live & Loud", "1993-12-13", "1993-12-13"), "Broadcast"),
+            Release("Nevermind", "1991-09-24", "1991-09-24"))));
+
+        var releases = await client.ReleasesAsync(Contact, "artist-id");
+
+        Assert.Equal(["Nevermind"], releases.Select(r => r.First.Title));
     }
 
     [Fact]

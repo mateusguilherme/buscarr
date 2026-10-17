@@ -28,7 +28,22 @@ public sealed class Release
                 ? $"{CoverArtArchiveUrl}/release-group/{releaseGroupId}/front-250"
                 : null;
 
+    private static readonly string[] SecondaryCategories = ["compilation", "soundtrack", "remix", "demo", "live"];
+
+    private static readonly string[] PrimaryCategories = ["album", "ep", "single"];
+
     public string? Type => ReleaseGroup?.PrimaryType?.ToLowerInvariant();
+
+    public string? Category
+    {
+        get
+        {
+            var secondary = SecondaryCategories.FirstOrDefault(category =>
+                ReleaseGroup?.SecondaryTypes.Contains(category, StringComparer.OrdinalIgnoreCase) == true);
+
+            return secondary ?? (PrimaryCategories.Contains(Type) ? Type : null);
+        }
+    }
 
     public int TrackCount => Media.Sum(medium => medium.TrackCount);
 
@@ -58,7 +73,6 @@ public sealed class Release
 
     public bool IsOriginalRelease =>
         Date is { Length: 10 } date
-        && ReleaseGroup is { FirstReleaseDate: { Length: > 0 } firstRelease } group
-        && group.SecondaryTypes.All(type => type == "Live")
+        && ReleaseGroup is { FirstReleaseDate: { Length: > 0 } firstRelease }
         && date.StartsWith(firstRelease, StringComparison.Ordinal);
 }
