@@ -49,7 +49,7 @@ public class MusicBrainzClientTests
     [Fact]
     public async Task FindArtistAsync_WithCountry_FiltersByCountryInsteadOfDismax()
     {
-        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()));
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("1", "Sigur Rós"))));
 
         await client.FindArtistAsync(Contact, "Sigur Rós", "IS");
 
@@ -65,8 +65,52 @@ public class MusicBrainzClientTests
 
         await client.FindArtistAsync(Contact, "AC/DC: Live!", "AU");
 
-        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
         Assert.Equal(@"(ac\/dc\: live\!) AND country:AU", query["query"]);
+    }
+
+    [Fact]
+    public async Task FindArtistAsync_WithCountry_LooksUpArtistsWhoseAreaIsInsideACountry()
+    {
+        var (client, handler) = CreateClient(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/ws/2/artist" when request.RequestUri.Query.Contains("dismax=true") =>
+                FakeHttpMessageHandler.Json(ArtistsWithArea(
+                    ("1", "Rancore", "IT", "Italy"),
+                    ("2", "Rancore", null, "São Paulo"))),
+            "/ws/2/artist" => FakeHttpMessageHandler.Json(Artists()),
+            "/ws/2/artist/2" => FakeHttpMessageHandler.Json(Artist("2", "Rancore", "BR")),
+            _ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound),
+        });
+
+        var artist = await client.FindArtistAsync(Contact, "rancore", "BR");
+
+        Assert.Equal("2", artist?.Id);
+        Assert.Equal(
+            ["/ws/2/artist", "/ws/2/artist", "/ws/2/artist/2"],
+            handler.Requests.Select(r => r.Uri.AbsolutePath));
+    }
+
+    [Fact]
+    public async Task FindArtistAsync_WithCountry_ReturnsNullWithoutLookingUpArtistsWithoutArea()
+    {
+        var (client, handler) = CreateClient(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/ws/2/artist" when request.RequestUri.Query.Contains("dismax=true") =>
+                FakeHttpMessageHandler.Json(ArtistsWithArea(
+                    ("1", "Rancore", null, null),
+                    ("2", "Rancore", null, "Roma"))),
+            "/ws/2/artist" => FakeHttpMessageHandler.Json(Artists()),
+            "/ws/2/artist/2" => FakeHttpMessageHandler.Json(Artist("2", "Rancore", "IT")),
+            _ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound),
+        });
+
+        var artist = await client.FindArtistAsync(Contact, "rancore", "BR");
+
+        Assert.Null(artist);
+        Assert.Equal(
+            ["/ws/2/artist", "/ws/2/artist", "/ws/2/artist/2"],
+            handler.Requests.Select(r => r.Uri.AbsolutePath));
     }
 
     [Fact]

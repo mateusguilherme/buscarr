@@ -16,14 +16,34 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
 
     public async Task<Artist?> FindArtistAsync(string contact, string query, string? country = null)
     {
-        List<(string, string)> parameters = country is null
-            ? [("query", query), ("dismax", "true"), ("limit", "10")]
-            : [("query", $"({EscapeSearchSyntax(query.ToLowerInvariant())}) AND country:{country}"), ("limit", "10")];
+        List<(string, string)> byName = [("query", query), ("dismax", "true")];
 
-        var search = await GetAsync<ArtistSearch>(contact, "artist", parameters);
-        var q = Names.Normalize(query);
+        if (country is null)
+        {
+            return (await SearchArtistsAsync(contact, query, byName)).FirstOrDefault();
+        }
 
-        return search.Artists.FirstOrDefault(artist => Names.Normalize(artist.Name).Contains(q));
+        var inCountry = await SearchArtistsAsync(
+            contact,
+            query,
+            [("query", $"({EscapeSearchSyntax(query.ToLowerInvariant())}) AND country:{country}")]);
+
+        if (inCountry.Count > 0)
+        {
+            return inCountry[0];
+        }
+
+        foreach (var artist in await SearchArtistsAsync(contact, query, byName))
+        {
+            if (artist.Country is null
+                && artist.Area is not null
+                && (await ArtistAsync(contact, artist.Id)).Country == country)
+            {
+                return artist;
+            }
+        }
+
+        return null;
     }
 
     public Task<Artist> ArtistAsync(string contact, string id) =>
@@ -65,6 +85,17 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             .OrderBy(release => release.Date, StringComparer.Ordinal)
             .ThenBy(release => Names.Normalize(release.Title), StringComparer.Ordinal)
             .ToList();
+    }
+
+    private async Task<List<Artist>> SearchArtistsAsync(
+        string contact,
+        string query,
+        List<(string, string)> parameters)
+    {
+        var search = await GetAsync<ArtistSearch>(contact, "artist", [.. parameters, ("limit", "10")]);
+        var name = Names.Normalize(query);
+
+        return search.Artists.Where(artist => Names.Normalize(artist.Name).Contains(name)).ToList();
     }
 
     private async Task<T> GetAsync<T>(
