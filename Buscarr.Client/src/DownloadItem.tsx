@@ -1,0 +1,110 @@
+import { useState } from 'react';
+import { cancelDownload, type Download } from './api';
+import { DiscIcon } from './icons';
+import { locale, t } from './i18n';
+
+const cancellable = ['waiting', 'searching', 'not-found', 'downloading', 'failed'];
+
+function when(date: string): string {
+  return new Date(date).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function failureLabel(failure: string | null): string {
+  switch (failure) {
+    case 'refused':
+      return t.downloads.refused;
+    case 'stalled':
+      return t.downloads.stalled;
+    case 'transfer-failed':
+      return t.downloads.transferFailed;
+    default:
+      return failure ?? '';
+  }
+}
+
+function stateLabel(download: Download): string {
+  switch (download.state) {
+    case 'waiting':
+      return new Date(download.nextAttemptAt).getTime() > Date.now()
+        ? t.downloads.nextAttempt(when(download.nextAttemptAt))
+        : t.downloads.waiting;
+    case 'searching':
+      return t.downloads.searching;
+    case 'not-found': {
+      const what = download.failure === 'no-matching-folder' ? t.downloads.noMatchingFolder : t.downloads.notFound;
+
+      return `${what} · ${t.downloads.nextAttempt(when(download.nextAttemptAt))}`;
+    }
+    case 'downloading':
+      return download.placeInQueue != null
+        ? t.downloads.inQueue(download.placeInQueue)
+        : t.downloads.downloading(download.tracksDone, download.trackCount);
+    case 'downloaded':
+      return t.downloads.downloaded;
+    case 'failed':
+      return t.downloads.failed(failureLabel(download.failure));
+    case 'cancelled':
+      return t.downloads.cancelled;
+    default:
+      return download.state;
+  }
+}
+
+export function DownloadItem({ download, onCancelled }: { download: Download; onCancelled: () => void }) {
+  const [cancelling, setCancelling] = useState(false);
+  const [coverFailed, setCoverFailed] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function handleCancel() {
+    setError(undefined);
+    setCancelling(true);
+
+    try {
+      await cancelDownload(download.id);
+      onCancelled();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  return (
+    <li className="card artist-card">
+      <span className="avatar" aria-hidden="true">
+        {download.coverUrl && !coverFailed ? (
+          <img src={download.coverUrl} alt="" loading="lazy" onError={() => setCoverFailed(true)} />
+        ) : (
+          <DiscIcon />
+        )}
+      </span>
+      <div className="artist-info">
+        <span className="artist-name">{download.title}</span>
+        <div className="artist-meta">
+          <span>{download.artistName}</span>
+          <span className="chip">{t.downloads.types[download.type] ?? download.type}</span>
+          <span>{t.downloads.tracks(download.trackCount)}</span>
+        </div>
+        <p className="download-state">{stateLabel(download)}</p>
+        {download.state === 'downloading' && download.bytesTotal > 0 && (
+          <div className="progress">
+            <div
+              className="progress-fill"
+              style={{ width: `${Math.round((download.bytesTransferred / download.bytesTotal) * 100)}%` }}
+            />
+          </div>
+        )}
+        {error && (
+          <p className="alert" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+      {cancellable.includes(download.state) && (
+        <button className="button-ghost button-small" disabled={cancelling} onClick={handleCancel}>
+          {t.downloads.cancel}
+        </button>
+      )}
+    </li>
+  );
+}

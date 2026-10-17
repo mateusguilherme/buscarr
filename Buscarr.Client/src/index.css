@@ -565,3 +565,25 @@ button {
     transition: none !important;
   }
 }
+
+.download-state {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.progress {
+  width: 100%;
+  max-width: 20rem;
+  height: 0.375rem;
+  margin-top: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}

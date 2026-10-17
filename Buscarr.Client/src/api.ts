@@ -135,6 +135,43 @@ export async function saveSettings(settings: Settings): Promise<void> {
   }
 }
 
+export type Download = {
+  id: number;
+  artistName: string;
+  title: string;
+  type: string;
+  coverUrl: string | null;
+  trackCount: number;
+  quality: string;
+  state: string;
+  failure: string | null;
+  attempts: number;
+  nextAttemptAt: string;
+  tracksDone: number;
+  bytesTransferred: number;
+  bytesTotal: number;
+  placeInQueue: number | null;
+  username: string | null;
+};
+
+export async function getDownloads(): Promise<Download[]> {
+  const res = await fetch('/api/downloads');
+
+  if (!res.ok) {
+    throw new Error(t.api.downloadsError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function cancelDownload(id: number): Promise<void> {
+  const res = await fetch(`/api/downloads/${id}/cancel`, { method: 'POST' });
+
+  if (!res.ok) {
+    throw new Error(t.api.cancelDownloadError(res.status));
+  }
+}
+
 export async function findArtists(query: string): Promise<Artist[]> {
   const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}`);
 

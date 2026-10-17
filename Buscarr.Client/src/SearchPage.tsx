@@ -67,6 +67,9 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
         <Link to="/list" className="header-link">
           {t.search.list}
         </Link>
+        <Link to="/downloads" className="header-link">
+          {t.search.downloads}
+        </Link>
         <Link to="/settings" className="header-link">
           {t.search.settings}
         </Link>

@@ -36,6 +36,15 @@ export function ArtistIcon() {
   );
 }
 
+export function DiscIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}
+
 export function ArrowLeftIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24" aria-hidden="true">

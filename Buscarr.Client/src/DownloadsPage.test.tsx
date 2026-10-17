@@ -1,0 +1,126 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Download } from './api';
+import { DownloadsPage } from './DownloadsPage';
+import { mockFetch } from './test-utils';
+
+class FakeEventSource {
+  static instances: FakeEventSource[] = [];
+
+  onmessage: ((event: MessageEvent) => void) | null = null;
+  onerror: (() => void) | null = null;
+  closed = false;
+
+  constructor(public url: string) {
+    FakeEventSource.instances.push(this);
+  }
+
+  close() {
+    this.closed = true;
+  }
+
+  emit(downloads: Download[]) {
+    this.onmessage?.({ data: JSON.stringify(downloads) } as MessageEvent);
+  }
+}
+
+function download(overrides: Partial<Download>): Download {
+  return {
+    id: 1,
+    artistName: 'Nirvana',
+    title: 'Nevermind',
+    type: 'album',
+    coverUrl: null,
+    trackCount: 12,
+    quality: 'mp3-320',
+    state: 'waiting',
+    failure: null,
+    attempts: 0,
+    nextAttemptAt: '1970-01-01T00:00:00Z',
+    tracksDone: 0,
+    bytesTransferred: 0,
+    bytesTotal: 0,
+    placeInQueue: null,
+    username: null,
+    ...overrides,
+  };
+}
+
+function renderPage() {
+  render(
+    <MemoryRouter initialEntries={['/downloads']}>
+      <DownloadsPage />
+    </MemoryRouter>,
+  );
+}
+
+describe('DownloadsPage', () => {
+  beforeEach(() => {
+    FakeEventSource.instances = [];
+    vi.stubGlobal('EventSource', FakeEventSource);
+  });
+
+  it('mostra cada download com seu estado', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderPage();
+    await screen.findByText('Nenhum download ainda. Adicione artistas à lista.');
+
+    FakeEventSource.instances[0].emit([
+      download({ id: 1, state: 'downloading', tracksDone: 7, bytesTransferred: 70, bytesTotal: 120 }),
+      download({ id: 2, title: 'In Utero', state: 'downloading', placeInQueue: 3 }),
+      download({ id: 3, title: 'Bleach', state: 'not-found', failure: 'no-matching-folder' }),
+      download({ id: 4, title: 'Incesticide', state: 'downloaded' }),
+      download({ id: 5, title: 'Unplugged', state: 'failed', failure: 'refused' }),
+      download({ id: 6, title: 'Hormoaning', state: 'cancelled' }),
+      download({ id: 7, title: 'Sliver', state: 'verifying' }),
+      download({ id: 8, title: 'Love Buzz', state: 'waiting', nextAttemptAt: '2999-01-01T12:00:00Z' }),
+    ]);
+
+    expect(await screen.findByText('Baixando 7/12')).toBeDefined();
+    expect(screen.getByText('Na fila do peer (posição 3)')).toBeDefined();
+    expect(screen.getByText(/Nenhuma pasta serve · Próxima tentativa em/)).toBeDefined();
+    expect(screen.getByText('Baixado')).toBeDefined();
+    expect(screen.getByText('Falhou: o peer recusou')).toBeDefined();
+    expect(screen.getByText('Cancelado')).toBeDefined();
+    expect(screen.getByText('verifying')).toBeDefined();
+    expect(screen.getByText(/^Próxima tentativa em/)).toBeDefined();
+  });
+
+  it('cancela um download e não o deixa voltar', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: [download({ state: 'waiting' })] },
+      { status: 204 },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByText('Cancelado')).toBeDefined();
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/downloads/1/cancel');
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('refaz a busca quando o SSE cai', async () => {
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [download({ state: 'downloaded' })] },
+    );
+    renderPage();
+
+    expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
+
+    FakeEventSource.instances[0].onerror?.();
+
+    expect(await screen.findByText('Baixado')).toBeDefined();
+    expect(FakeEventSource.instances[0].closed).toBe(true);
+  });
+
+  it('mostra a lista vazia', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderPage();
+
+    expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
+  });
+});
