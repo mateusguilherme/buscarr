@@ -32,6 +32,7 @@ builder.Services.AddDbContext<BuscarrDbContext>(options =>
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
 builder.Services.AddSingleton<GeneratorTrigger>();
+builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddScoped<RequestGenerator>();
 builder.Services.AddSingleton<AlbumSearch>();
 builder.Services.AddSingleton<AlbumDownload>();
@@ -70,6 +71,7 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapArtistEndpoints();
 app.MapSettingsEndpoints();

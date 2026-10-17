@@ -42,9 +42,19 @@ public sealed class FakeSlskd
 
     public void AlreadyKnows(string username, string filename, long size) => Know(username, filename, size);
 
+    public bool Connected { get; set; } = true;
+
     private HttpResponseMessage Respond(HttpRequestMessage request)
     {
         var path = request.RequestUri!.AbsolutePath.Split('/');
+
+        if (path[3] == "application")
+        {
+            var state = Connected ? "true" : "false";
+
+            return FakeHttpMessageHandler.Json(
+                "{\"server\":{\"isConnected\":" + state + ",\"isLoggedIn\":" + state + "}}");
+        }
 
         if (path[3] == "transfers")
         {

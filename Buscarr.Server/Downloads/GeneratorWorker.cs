@@ -1,6 +1,10 @@
 namespace Buscarr.Server.Downloads;
 
-public sealed class GeneratorWorker(IServiceScopeFactory scopes, GeneratorTrigger trigger, TimeProvider time)
+public sealed class GeneratorWorker(
+    IServiceScopeFactory scopes,
+    GeneratorTrigger trigger,
+    WorkerHeartbeat heartbeat,
+    TimeProvider time)
     : BackgroundService
 {
     private static readonly TimeSpan Interval = TimeSpan.FromHours(12);
@@ -9,6 +13,8 @@ public sealed class GeneratorWorker(IServiceScopeFactory scopes, GeneratorTrigge
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            heartbeat.Beat(WorkerHeartbeat.Generator);
+
             try
             {
                 using var scope = scopes.CreateScope();

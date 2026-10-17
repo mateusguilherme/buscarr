@@ -6,6 +6,7 @@ using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Slskd;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -40,7 +41,11 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
 
+    public FakeSlskd Slskd { get; } = new();
+
     public bool FanartTvDown { get; init; }
+
+    public bool SlskdDown { get; init; }
 
     public async Task<HttpClient> CreateLoggedInClientAsync()
     {
@@ -69,6 +74,13 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                 new FakeTimeProvider { AutoAdvanceAmount = TimeSpan.FromSeconds(1) }));
             services.RemoveAll<FanartTvClient>();
             services.AddSingleton(new FanartTvClient(new HttpClient(FanartTv), "chave-de-teste"));
+            services.RemoveAll<SlskdClient>();
+            services.AddSingleton(new SlskdClient(
+                new HttpClient(SlskdDown
+                    ? new FakeHttpMessageHandler(_ => throw new HttpRequestException("fora do ar"))
+                    : Slskd.Handler),
+                "http://slskd.local:5030",
+                "chave-de-teste"));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
             foreach (var worker in services

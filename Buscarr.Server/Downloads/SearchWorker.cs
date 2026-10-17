@@ -1,6 +1,10 @@
 namespace Buscarr.Server.Downloads;
 
-public sealed class SearchWorker(IServiceScopeFactory scopes, DownloadRunner runner, TimeProvider time)
+public sealed class SearchWorker(
+    IServiceScopeFactory scopes,
+    DownloadRunner runner,
+    WorkerHeartbeat heartbeat,
+    TimeProvider time)
     : BackgroundService
 {
     private static readonly TimeSpan BetweenSearches = TimeSpan.FromSeconds(16);
@@ -8,6 +12,8 @@ public sealed class SearchWorker(IServiceScopeFactory scopes, DownloadRunner run
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        heartbeat.Beat(WorkerHeartbeat.Search);
+
         try
         {
             using var scope = scopes.CreateScope();
@@ -20,6 +26,7 @@ public sealed class SearchWorker(IServiceScopeFactory scopes, DownloadRunner run
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            heartbeat.Beat(WorkerHeartbeat.Search);
             SearchedRequest? searched = null;
 
             try
