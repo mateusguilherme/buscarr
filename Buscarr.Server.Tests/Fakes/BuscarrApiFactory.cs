@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Web;
 using Buscarr.Server.Data;
 using Buscarr.Server.Endpoints;
+using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -21,10 +22,22 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 {
     public const string NirvanaId = "5b11f4ce-a62d-471e-81fc-a69a8278c7da";
 
+    public const string NirvanaImage =
+        $"https://assets.fanart.tv/preview/music/{NirvanaId}/artistthumb/nirvana.jpg";
+
     private readonly string _databasePath =
         Path.Combine(Path.GetTempPath(), $"buscarr-tests-{Guid.NewGuid()}.db");
 
+    public BuscarrApiFactory()
+    {
+        FanartTv = new FakeHttpMessageHandler(RespondLikeFanartTv);
+    }
+
     public FakeHttpMessageHandler MusicBrainz { get; } = new(RespondLikeMusicBrainz);
+
+    public FakeHttpMessageHandler FanartTv { get; }
+
+    public bool FanartTvDown { get; init; }
 
     public async Task<HttpClient> CreateLoggedInClientAsync()
     {
@@ -40,6 +53,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
         builder.ConfigureTestServices(services =>
         {
             services.ConfigureDbContext<BuscarrDbContext>(options =>
@@ -48,6 +62,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
             services.AddSingleton(new MusicBrainzClient(
                 new HttpClient(MusicBrainz),
                 new FakeTimeProvider { AutoAdvanceAmount = TimeSpan.FromSeconds(1) }));
+            services.RemoveAll<FanartTvClient>();
+            services.AddSingleton(new FanartTvClient(new HttpClient(FanartTv), "chave-de-teste"));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
         });
     }
@@ -88,5 +104,20 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         }
 
         return FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);
+    }
+
+    private HttpResponseMessage RespondLikeFanartTv(HttpRequestMessage request)
+    {
+        if (FanartTvDown)
+        {
+            return FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError);
+        }
+
+        return request.RequestUri!.AbsolutePath == $"/v3/music/{NirvanaId}"
+            ? FakeHttpMessageHandler.Json(FanartTvJson.Artist((
+                "artistthumb",
+                $"https://assets.fanart.tv/fanart/music/{NirvanaId}/artistthumb/nirvana.jpg",
+                3)))
+            : FakeHttpMessageHandler.Json(FanartTvJson.NotFound(), HttpStatusCode.NotFound);
     }
 }

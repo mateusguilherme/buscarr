@@ -24,10 +24,27 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
 
         Assert.Equal(
             [
-                new ArtistCard("1", "Approaching Nirvana", null, null),
-                new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", "90s US grunge band", "United States"),
+                new ArtistCard("1", "Approaching Nirvana", null, null, null),
+                new ArtistCard(
+                    BuscarrApiFactory.NirvanaId,
+                    "Nirvana",
+                    "90s US grunge band",
+                    "United States",
+                    BuscarrApiFactory.NirvanaImage),
             ],
             artists);
+    }
+
+    [Fact]
+    public async Task SearchArtists_WhenFanartTvFails_ReturnsArtistsWithoutImages()
+    {
+        await using var fanartTvDown = new BuscarrApiFactory { FanartTvDown = true };
+        var client = await fanartTvDown.CreateLoggedInClientAsync();
+
+        var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/artists?q=nirvana");
+
+        Assert.Equal(["1", BuscarrApiFactory.NirvanaId], artists!.Select(a => a.Id));
+        Assert.All(artists!, artist => Assert.Null(artist.Image));
     }
 
     [Fact]
@@ -47,7 +64,21 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
 
         var artist = await client.GetFromJsonAsync<ArtistCard>($"/api/artists/{BuscarrApiFactory.NirvanaId}");
 
-        Assert.Equal(new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null), artist);
+        Assert.Equal(
+            new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null, BuscarrApiFactory.NirvanaImage),
+            artist);
+    }
+
+    [Fact]
+    public async Task GetArtist_WhenFanartTvFails_ReturnsTheArtistWithoutImage()
+    {
+        await using var fanartTvDown = new BuscarrApiFactory { FanartTvDown = true };
+        var client = await fanartTvDown.CreateLoggedInClientAsync();
+
+        var artist = await client.GetFromJsonAsync<ArtistCard>($"/api/artists/{BuscarrApiFactory.NirvanaId}");
+
+        Assert.Equal("Nirvana", artist!.Name);
+        Assert.Null(artist.Image);
     }
 
     [Fact]

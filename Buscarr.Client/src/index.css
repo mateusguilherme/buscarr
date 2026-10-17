@@ -310,6 +310,9 @@ button {
 
 .artist-card {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   padding: 0.875rem 1.125rem;
   animation: rise 0.25s ease both;
   transition:
@@ -320,6 +323,33 @@ button {
 .artist-card:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   transform: translateY(-1px);
+}
+
+.artist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar {
+  flex: none;
+  width: 3.25rem;
+  height: 3.25rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.avatar-large {
+  width: 5.5rem;
+  height: 5.5rem;
 }
 
 .artist-name {
@@ -390,6 +420,9 @@ button {
 }
 
 .artist-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   min-height: 3rem;
   margin: 1.25rem 0 1.5rem;
 }

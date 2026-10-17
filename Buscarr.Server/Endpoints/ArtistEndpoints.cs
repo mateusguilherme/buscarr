@@ -1,10 +1,11 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
 
 namespace Buscarr.Server.Endpoints;
 
-public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area);
+public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area, string? Image);
 
 public record ReleaseItem(string Title, string Date, bool Live, string? Type);
 
@@ -21,6 +22,7 @@ public static class ArtistEndpoints
 
     private static async Task<IResult> SearchArtists(
         MusicBrainzClient musicBrainz,
+        FanartTvClient fanartTv,
         ClaimsPrincipal user,
         string q)
     {
@@ -35,18 +37,23 @@ public static class ArtistEndpoints
             return BadGateway(e);
         }
 
-        return Results.Json(artists
-            .Select(artist => new ArtistCard(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name))
-            .ToList());
+        var images = await Task.WhenAll(artists.Select(artist => ArtistImageAsync(fanartTv, artist.Id)));
+
+        return Results.Json(artists.Select((artist, index) => Card(artist, images[index])).ToList());
     }
 
-    private static async Task<IResult> GetArtist(MusicBrainzClient musicBrainz, ClaimsPrincipal user, string id)
+    private static async Task<IResult> GetArtist(
+        MusicBrainzClient musicBrainz,
+        FanartTvClient fanartTv,
+        ClaimsPrincipal user,
+        string id)
     {
         if (!IsMusicBrainzId(id))
         {
             return Results.NotFound();
         }
 
+        var image = ArtistImageAsync(fanartTv, id);
         Artist artist;
 
         try
@@ -58,7 +65,7 @@ public static class ArtistEndpoints
             return BadGateway(e);
         }
 
-        return Results.Json(new ArtistCard(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name));
+        return Results.Json(Card(artist, await image));
     }
 
     private static async Task<IResult> GetArtistReleases(
@@ -85,6 +92,23 @@ public static class ArtistEndpoints
         return Results.Json(releases
             .Select(release => new ReleaseItem(release.Title, release.Date ?? "", release.IsLive, release.Type))
             .ToList());
+    }
+
+    private static ArtistCard Card(Artist artist, string? image) =>
+        new(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name, image);
+
+    private static async Task<string?> ArtistImageAsync(FanartTvClient fanartTv, string id)
+    {
+        try
+        {
+            return await fanartTv.ArtistImageAsync(id);
+        }
+        catch (Exception e) when (IsUpstreamError(e))
+        {
+            Console.Error.WriteLine($"erro no fanart.tv: {e.Message}");
+
+            return null;
+        }
     }
 
     private static bool IsMusicBrainzId(string id) =>

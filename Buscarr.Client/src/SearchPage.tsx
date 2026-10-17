@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { findArtists, logout, type Artist, type User } from './api';
+import { Avatar } from './Avatar';
 import { Header } from './Header';
 import { PinIcon, SearchIcon } from './icons';
 import { t } from './i18n';
@@ -100,25 +101,28 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             <ul className="artist-list">
               {artists.map((artist) => (
                 <li key={artist.id} className="card artist-card">
-                  <Link
-                    className="artist-name"
-                    to={`/artist/${artist.id}`}
-                    state={linkState}
-                    onClick={() => navigate(location, { replace: true, state: linkState })}
-                  >
-                    {artist.name}
-                  </Link>
-                  {(artist.disambiguation || artist.area) && (
-                    <div className="artist-meta">
-                      {artist.disambiguation && <span>{artist.disambiguation}</span>}
-                      {artist.area && (
-                        <span className="chip">
-                          <PinIcon />
-                          {artist.area}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <Avatar image={artist.image} />
+                  <div className="artist-info">
+                    <Link
+                      className="artist-name"
+                      to={`/artist/${artist.id}`}
+                      state={linkState}
+                      onClick={() => navigate(location, { replace: true, state: linkState })}
+                    >
+                      {artist.name}
+                    </Link>
+                    {(artist.disambiguation || artist.area) && (
+                      <div className="artist-meta">
+                        {artist.disambiguation && <span>{artist.disambiguation}</span>}
+                        {artist.area && (
+                          <span className="chip">
+                            <PinIcon />
+                            {artist.area}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router';
-import { getArtist, getArtistReleases, type Release } from './api';
+import { getArtist, getArtistReleases, type Artist, type Release } from './api';
+import { Avatar } from './Avatar';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { locale, t } from './i18n';
@@ -26,7 +27,7 @@ export function ReleasesPage() {
   const { id = '' } = useParams();
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') ?? 'album';
-  const [name, setName] = useState(from?.artists.find((artist) => artist.id === id)?.name);
+  const [artist, setArtist] = useState<Artist | undefined>(from?.artists.find((found) => found.id === id));
   const [releases, setReleases] = useState<Release[] | null>(null);
   const [error, setError] = useState<string>();
   const shown = releases && (type === 'all' ? releases : releases.filter((release) => release.type === type));
@@ -36,10 +37,10 @@ export function ReleasesPage() {
 
     async function loadArtist() {
       try {
-        const artist = await getArtist(id);
+        const result = await getArtist(id);
 
         if (!ignore) {
-          setName(artist.name);
+          setArtist(result);
         }
       } catch (err) {
         if (!ignore) {
@@ -65,7 +66,7 @@ export function ReleasesPage() {
       }
     }
 
-    if (!name) {
+    if (!artist) {
       loadArtist();
     }
 
@@ -87,7 +88,12 @@ export function ReleasesPage() {
         </Link>
 
         <div className="artist-hero">
-          {name && <h1>{name}</h1>}
+          {artist && (
+            <>
+              {artist.image && <Avatar image={artist.image} large />}
+              <h1>{artist.name}</h1>
+            </>
+          )}
         </div>
 
         <nav className="segmented" aria-label={t.releases.type}>

@@ -1,5 +1,6 @@
 using Buscarr.Server.Data;
 using Buscarr.Server.Endpoints;
+using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Users;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -8,6 +9,9 @@ using Microsoft.EntityFrameworkCore;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 builder.Services.AddSingleton(new MusicBrainzClient(new HttpClient(), TimeProvider.System));
+builder.Services.AddSingleton(new FanartTvClient(
+    new HttpClient { Timeout = TimeSpan.FromSeconds(5) },
+    builder.Configuration["FanartTv:ApiKey"]));
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();

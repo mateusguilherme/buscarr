@@ -1,7 +1,13 @@
 import { t } from './i18n';
 
 export type User = { email: string; name: string };
-export type Artist = { id: string; name: string; disambiguation: string | null; area: string | null };
+export type Artist = {
+  id: string;
+  name: string;
+  disambiguation: string | null;
+  area: string | null;
+  image: string | null;
+};
 export type Release = { title: string; date: string; live: boolean; type: string | null };
 
 export async function getCurrentUser(): Promise<User | null> {

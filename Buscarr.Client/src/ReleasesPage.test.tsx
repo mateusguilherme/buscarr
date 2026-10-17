@@ -76,6 +76,26 @@ describe('ReleasesPage', () => {
     expect(screen.getByRole('status').textContent).toBe('Carregando…');
   });
 
+  it('mostra a foto do artista pedido pelo id', async () => {
+    const photo = 'https://assets.fanart.tv/preview/music/abc-123/artistthumb/nirvana.jpg';
+    mockFetch({ status: 200, body: { ...nirvana, image: photo } }, { status: 200, body: nirvanaReleases });
+    renderReleasesPage();
+
+    const heading = await screen.findByRole('heading', { name: 'Nirvana' });
+
+    expect(heading.parentElement?.querySelector('img')?.getAttribute('src')).toBe(photo);
+  });
+
+  it('mostra a foto do artista que veio da busca', async () => {
+    const photo = 'https://assets.fanart.tv/preview/music/83048ffe/artistthumb/rancore.jpg';
+    mockFetch({ status: 200, body: [{ ...rancore[0], image: photo }] }, { status: 200, body: rancoreReleases });
+
+    await openArtistFromSearch();
+
+    const heading = screen.getByRole('heading', { name: 'Rancore' });
+    expect(heading.parentElement?.querySelector('img')?.getAttribute('src')).toBe(photo);
+  });
+
   it('usa o nome que veio da busca, sem pedir o artista', async () => {
     const fetchMock = mockFetch({ status: 200, body: rancore });
     fetchMock.mockReturnValueOnce(new Promise(() => {}));

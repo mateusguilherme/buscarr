@@ -74,6 +74,24 @@ describe('SearchPage', () => {
     expect(screen.getByText('3 artistas encontrados')).toBeDefined();
   });
 
+  it('mostra a foto de cada candidato que tem uma', async () => {
+    const photo = 'https://assets.fanart.tv/preview/music/e33ee038/artistthumb/rancore.jpg';
+    mockFetch({
+      status: 200,
+      body: [
+        { id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null, image: photo },
+        { id: '83048ffe', name: 'Rancore', disambiguation: null, area: null, image: null },
+      ],
+    });
+    renderSearchPage();
+
+    await search('rancore');
+
+    const [withPhoto, withoutPhoto] = await screen.findAllByRole('listitem');
+    expect(withPhoto.querySelector('img')?.getAttribute('src')).toBe(photo);
+    expect(withoutPhoto.querySelector('img')).toBeNull();
+  });
+
   it('conta um único candidato no singular', async () => {
     mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
     renderSearchPage();
