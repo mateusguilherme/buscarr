@@ -144,6 +144,84 @@ public class SlskdClientTests
         Assert.Equal(new SlskdFile(smells, 12_000_000, 320, null, 301), Assert.Single(response.Files));
     }
 
+    [Fact]
+    public async Task EnqueueDownloadsAsync_AsksThePeerForEachFileWithItsSize()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.Created));
+
+        await client.EnqueueDownloadsAsync(
+            "fulano de tal",
+            [
+                new SlskdFile(@"@@musica\Nevermind\01.mp3", 1_000, 320, null, 301),
+                new SlskdFile(@"@@musica\Nevermind\02.mp3", 2_000, 320, null, 303),
+            ]);
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body!);
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal($"{Url}/api/v0/transfers/downloads/fulano%20de%20tal", request.Uri.AbsoluteUri);
+        Assert.Equal(
+            [(@"@@musica\Nevermind\01.mp3", 1_000L), (@"@@musica\Nevermind\02.mp3", 2_000L)],
+            body.RootElement.EnumerateArray().Select(file =>
+                (file.GetProperty("filename").GetString(), file.GetProperty("size").GetInt64())));
+    }
+
+    [Fact]
+    public async Task EnqueueDownloadsAsync_ThrowsWhenSlskdCannotAskThePeer()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.EnqueueDownloadsAsync("fulano", [new SlskdFile("01.mp3", 1_000, 320, null, 301)]));
+    }
+
+    [Fact]
+    public async Task DownloadsAsync_ReadsEveryTransferFromThePeer()
+    {
+        var id = Guid.NewGuid();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(UserTransfers(
+            "fulano",
+            Transfer(id, @"@@musica\Nevermind\01.mp3", "Queued, Remotely", 1_000, 0, 7),
+            Transfer(Guid.NewGuid(), @"@@musica\Nevermind\02.mp3", "InProgress", 2_000, 500))));
+
+        var transfers = await client.DownloadsAsync("fulano");
+
+        Assert.Equal($"{Url}/api/v0/transfers/downloads/fulano", Assert.Single(handler.Requests).Uri.ToString());
+        Assert.Equal(new SlskdTransfer(id, @"@@musica\Nevermind\01.mp3", 1_000, "Queued, Remotely", 0, 7), transfers[0]);
+        Assert.Equal(
+            ("InProgress", 500L, (int?)null),
+            (transfers[1].State, transfers[1].BytesTransferred, transfers[1].PlaceInQueue));
+    }
+
+    [Fact]
+    public async Task DownloadsAsync_IsEmptyWhenNothingComesFromThePeer()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound));
+
+        Assert.Empty(await client.DownloadsAsync("fulano"));
+    }
+
+    [Fact]
+    public async Task CancelDownloadAsync_CancelsTheTransfer()
+    {
+        var id = Guid.NewGuid();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NoContent));
+
+        await client.CancelDownloadAsync("fulano", id);
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Delete, request.Method);
+        Assert.Equal($"{Url}/api/v0/transfers/downloads/fulano/{id}", request.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task CancelDownloadAsync_IgnoresATransferThatIsAlreadyGone()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound));
+
+        await client.CancelDownloadAsync("fulano", Guid.NewGuid());
+    }
+
     private static (SlskdClient Client, FakeHttpMessageHandler Handler) CreateClient(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
         string? url = Url,

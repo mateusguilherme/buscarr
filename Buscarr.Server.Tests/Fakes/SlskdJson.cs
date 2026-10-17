@@ -59,6 +59,36 @@ public static class SlskdJson
             code = 1,
         };
 
+    public static string UserTransfers(string username, params object[] transfers) =>
+        JsonSerializer.Serialize(new
+        {
+            username,
+            directories = new[]
+            {
+                new { directory = "@@musica\\Nirvana\\Nevermind", fileCount = transfers.Length, files = transfers },
+            },
+        });
+
+    public static object Transfer(
+        Guid id,
+        string filename,
+        string state,
+        long size = 8_000_000,
+        long bytesTransferred = 0,
+        int? placeInQueue = null) =>
+        new
+        {
+            id,
+            username = "",
+            direction = "Download",
+            filename,
+            size,
+            state,
+            bytesTransferred,
+            placeInQueue,
+            percentComplete = size == 0 ? 0 : 100.0 * bytesTransferred / size,
+        };
+
     public static object[] AlbumFiles(string directory, int tracks, int? bitRate = 320, string extension = "mp3") =>
         [.. Enumerable.Range(1, tracks).Select(track =>
             AudioFile($"{directory}\\{track:00} - Faixa {track}.{extension}", bitRate))];

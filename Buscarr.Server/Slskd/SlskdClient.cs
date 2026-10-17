@@ -16,6 +16,8 @@ public record SlskdResponse(
 
 public record SlskdFile(string Filename, long Size, int? BitRate, int? BitDepth, int? Length);
 
+public record SlskdTransfer(Guid Id, string Filename, long Size, string State, long BytesTransferred, int? PlaceInQueue);
+
 public sealed class SlskdClient(HttpClient http, string? url, string? apiKey)
 {
     private const string UserAgent = "buscarr/0.1.0";
@@ -57,6 +59,45 @@ public sealed class SlskdClient(HttpClient http, string? url, string? apiKey)
     public Task<List<SlskdResponse>> SearchResponsesAsync(Guid id) =>
         GetAsync<List<SlskdResponse>>($"searches/{id}/responses");
 
+    public async Task EnqueueDownloadsAsync(string username, IEnumerable<SlskdFile> files)
+    {
+        using var request = Request(HttpMethod.Post, Downloads(username));
+        request.Content = JsonContent.Create(files.Select(file => new { file.Filename, file.Size }));
+        using var response = await http.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<List<SlskdTransfer>> DownloadsAsync(string username)
+    {
+        using var request = Request(HttpMethod.Get, Downloads(username));
+        using var response = await http.SendAsync(request);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return [];
+        }
+
+        response.EnsureSuccessStatusCode();
+        var user = await response.Content.ReadFromJsonAsync<UserTransfers>()
+            ?? throw new JsonException("resposta vazia do slskd nas transferências");
+
+        return [.. user.Directories.SelectMany(directory => directory.Files)];
+    }
+
+    public async Task CancelDownloadAsync(string username, Guid id)
+    {
+        using var request = Request(HttpMethod.Delete, $"{Downloads(username)}/{id}");
+        using var response = await http.SendAsync(request);
+
+        if (response.StatusCode != HttpStatusCode.NotFound)
+        {
+            response.EnsureSuccessStatusCode();
+        }
+    }
+
+    private static string Downloads(string username) =>
+        $"transfers/downloads/{Uri.EscapeDataString(username)}";
+
     private async Task<T> GetAsync<T>(string path)
     {
         using var request = Request(HttpMethod.Get, path);
@@ -84,5 +125,15 @@ public sealed class SlskdClient(HttpClient http, string? url, string? apiKey)
     private sealed class ApplicationState
     {
         public required SlskdServerState Server { get; init; }
+    }
+
+    private sealed class UserTransfers
+    {
+        public List<TransferDirectory> Directories { get; init; } = [];
+    }
+
+    private sealed class TransferDirectory
+    {
+        public List<SlskdTransfer> Files { get; init; } = [];
     }
 }
