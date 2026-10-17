@@ -47,6 +47,7 @@ builder.Services.AddSingleton(services =>
 });
 builder.Services.AddSingleton<DownloadRunner>();
 builder.Services.AddScoped<SearchQueue>();
+builder.Services.AddScoped<ImportQueue>();
 builder.Services.AddHostedService<GeneratorWorker>();
 builder.Services.AddHostedService<SearchWorker>();
 builder.Services

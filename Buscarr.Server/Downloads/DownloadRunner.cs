@@ -32,6 +32,20 @@ public sealed class DownloadRunner(
         _ = RunAsync(requestId, folders, cancellation.Token);
     }
 
+    public void StartImport(int requestId)
+    {
+        var cancellation = new CancellationTokenSource();
+
+        if (!_running.TryAdd(requestId, cancellation))
+        {
+            cancellation.Dispose();
+
+            return;
+        }
+
+        _ = ReimportAsync(requestId, cancellation.Token);
+    }
+
     public void Cancel(int requestId)
     {
         if (_running.TryGetValue(requestId, out var cancellation))
@@ -58,12 +72,12 @@ public sealed class DownloadRunner(
                     new RowProgress(this, requestId),
                     verify,
                     cancellation);
-                Persist(requestId, request => Finish(request, result));
+                var importing = result.Outcome == AlbumDownloadOutcome.Downloaded && tracks is not null;
+                Persist(requestId, request => Finish(request, result, importing));
 
-                if (result.Outcome == AlbumDownloadOutcome.Downloaded && tracks is not null)
+                if (importing)
                 {
-                    Persist(requestId, request => request.State = DownloadState.Importing);
-                    var failure = await pipeline.ImportAsync(snapshot!, tracks, result.Folder!);
+                    var failure = await pipeline.ImportAsync(snapshot!, tracks!, result.Folder!);
                     Persist(requestId, request => FinishImport(request, failure));
                 }
             }
@@ -94,11 +108,53 @@ public sealed class DownloadRunner(
         }
     }
 
-    private void Finish(DownloadRequest request, AlbumDownloadResult result)
+    private async Task ReimportAsync(int requestId, CancellationToken cancellation)
+    {
+        try
+        {
+            await _slots.WaitAsync(cancellation);
+
+            try
+            {
+                var snapshot = await SnapshotAsync(requestId);
+
+                if (snapshot is null)
+                {
+                    return;
+                }
+
+                var tracks = await pipeline.TracksAsync(snapshot);
+                var failure = tracks is null ? "import-failed" : await pipeline.ReimportAsync(snapshot, tracks);
+                Persist(requestId, request => FinishImport(request, failure));
+            }
+            finally
+            {
+                _slots.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Persist(requestId, request => request.State = DownloadState.Cancelled);
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine($"erro ao importar o pedido {requestId}: {e.Message}");
+            Persist(requestId, request => request.State = DownloadState.Downloaded);
+        }
+        finally
+        {
+            if (_running.TryRemove(requestId, out var finished))
+            {
+                finished.Dispose();
+            }
+        }
+    }
+
+    private void Finish(DownloadRequest request, AlbumDownloadResult result, bool importing)
     {
         if (result.Outcome == AlbumDownloadOutcome.Downloaded)
         {
-            request.State = DownloadState.Downloaded;
+            request.State = importing ? DownloadState.Importing : DownloadState.Downloaded;
             request.Failure = null;
             request.Username = result.Folder!.Username;
             request.Directory = result.Folder.Directory;

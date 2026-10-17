@@ -44,9 +44,26 @@ public sealed class SearchWorker(
                 runner.Start(searched.RequestId, searched.Folders);
             }
 
+            int? import = null;
+
             try
             {
-                await Task.Delay(searched is null ? IdleWait : BetweenSearches, time, stoppingToken);
+                using var scope = scopes.CreateScope();
+                import = await scope.ServiceProvider.GetRequiredService<ImportQueue>().ClaimNextAsync();
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"erro na fila de importação: {e.Message}");
+            }
+
+            if (import is { } requestId)
+            {
+                runner.StartImport(requestId);
+            }
+
+            try
+            {
+                await Task.Delay(searched is null && import is null ? IdleWait : BetweenSearches, time, stoppingToken);
             }
             catch (OperationCanceledException)
             {

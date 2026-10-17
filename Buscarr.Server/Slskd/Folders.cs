@@ -29,6 +29,18 @@ public static class Folders
         return [.. inQuality, .. toTranscode];
     }
 
+    public static bool IsAudioFile(string path) => AudioExtensions.Contains(Extension(path));
+
+    public static bool IsLosslessFile(string path) => LosslessExtensions.Contains(Extension(path));
+
+    public static bool MatchesQuality(string path, string quality) =>
+        quality switch
+        {
+            Qualities.Mp3320 => Extension(path) == ".mp3",
+            Qualities.Flac => Extension(path) == ".flac",
+            _ => false,
+        };
+
     private static bool IsIn(SlskdFile file, string quality) =>
         quality switch
         {

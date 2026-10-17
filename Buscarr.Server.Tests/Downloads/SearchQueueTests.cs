@@ -177,6 +177,7 @@ public sealed class SearchQueueTests : IDisposable
         var searching = await AddRequestAsync(releaseGroupId: "g1", state: DownloadState.Searching, nextAttemptIn: TimeSpan.FromDays(1));
         var downloading = await AddRequestAsync(releaseGroupId: "g2", state: DownloadState.Downloading, nextAttemptIn: TimeSpan.FromDays(1));
         var downloaded = await AddRequestAsync(releaseGroupId: "g3", state: DownloadState.Downloaded);
+        var importing = await AddRequestAsync(releaseGroupId: "g4", state: DownloadState.Importing);
 
         await _queue.RecoverAsync();
 
@@ -185,6 +186,7 @@ public sealed class SearchQueueTests : IDisposable
         Assert.Equal(_time.GetUtcNow(), searching.NextAttemptAt);
         Assert.Equal(_time.GetUtcNow(), downloading.NextAttemptAt);
         Assert.Equal(DownloadState.Downloaded, downloaded.State);
+        Assert.Equal(DownloadState.Downloaded, importing.State);
     }
 
     private async Task<DownloadRequest> AddRequestAsync(

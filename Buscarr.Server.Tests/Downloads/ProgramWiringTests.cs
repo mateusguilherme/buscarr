@@ -20,6 +20,7 @@ public class ProgramWiringTests(BuscarrApiFactory factory) : IClassFixture<Busca
         using var scope = factory.Services.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<SearchQueue>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<ImportQueue>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RequestGenerator>());
     }
 

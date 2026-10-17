@@ -21,6 +21,15 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
             request.NextAttemptAt = now;
         }
 
+        var importing = await db.DownloadRequests
+            .Where(r => r.State == DownloadState.Importing)
+            .ToListAsync();
+
+        foreach (var request in importing)
+        {
+            request.State = DownloadState.Downloaded;
+        }
+
         await db.SaveChangesAsync();
     }
 

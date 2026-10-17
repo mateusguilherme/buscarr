@@ -162,12 +162,87 @@ public sealed class ImportPipelineTests : IDisposable
         Assert.Equal("transcode-failed", (await RequestAsync(request.Id)).Failure);
     }
 
-    private async Task<DownloadRequest> AddRequestAsync()
+    [Fact]
+    public async Task StartImport_ImportsARequestThatStayedDownloaded()
+    {
+        var request = await AddRequestAsync(DownloadState.Downloaded, @"@@fulano\Nirvana\Nevermind");
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+        _tools.GoodMp3(Path.Combine(local, "01.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "02.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "03.mp3"), 0.1);
+
+        _runner.StartImport(request.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var album = Path.Combine(_library, "Nirvana", "Nevermind");
+        Assert.Equal(
+            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3"],
+            Directory.GetFiles(album).Select(Path.GetFileName).Order());
+        Assert.False(Directory.Exists(local));
+        Assert.Null((await RequestAsync(request.Id)).Failure);
+    }
+
+    [Fact]
+    public async Task StartImport_VerifiesTheAudioAgainAndQuarantinesWhatFails()
+    {
+        var request = await AddRequestAsync(DownloadState.Downloaded, @"@@fulano\Nirvana\Nevermind");
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+
+        foreach (var file in Directory.GetFiles(local))
+        {
+            _tools.Probe(file, new AudioProbe("mp3", 320_000, 44_100, null, 0.1));
+            _tools.Levels(file, new SpectralLevels(-20, -80, -95, -100));
+        }
+
+        _runner.StartImport(request.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("fake-audio", (await RequestAsync(request.Id)).Failure);
+        Assert.False(Directory.Exists(local));
+        Assert.Single(Directory.GetDirectories(_rejected));
+        Assert.Empty(Directory.GetDirectories(_library));
+    }
+
+    [Fact]
+    public async Task StartImport_SeesThatALosslessFolderNeedsTranscoding()
+    {
+        var request = await AddRequestAsync(DownloadState.Downloaded, @"@@fulano\Nirvana\Nevermind");
+        var local = StageLocalFolder("silence.flac", ".flac");
+
+        foreach (var file in Directory.GetFiles(local))
+        {
+            _tools.GoodFlac(file, 0.1);
+        }
+
+        _tools.TranscodeFails = true;
+
+        _runner.StartImport(request.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("transcode-failed", (await RequestAsync(request.Id)).Failure);
+        Assert.NotEmpty(_tools.Transcoded);
+    }
+
+    [Fact]
+    public async Task StartImport_FailsWhenTheDownloadedFolderIsGone()
+    {
+        var request = await AddRequestAsync(DownloadState.Downloaded, @"@@fulano\Nirvana\Nevermind");
+
+        _runner.StartImport(request.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("missing-files", (await RequestAsync(request.Id)).Failure);
+    }
+
+    private async Task<DownloadRequest> AddRequestAsync(
+        DownloadState state = DownloadState.Downloading,
+        string? directory = null)
     {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
         var request = DownloadRequestTests.Request("g1", trackCount: 3);
-        request.State = DownloadState.Downloading;
+        request.State = state;
+        request.Directory = directory;
         db.DownloadRequests.Add(request);
         await db.SaveChangesAsync();
 

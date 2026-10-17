@@ -60,9 +60,44 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
             return "missing-files";
         }
 
-        var files = local.Value.Files.OrderBy(Path.GetFileName, NaturalOrder.Instance).ToList();
+        return await ImportFilesAsync(request, tracks, local.Value.Directory, local.Value.Files, folder.NeedsTranscode);
+    }
 
-        if (folder.NeedsTranscode)
+    public async Task<string?> ReimportAsync(DownloadRequest request, EditionTracks tracks)
+    {
+        var directory = Path.Combine(Options.DownloadsPath!, Name(request.Directory ?? ""));
+
+        if (request.Directory is null || !Directory.Exists(directory))
+        {
+            return "missing-files";
+        }
+
+        var files = Directory.EnumerateFiles(directory).Where(Folders.IsAudioFile).ToList();
+        var needsTranscode =
+            !files.All(file => Folders.MatchesQuality(file, request.Quality))
+            && files.All(Folders.IsLosslessFile);
+        var reason = await _verifier.VerifyAsync(files, tracks.Tracks, request.Quality, needsTranscode);
+
+        if (reason is not null)
+        {
+            Quarantine(directory, request, reason);
+
+            return reason;
+        }
+
+        return await ImportFilesAsync(request, tracks, directory, files, needsTranscode);
+    }
+
+    private async Task<string?> ImportFilesAsync(
+        DownloadRequest request,
+        EditionTracks tracks,
+        string directory,
+        List<string> sources,
+        bool needsTranscode)
+    {
+        var files = sources.OrderBy(Path.GetFileName, NaturalOrder.Instance).ToList();
+
+        if (needsTranscode)
         {
             files = await _transcoder.ToMp3Async(files) ?? [];
 
@@ -94,7 +129,7 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
                 request.Title,
                 request.Type,
                 [.. files.Select((file, i) => new ImportFile(file, tracks.Tracks[i].Position, tracks.Tracks[i].Title))]);
-            Directory.Delete(local.Value.Directory, true);
+            Directory.Delete(directory, true);
 
             return null;
         }
