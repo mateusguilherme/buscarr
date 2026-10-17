@@ -26,6 +26,12 @@ builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
 builder.Services.AddSingleton<GeneratorTrigger>();
 builder.Services.AddScoped<RequestGenerator>();
+builder.Services.AddSingleton<AlbumSearch>();
+builder.Services.AddSingleton<AlbumDownload>();
+builder.Services.AddSingleton<DownloadRunner>();
+builder.Services.AddScoped<SearchQueue>();
+builder.Services.AddHostedService<GeneratorWorker>();
+builder.Services.AddHostedService<SearchWorker>();
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

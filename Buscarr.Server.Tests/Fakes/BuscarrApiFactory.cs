@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Web;
 using Buscarr.Server.Data;
+using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
@@ -65,6 +66,13 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<FanartTvClient>();
             services.AddSingleton(new FanartTvClient(new HttpClient(FanartTv), "chave-de-teste"));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
+
+            foreach (var worker in services
+                .Where(s => s.ImplementationType == typeof(GeneratorWorker) || s.ImplementationType == typeof(SearchWorker))
+                .ToList())
+            {
+                services.Remove(worker);
+            }
         });
     }
 
