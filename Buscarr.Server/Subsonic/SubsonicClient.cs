@@ -2,18 +2,28 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Buscarr.Server.Settings;
 
 namespace Buscarr.Server.Subsonic;
 
 public record SubsonicAlbum(string Id, string Name, string Artist, int SongCount, string? MusicBrainzId);
 
-public sealed class SubsonicClient(HttpClient http, string? url, string? user, string? password)
+public sealed class SubsonicClient(HttpClient http, Func<ServerSettings> settings)
 {
     private const string UserAgent = "buscarr/0.1.0";
     private const int PageSize = 500;
 
-    public bool IsConfigured =>
-        !string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(password);
+    public SubsonicClient(HttpClient http, string? url, string? user, string? password)
+        : this(http, () => new ServerSettings { SubsonicUrl = url, SubsonicUser = user, SubsonicPassword = password })
+    {
+    }
+
+    public bool IsConfigured => IsComplete(settings());
+
+    public async Task PingAsync()
+    {
+        await GetAsync("ping", []);
+    }
 
     public async Task<List<SubsonicAlbum>> AlbumsAsync()
     {
@@ -38,19 +48,21 @@ public sealed class SubsonicClient(HttpClient http, string? url, string? user, s
 
     private async Task<SubsonicBody> GetAsync(string path, IEnumerable<(string Key, string Value)> parameters)
     {
-        if (!IsConfigured)
+        var current = settings();
+
+        if (!IsComplete(current))
         {
             throw new InvalidOperationException("servidor de música sem endereço, usuário ou senha");
         }
 
         var salt = RandomNumberGenerator.GetHexString(16, lowercase: true);
-        var token = Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(password + salt)));
+        var token = Convert.ToHexStringLower(MD5.HashData(Encoding.UTF8.GetBytes(current.SubsonicPassword + salt)));
         var query = string.Join(
             "&",
             parameters
                 .Concat(
                 [
-                    (Key: "u", Value: user!),
+                    (Key: "u", Value: current.SubsonicUser!),
                     (Key: "t", Value: token),
                     (Key: "s", Value: salt),
                     (Key: "v", Value: "1.16.1"),
@@ -58,7 +70,7 @@ public sealed class SubsonicClient(HttpClient http, string? url, string? user, s
                     (Key: "f", Value: "json"),
                 ])
                 .Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"{url!.TrimEnd('/')}/rest/{path}?{query}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{current.SubsonicUrl!.TrimEnd('/')}/rest/{path}?{query}");
         request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
         using var response = await http.SendAsync(request);
         response.EnsureSuccessStatusCode();
@@ -74,6 +86,11 @@ public sealed class SubsonicClient(HttpClient http, string? url, string? user, s
 
         return body;
     }
+
+    private static bool IsComplete(ServerSettings current) =>
+        !string.IsNullOrEmpty(current.SubsonicUrl)
+        && !string.IsNullOrEmpty(current.SubsonicUser)
+        && !string.IsNullOrEmpty(current.SubsonicPassword);
 
     private sealed class SubsonicEnvelope
     {

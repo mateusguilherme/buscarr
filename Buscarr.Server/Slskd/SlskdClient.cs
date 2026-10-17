@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Buscarr.Server.Settings;
 
 namespace Buscarr.Server.Slskd;
 
@@ -18,15 +19,21 @@ public record SlskdFile(string Filename, long Size, int? BitRate, int? BitDepth,
 
 public record SlskdTransfer(Guid Id, string Filename, long Size, string State, long BytesTransferred, int? PlaceInQueue);
 
-public sealed class SlskdClient(HttpClient http, string? url, string? apiKey)
+public sealed class SlskdClient(HttpClient http, Func<ServerSettings> settings)
 {
     private const string UserAgent = "buscarr/0.1.0";
 
-    private bool IsConfigured => !string.IsNullOrEmpty(url) && !string.IsNullOrEmpty(apiKey);
+    public SlskdClient(HttpClient http, string? url, string? apiKey)
+        : this(http, () => new ServerSettings { SlskdUrl = url, SlskdApiKey = apiKey })
+    {
+    }
+
+    private static bool IsConfigured(ServerSettings current) =>
+        !string.IsNullOrEmpty(current.SlskdUrl) && !string.IsNullOrEmpty(current.SlskdApiKey);
 
     public async Task<SlskdServerState?> ServerStateAsync()
     {
-        if (!IsConfigured)
+        if (!IsConfigured(settings()))
         {
             return null;
         }
@@ -110,14 +117,16 @@ public sealed class SlskdClient(HttpClient http, string? url, string? apiKey)
 
     private HttpRequestMessage Request(HttpMethod method, string path)
     {
-        if (!IsConfigured)
+        var current = settings();
+
+        if (!IsConfigured(current))
         {
             throw new InvalidOperationException("slskd sem endereço ou chave de API");
         }
 
-        var request = new HttpRequestMessage(method, $"{url!.TrimEnd('/')}/api/v0/{path}");
+        var request = new HttpRequestMessage(method, $"{current.SlskdUrl!.TrimEnd('/')}/api/v0/{path}");
         request.Headers.TryAddWithoutValidation("User-Agent", UserAgent);
-        request.Headers.TryAddWithoutValidation("X-API-Key", apiKey);
+        request.Headers.TryAddWithoutValidation("X-API-Key", current.SlskdApiKey);
 
         return request;
     }

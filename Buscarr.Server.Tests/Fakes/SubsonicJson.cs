@@ -6,6 +6,9 @@ public static class SubsonicJson
         @"{""subsonic-response"":{""status"":""ok"",""version"":""1.16.1"",""type"":""navidrome"",""openSubsonic"":true,"
         + @"""albumList2"":{""album"":[" + string.Join(",", albums) + "]}}}";
 
+    public static string Ok() =>
+        @"{""subsonic-response"":{""status"":""ok"",""version"":""1.16.1""}}";
+
     public static string EmptyAlbumList() =>
         @"{""subsonic-response"":{""status"":""ok"",""version"":""1.16.1"",""albumList2"":{}}}";
 

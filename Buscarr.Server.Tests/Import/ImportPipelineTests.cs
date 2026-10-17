@@ -69,7 +69,7 @@ public sealed class ImportPipelineTests : IDisposable
             pipeline,
             new Notifier(
                 new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(System.Net.HttpStatusCode.OK))),
-                null));
+                (string?)null));
     }
 
     public void Dispose()
@@ -77,6 +77,22 @@ public sealed class ImportPipelineTests : IDisposable
         _provider.Dispose();
         SqliteConnection.ClearAllPools();
         Directory.Delete(_root, true);
+    }
+
+    [Fact]
+    public void Enabled_FollowsTheCurrentSettings()
+    {
+        var options = new ImportOptions(null, null, null);
+        var pipeline = new ImportPipeline(
+            new MusicBrainzClient(new HttpClient(), _time),
+            new FakeAudioTools(),
+            () => options);
+
+        Assert.False(pipeline.Enabled);
+
+        options = new ImportOptions(_library, _downloads, null);
+
+        Assert.True(pipeline.Enabled);
     }
 
     [Fact]

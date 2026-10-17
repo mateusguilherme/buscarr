@@ -1,3 +1,4 @@
+using Buscarr.Server.Settings;
 using System.Net;
 using System.Web;
 using Buscarr.Server.FanartTv;
@@ -90,6 +91,20 @@ public class FanartTvClientTests
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => client.ArtistImageAsync(NirvanaId));
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_ReadsTheApiKeyFromTheCurrentSettings()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
+        var settings = new ServerSettings();
+        var client = new FanartTvClient(new HttpClient(handler), () => settings);
+
+        await client.ArtistImageAsync(NirvanaId);
+        settings = new ServerSettings { FanartTvApiKey = "outra-chave" };
+        await client.ArtistImageAsync(NirvanaId);
+
+        Assert.Equal("outra-chave", HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query)["api_key"]);
     }
 
     private static (FanartTvClient Client, FakeHttpMessageHandler Handler) CreateClient(

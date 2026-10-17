@@ -1,5 +1,6 @@
 using System.Net;
 using Buscarr.Server.Downloads;
+using Buscarr.Server.Settings;
 using Buscarr.Server.Tests.Fakes;
 
 namespace Buscarr.Server.Tests.Downloads;
@@ -24,11 +25,25 @@ public sealed class NotifierTests
     public async Task NotifyAsync_DoesNothingWithoutATopic()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.OK));
-        var notifier = new Notifier(new HttpClient(handler), null);
+        var notifier = new Notifier(new HttpClient(handler), (string?)null);
 
         await notifier.NotifyAsync("qualquer coisa");
 
         Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task NotifyAsync_ReadsTheTopicFromTheCurrentSettings()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.OK));
+        var settings = new ServerSettings();
+        var notifier = new Notifier(new HttpClient(handler), () => settings);
+
+        await notifier.NotifyAsync("antes");
+        settings = new ServerSettings { NtfyUrl = "https://ntfy.exemplo.com/buscarr" };
+        await notifier.NotifyAsync("depois");
+
+        Assert.Equal("depois", Assert.Single(handler.Requests).Body);
     }
 
     [Fact]

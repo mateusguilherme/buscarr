@@ -162,7 +162,7 @@ public sealed class DownloadRunnerTests : IDisposable
             new AlbumDownload(client, _time),
             _time,
             DisabledPipeline(),
-            new Notifier(new HttpClient(_ntfy), null));
+            new Notifier(new HttpClient(_ntfy), (string?)null));
         var request = await AddRequestAsync("g1");
 
         runner.Start(request.Id, [Folder("fulano")]);

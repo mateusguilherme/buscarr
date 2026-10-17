@@ -2,15 +2,23 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Buscarr.Server.Settings;
 
 namespace Buscarr.Server.FanartTv;
 
-public sealed partial class FanartTvClient(HttpClient http, string? apiKey)
+public sealed partial class FanartTvClient(HttpClient http, Func<ServerSettings> settings)
 {
     private const string UserAgent = "buscarr/0.1.0";
 
+    public FanartTvClient(HttpClient http, string? apiKey)
+        : this(http, () => new ServerSettings { FanartTvApiKey = apiKey })
+    {
+    }
+
     public async Task<string?> ArtistImageAsync(string musicBrainzId)
     {
+        var apiKey = settings().FanartTvApiKey;
+
         if (string.IsNullOrEmpty(apiKey) || !Guid.TryParseExact(musicBrainzId, "D", out _))
         {
             return null;

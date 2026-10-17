@@ -1,3 +1,4 @@
+using Buscarr.Server.Settings;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -113,6 +114,42 @@ public class SubsonicClientTests
         var client = new SubsonicClient(new HttpClient(), null, null, null);
 
         await Assert.ThrowsAsync<InvalidOperationException>(client.AlbumsAsync);
+    }
+
+    [Fact]
+    public async Task PingAsync_ChecksTheCredentials()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Ok()));
+
+        await client.PingAsync();
+
+        Assert.StartsWith($"{Url}/rest/ping?", Assert.Single(handler.Requests).Uri.ToString());
+    }
+
+    [Fact]
+    public async Task PingAsync_ThrowsWithTheServersMessageWhenItFails()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Failed("Wrong username or password")));
+
+        var error = await Assert.ThrowsAsync<HttpRequestException>(client.PingAsync);
+
+        Assert.Contains("Wrong username or password", error.Message);
+    }
+
+    [Fact]
+    public async Task ReadsTheSettingsOnEveryCall()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Ok()));
+        var settings = new ServerSettings();
+        var client = new SubsonicClient(new HttpClient(handler), () => settings);
+
+        Assert.False(client.IsConfigured);
+
+        settings = new ServerSettings { SubsonicUrl = Url, SubsonicUser = User, SubsonicPassword = Password };
+        await client.PingAsync();
+
+        Assert.True(client.IsConfigured);
+        Assert.StartsWith($"{Url}/rest/ping?", Assert.Single(handler.Requests).Uri.ToString());
     }
 
     private static (SubsonicClient Client, FakeHttpMessageHandler Handler) CreateClient(

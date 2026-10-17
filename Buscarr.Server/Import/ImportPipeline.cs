@@ -4,14 +4,21 @@ using Buscarr.Server.Slskd;
 
 namespace Buscarr.Server.Import;
 
-public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, ImportOptions options)
+public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, Func<ImportOptions> currentOptions)
 {
     private readonly AlbumVerifier _verifier = new(tools);
     private readonly Transcoder _transcoder = new(tools);
     private readonly Tagger _tagger = new();
     private readonly LibraryImporter _importer = new();
 
-    public bool Enabled => options.Enabled;
+    public ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, ImportOptions options)
+        : this(musicBrainz, tools, () => options)
+    {
+    }
+
+    public bool Enabled => Options.Enabled;
+
+    private ImportOptions Options => currentOptions();
 
     public async Task<EditionTracks?> TracksAsync(DownloadRequest request)
     {
@@ -82,7 +89,7 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
             }
 
             _importer.Import(
-                options.LibraryPath!,
+                Options.LibraryPath!,
                 request.ArtistName,
                 request.Title,
                 request.Type,
@@ -102,7 +109,7 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
     private (string Directory, List<string> Files)? Resolve(SoulseekFolder folder)
     {
         var names = folder.Files.Select(file => Name(file.Filename)).ToList();
-        var candidate = Path.Combine(options.DownloadsPath!, Name(folder.Directory));
+        var candidate = Path.Combine(Options.DownloadsPath!, Name(folder.Directory));
 
         foreach (var directory in Candidates(candidate))
         {
@@ -124,7 +131,7 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
             yield return first;
         }
 
-        foreach (var directory in Directory.EnumerateDirectories(options.DownloadsPath!, "*", SearchOption.AllDirectories))
+        foreach (var directory in Directory.EnumerateDirectories(Options.DownloadsPath!, "*", SearchOption.AllDirectories))
         {
             if (directory != first)
             {
@@ -137,8 +144,8 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
     {
         try
         {
-            Directory.CreateDirectory(options.Rejected);
-            var target = Path.Combine(options.Rejected, $"{Path.GetFileName(directory)}-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Options.Rejected);
+            var target = Path.Combine(Options.Rejected, $"{Path.GetFileName(directory)}-{Guid.NewGuid():N}");
             Directory.Move(directory, target);
             File.WriteAllText(
                 $"{target}.reason.txt",

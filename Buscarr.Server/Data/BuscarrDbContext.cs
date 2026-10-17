@@ -1,5 +1,6 @@
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Lists;
+using Buscarr.Server.Settings;
 using Buscarr.Server.Users;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,8 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
     public DbSet<ListedArtist> ListedArtists => Set<ListedArtist>();
 
     public DbSet<DownloadRequest> DownloadRequests => Set<DownloadRequest>();
+
+    public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +36,12 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             request.Property(r => r.NextAttemptAt).HasConversion(
                 value => value.ToUnixTimeMilliseconds(),
                 value => DateTimeOffset.FromUnixTimeMilliseconds(value));
+        });
+
+        modelBuilder.Entity<ServerSettings>(settings =>
+        {
+            settings.Property(s => s.Id).ValueGeneratedNever();
+            settings.Ignore(s => s.Import);
         });
     }
 }

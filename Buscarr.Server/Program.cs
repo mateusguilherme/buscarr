@@ -5,6 +5,7 @@ using Buscarr.Server.FanartTv;
 using Buscarr.Server.Import;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
 using Buscarr.Server.Subsonic;
 using Buscarr.Server.Users;
@@ -15,18 +16,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new MusicBrainzClient(new HttpClient(), TimeProvider.System));
-builder.Services.AddSingleton(new FanartTvClient(
+builder.Services.AddSingleton<ServerSettingsStore>();
+builder.Services.AddSingleton(services => new FanartTvClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(5) },
-    builder.Configuration["FanartTv:ApiKey"]));
-builder.Services.AddSingleton(new SlskdClient(
+    CurrentSettings(services)));
+builder.Services.AddSingleton(services => new SlskdClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-    builder.Configuration["Slskd:Url"],
-    builder.Configuration["Slskd:ApiKey"]));
-builder.Services.AddSingleton(new SubsonicClient(
+    CurrentSettings(services)));
+builder.Services.AddSingleton(services => new SubsonicClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-    builder.Configuration["Subsonic:Url"],
-    builder.Configuration["Subsonic:User"],
-    builder.Configuration["Subsonic:Password"]));
+    CurrentSettings(services)));
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();
@@ -37,14 +36,18 @@ builder.Services.AddScoped<RequestGenerator>();
 builder.Services.AddSingleton<AlbumSearch>();
 builder.Services.AddSingleton<AlbumDownload>();
 builder.Services.AddSingleton<AudioTools>(new FfmpegAudioTools());
-builder.Services.AddSingleton(new ImportOptions(
-    builder.Configuration["Library:Path"],
-    builder.Configuration["Slskd:DownloadsPath"],
-    builder.Configuration["Library:RejectedPath"]));
-builder.Services.AddSingleton<ImportPipeline>();
-builder.Services.AddSingleton(new Notifier(
+builder.Services.AddSingleton(services =>
+{
+    var settings = CurrentSettings(services);
+
+    return new ImportPipeline(
+        services.GetRequiredService<MusicBrainzClient>(),
+        services.GetRequiredService<AudioTools>(),
+        () => settings().Import);
+});
+builder.Services.AddSingleton(services => new Notifier(
     new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-    builder.Configuration["Ntfy:Url"]));
+    CurrentSettings(services)));
 builder.Services.AddSingleton<DownloadRunner>();
 builder.Services.AddScoped<SearchQueue>();
 builder.Services.AddHostedService<GeneratorWorker>();
@@ -67,8 +70,10 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<BuscarrDbContext>().Database.Migrate();
+    var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+    db.Database.Migrate();
     await scope.ServiceProvider.GetRequiredService<UserStore>().EnsureAdminAsync();
+    await app.Services.GetRequiredService<ServerSettingsStore>().LoadAsync(db, app.Configuration);
 }
 
 app.UseStaticFiles();
@@ -87,3 +92,10 @@ app.MapFallbackToFile("index.html");
 var url = builder.Configuration["urls"] ?? "http://127.0.0.1:3000";
 app.Lifetime.ApplicationStarted.Register(() => Console.WriteLine($"Buscarr.Server rodando em {url}"));
 app.Run(url);
+
+static Func<ServerSettings> CurrentSettings(IServiceProvider services)
+{
+    var store = services.GetRequiredService<ServerSettingsStore>();
+
+    return () => store.Current;
+}

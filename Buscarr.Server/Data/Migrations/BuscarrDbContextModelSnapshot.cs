@@ -126,6 +126,46 @@ namespace Buscarr.Server.Data.Migrations
                     b.ToTable("ListedArtists");
                 });
 
+            modelBuilder.Entity("Buscarr.Server.Settings.ServerSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DownloadsPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FanartTvApiKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LibraryPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NtfyUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RejectedPath")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SlskdApiKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SlskdUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubsonicPassword")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubsonicUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubsonicUser")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServerSettings");
+                });
+
             modelBuilder.Entity("Buscarr.Server.Users.User", b =>
                 {
                     b.Property<int>("Id")

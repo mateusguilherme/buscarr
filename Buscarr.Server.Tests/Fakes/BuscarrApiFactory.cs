@@ -61,6 +61,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.UseEnvironment("Testing");
         builder.UseSetting("hostBuilder:reloadConfigOnChange", "false");
         builder.ConfigureTestServices(services =>
         {

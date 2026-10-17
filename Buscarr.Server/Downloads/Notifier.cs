@@ -1,9 +1,18 @@
+using Buscarr.Server.Settings;
+
 namespace Buscarr.Server.Downloads;
 
-public sealed class Notifier(HttpClient http, string? url)
+public sealed class Notifier(HttpClient http, Func<ServerSettings> settings)
 {
+    public Notifier(HttpClient http, string? url)
+        : this(http, () => new ServerSettings { NtfyUrl = url })
+    {
+    }
+
     public async Task NotifyAsync(string message)
     {
+        var url = settings().NtfyUrl;
+
         if (string.IsNullOrEmpty(url))
         {
             return;

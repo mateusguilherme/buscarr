@@ -1,3 +1,4 @@
+using Buscarr.Server.Settings;
 using System.Net;
 using System.Text.Json;
 using Buscarr.Server.Slskd;
@@ -220,6 +221,21 @@ public class SlskdClientTests
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound));
 
         await client.CancelDownloadAsync("fulano", Guid.NewGuid());
+    }
+
+    [Fact]
+    public async Task ReadsTheSettingsOnEveryCall()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Application(true, true)));
+        var settings = new ServerSettings { SlskdUrl = Url, SlskdApiKey = ApiKey };
+        var client = new SlskdClient(new HttpClient(handler), () => settings);
+
+        await client.ServerStateAsync();
+        settings = new ServerSettings { SlskdUrl = "http://outro:5030", SlskdApiKey = "outra-chave" };
+        await client.ServerStateAsync();
+
+        Assert.Equal("http://outro:5030/api/v0/application", handler.Requests[1].Uri.ToString());
+        Assert.Equal("outra-chave", handler.Requests[1].Headers["X-API-Key"]);
     }
 
     private static (SlskdClient Client, FakeHttpMessageHandler Handler) CreateClient(
