@@ -1,3 +1,5 @@
+import { locale } from './i18n';
+
 const codes = [
   'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW',
   'AX', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN',
@@ -19,8 +21,8 @@ const codes = [
   'VG', 'VI', 'VN', 'VU', 'WF', 'WS', 'XK', 'YE', 'YT', 'ZA', 'ZM', 'ZW',
 ];
 
-const names = new Intl.DisplayNames(['pt-BR'], { type: 'region' });
+const names = new Intl.DisplayNames([locale], { type: 'region' });
 
 export const countries = codes
   .map((code) => ({ code, name: names.of(code) ?? code }))
-  .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  .sort((a, b) => a.name.localeCompare(b.name, locale));

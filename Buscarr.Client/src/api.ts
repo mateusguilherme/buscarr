@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 export type User = { email: string; name: string };
 export type Artist = { id: string; name: string };
 export type Release = { title: string; date: string; live: boolean };
@@ -11,7 +13,7 @@ export async function getCurrentUser(): Promise<User | null> {
   }
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} ao carregar o usuário.`);
+    throw new Error(t.api.loadUserError(res.status));
   }
 
   return res.json();
@@ -21,11 +23,11 @@ export async function login(email: string, password: string): Promise<User> {
   const res = await postJson('/api/auth/login', { email, password });
 
   if (res.status === 401) {
-    throw new Error('E-mail ou senha incorretos.');
+    throw new Error(t.api.wrongCredentials);
   }
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} ao entrar.`);
+    throw new Error(t.api.loginError(res.status));
   }
 
   return res.json();
@@ -35,15 +37,15 @@ export async function register(email: string, name: string, password: string): P
   const res = await postJson('/api/auth/register', { email, name, password });
 
   if (res.status === 409) {
-    throw new Error('Já existe um usuário com esse e-mail.');
+    throw new Error(t.api.emailTaken);
   }
 
   if (res.status === 400) {
-    throw new Error('Preencha todos os campos. A senha precisa ter pelo menos 8 caracteres.');
+    throw new Error(t.api.invalidRegistration);
   }
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} ao criar o usuário.`);
+    throw new Error(t.api.registerError(res.status));
   }
 
   return res.json();
@@ -53,7 +55,7 @@ export async function logout(): Promise<void> {
   const res = await fetch('/api/auth/logout', { method: 'POST' });
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} ao sair.`);
+    throw new Error(t.api.logoutError(res.status));
   }
 }
 
@@ -74,7 +76,7 @@ export async function findArtist(query: string, country?: string): Promise<Artis
   }
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} na busca.`);
+    throw new Error(t.api.searchError(res.status));
   }
 
   return res.json();
@@ -86,7 +88,7 @@ export async function getArtistReleases(id: string, type: string): Promise<Artis
   );
 
   if (!res.ok) {
-    throw new Error(`Erro ${res.status} ao carregar os releases.`);
+    throw new Error(t.api.releasesError(res.status));
   }
 
   return res.json();

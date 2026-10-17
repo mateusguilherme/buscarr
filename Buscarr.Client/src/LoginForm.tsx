@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { login, register, type User } from './api';
+import { t } from './i18n';
 
 export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
   const [creating, setCreating] = useState(false);
@@ -30,7 +31,7 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
       <p>
         <input
           type="email"
-          placeholder="E-mail"
+          placeholder={t.login.email}
           required
           autoFocus
           autoComplete="email"
@@ -41,7 +42,7 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
       {creating && (
         <p>
           <input
-            placeholder="Nome"
+            placeholder={t.login.name}
             required
             autoComplete="name"
             value={name}
@@ -52,7 +53,7 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
       <p>
         <input
           type="password"
-          placeholder="Senha"
+          placeholder={t.login.password}
           required
           minLength={creating ? 8 : undefined}
           autoComplete={creating ? 'new-password' : 'current-password'}
@@ -60,9 +61,9 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
           onChange={(e) => setPassword(e.target.value)}
         />
       </p>
-      <button>{creating ? 'Criar usuário' : 'Entrar'}</button>{' '}
+      <button>{creating ? t.login.createUser : t.login.signIn}</button>{' '}
       <button type="button" onClick={toggleMode}>
-        {creating ? 'Já tenho usuário' : 'Criar usuário'}
+        {creating ? t.login.haveUser : t.login.createUser}
       </button>
       {error && <p>{error}</p>}
     </form>

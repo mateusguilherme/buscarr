@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { getArtistReleases, type ArtistReleases, type Release } from './api';
+import { t } from './i18n';
 
 const releaseTypes = [
-  { value: 'album', label: 'Álbuns' },
-  { value: 'ep', label: 'EPs' },
-  { value: 'single', label: 'Singles' },
-  { value: 'all', label: 'Todos' },
+  { value: 'album', label: t.releases.albums },
+  { value: 'ep', label: t.releases.eps },
+  { value: 'single', label: t.releases.singles },
+  { value: 'all', label: t.releases.all },
 ];
 
 export function ReleasesPage() {
@@ -46,7 +47,7 @@ export function ReleasesPage() {
   return (
     <>
       <p>
-        <Link to="/">Voltar</Link>
+        <Link to="/">{t.releases.back}</Link>
       </p>
       {data && <h1>{data.name}</h1>}
       <select value={type} onChange={(e) => setSearchParams({ type: e.target.value })}>
@@ -58,12 +59,12 @@ export function ReleasesPage() {
       </select>
 
       {error && <p>{error}</p>}
-      {!data && !error && <p>Carregando…</p>}
-      {data && data.releases.length === 0 && <p>Nenhum release oficial encontrado.</p>}
+      {!data && !error && <p>{t.releases.loading}</p>}
+      {data && data.releases.length === 0 && <p>{t.releases.empty}</p>}
       {data && (
         <>
-          <ReleaseSection title="Estúdio" releases={data.releases.filter((r) => !r.live)} />
-          <ReleaseSection title="Ao vivo" releases={data.releases.filter((r) => r.live)} />
+          <ReleaseSection title={t.releases.studio} releases={data.releases.filter((r) => !r.live)} />
+          <ReleaseSection title={t.releases.live} releases={data.releases.filter((r) => r.live)} />
         </>
       )}
     </>

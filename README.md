@@ -52,6 +52,7 @@ O build do servidor compila o React em `Buscarr.Server/wwwroot`, e o servidor en
 - **Contas:** cada usuário se cadastra com e-mail, nome e senha (mínimo de 8 caracteres). A senha é guardada como hash (PBKDF2, via `PasswordHasher` do ASP.NET Identity), e a sessão fica num cookie válido por 14 dias.
 - **Busca:** devolve o primeiro artista do MusicBrainz cujo nome contém o texto buscado, ignorando maiúsculas e caracteres tipográficos (como o hífen U+2010 em "blink‐182").
 - **Lançamentos:** só edições oficiais, filtráveis por tipo (álbuns, EPs, singles ou todos). De cada álbum entra apenas a primeira edição, com data completa. Coletâneas, remixes, demos e trilhas sonoras ficam de fora, e os ao vivo aparecem numa seção própria.
+- **Idioma:** a interface sai em português ou em inglês, conforme a preferência do navegador (`navigator.languages`). Qualquer variante de `pt` usa o português, e idiomas sem tradução caem no inglês. Os textos ficam em `Buscarr.Client/src/i18n.ts`, e o nome dos países vem do `Intl.DisplayNames` no mesmo idioma.
 - **MusicBrainz:** as consultas respeitam o limite de 1 requisição por segundo, numa fila compartilhada, e são repetidas até 3 vezes quando a API responde 503. O e-mail de quem está logado vai como contato no `User-Agent`, como a API exige.
 
 ## API
@@ -80,7 +81,7 @@ buscarr/
 │   ├── Data/                 DbContext e migrations do EF Core
 │   └── Properties/           perfil de lançamento (SpaProxy)
 └── Buscarr.Client/
-    └── src/                  páginas React e chamadas à API (api.ts)
+    └── src/                  páginas React, chamadas à API (api.ts) e traduções (i18n.ts)
 ```
 
 ## Banco de dados
@@ -102,7 +103,7 @@ cd Buscarr.Client && npm test  # cliente
 ```
 
 - **Servidor (`Buscarr.Server.Tests`, xUnit):** testes de unidade do cliente do MusicBrainz, dos filtros de lançamentos e das contas (com SQLite em memória), e testes de integração da API com `WebApplicationFactory`, cada classe com um banco SQLite temporário.
-- **Cliente (Vitest + Testing Library):** chamadas da `api.ts` e as telas de login, busca e lançamentos.
+- **Cliente (Vitest + Testing Library):** chamadas da `api.ts`, a escolha do idioma e as telas de login, busca e lançamentos. Os testes rodam com o navegador em português (definido em `test-setup.ts`).
 
 Os testes nunca acessam o MusicBrainz de verdade: as respostas são simuladas por um `HttpMessageHandler` falso, e o intervalo de 1 segundo é controlado por um `FakeTimeProvider`.
 

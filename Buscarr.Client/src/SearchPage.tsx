@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { findArtist, logout, type Artist, type User } from './api';
 import { countries } from './countries';
+import { t } from './i18n';
 
 export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [query, setQuery] = useState('');
@@ -12,14 +13,14 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setArtist(null);
-    setMessage('Buscando…');
+    setMessage(t.search.searching);
 
     try {
       const found = await findArtist(query, country);
       setArtist(found);
-      setMessage(found ? '' : 'Nenhum artista encontrado.');
+      setMessage(found ? '' : t.search.notFound);
     } catch {
-      setMessage('Erro na busca.');
+      setMessage(t.search.error);
     }
   }
 
@@ -35,27 +36,27 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
   return (
     <>
       <p>
-        Olá, {user.name} <button onClick={handleLogout}>Sair</button>
+        {t.search.greeting(user.name)} <button onClick={handleLogout}>{t.search.logout}</button>
       </p>
 
       <form onSubmit={handleSearch}>
         <p>
           <input
-            placeholder="Nome do artista"
+            placeholder={t.search.artistName}
             required
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />{' '}
           <select value={country} onChange={(e) => setCountry(e.target.value)}>
-            <option value="">Todos os países</option>
+            <option value="">{t.search.allCountries}</option>
             {countries.map(({ code, name }) => (
               <option key={code} value={code}>
                 {name}
               </option>
             ))}
           </select>{' '}
-          <button>Buscar</button>
+          <button>{t.search.search}</button>
         </p>
       </form>
 
