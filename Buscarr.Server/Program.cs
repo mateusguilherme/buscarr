@@ -5,6 +5,7 @@ using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Subsonic;
 using Buscarr.Server.Users;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,11 @@ builder.Services.AddSingleton(new SlskdClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
     builder.Configuration["Slskd:Url"],
     builder.Configuration["Slskd:ApiKey"]));
+builder.Services.AddSingleton(new SubsonicClient(
+    new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+    builder.Configuration["Subsonic:Url"],
+    builder.Configuration["Subsonic:User"],
+    builder.Configuration["Subsonic:Password"]));
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();

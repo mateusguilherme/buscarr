@@ -5,6 +5,7 @@ using Buscarr.Server.Downloads;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Subsonic;
 using Buscarr.Server.Tests.Fakes;
 using Buscarr.Server.Users;
 using Microsoft.Data.Sqlite;
@@ -22,6 +23,9 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly BuscarrDbContext _db;
     private readonly Dictionary<string, string> _releases = [];
     private readonly HashSet<string> _failing = [];
+    private readonly List<string> _libraryAlbums = [];
+    private bool _libraryFailing;
+    private readonly MusicBrainzClient _musicBrainz;
     private readonly RequestGenerator _generator;
 
     public RequestGeneratorTests()
@@ -29,10 +33,11 @@ public sealed class RequestGeneratorTests : IDisposable
         _connection.Open();
         _db = new BuscarrDbContext(new DbContextOptionsBuilder<BuscarrDbContext>().UseSqlite(_connection).Options);
         _db.Database.Migrate();
-        var musicBrainz = new MusicBrainzClient(
+        _musicBrainz = new MusicBrainzClient(
             new HttpClient(new FakeHttpMessageHandler(Respond)),
             new FakeTimeProvider(Now) { AutoAdvanceAmount = TimeSpan.FromSeconds(1) });
-        _generator = new RequestGenerator(_db, musicBrainz, new FakeTimeProvider(Now));
+        var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
+        _generator = new RequestGenerator(_db, _musicBrainz, subsonic, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -169,6 +174,102 @@ public sealed class RequestGeneratorTests : IDisposable
 
         Assert.Empty(await _db.DownloadRequests.ToListAsync());
     }
+
+    [Fact]
+    public async Task GenerateAsync_SkipsAlbumsTheLibraryAlreadyHas()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album", "single"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind", "Nirvana", 12, "r1"));
+
+        await WithLibrary().GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("g2", request.ReleaseGroupId);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_SkipsAnAlbumCoveredByTheDeluxeOnTheShelf()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind (Deluxe)", "Nirvana", 40, "r2"));
+
+        await WithLibrary().GenerateAsync();
+
+        Assert.Empty(await _db.DownloadRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_KeepsAskingWhenTheLibraryCopyHasFewerTracks()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind", "Nirvana", 5, "r1"));
+
+        await WithLibrary().GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("g1", request.ReleaseGroupId);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FindsAnUntaggedLibraryAlbumByNameAndArtist()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind", "Nirvana", 12));
+
+        await WithLibrary().GenerateAsync();
+
+        Assert.Empty(await _db.DownloadRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_RemovesARequestWhenTheLibraryGainsItsAlbum()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _db.DownloadRequests.Add(Request("g1", trackCount: 12, state: DownloadState.NotFound));
+        await _db.SaveChangesAsync();
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind", "Nirvana", 12, "r1"));
+
+        await WithLibrary().GenerateAsync();
+
+        Assert.Empty(await _db.DownloadRequests.ToListAsync());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GeneratesWithoutTheFilterAndRemovesNothingWhenTheLibraryFails()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album", "single"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _libraryFailing = true;
+        _libraryAlbums.Add(SubsonicJson.Album("al-1", "Nevermind", "Nirvana", 12, "r1"));
+        _db.DownloadRequests.Add(Request("stale", state: DownloadState.NotFound));
+        await _db.SaveChangesAsync();
+
+        await WithLibrary().GenerateAsync();
+
+        var groups = (await _db.DownloadRequests.ToListAsync()).Select(r => r.ReleaseGroupId);
+        Assert.Equal(["g1", "g2", "stale"], groups.Order());
+    }
+
+    private RequestGenerator WithLibrary()
+    {
+        var subsonic = new SubsonicClient(
+            new HttpClient(new FakeHttpMessageHandler(RespondLikeSubsonic)),
+            "http://navidrome.local:4533",
+            "fulano",
+            "segredo123");
+
+        return new RequestGenerator(_db, _musicBrainz, subsonic, new FakeTimeProvider(Now));
+    }
+
+    private HttpResponseMessage RespondLikeSubsonic(HttpRequestMessage request) =>
+        _libraryFailing
+            ? FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError)
+            : FakeHttpMessageHandler.Json(SubsonicJson.AlbumList([.. _libraryAlbums]));
 
     private async Task<User> ListedUserAsync(
         string email,

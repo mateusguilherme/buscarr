@@ -2,11 +2,16 @@ using Buscarr.Server.Data;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Subsonic;
 using Microsoft.EntityFrameworkCore;
 
 namespace Buscarr.Server.Downloads;
 
-public sealed class RequestGenerator(BuscarrDbContext db, MusicBrainzClient musicBrainz, TimeProvider time)
+public sealed class RequestGenerator(
+    BuscarrDbContext db,
+    MusicBrainzClient musicBrainz,
+    SubsonicClient subsonic,
+    TimeProvider time)
 {
     public async Task GenerateAsync()
     {
@@ -15,6 +20,20 @@ public sealed class RequestGenerator(BuscarrDbContext db, MusicBrainzClient musi
         var keys = existing.Select(Key).ToHashSet();
         var wanted = new HashSet<(string, int, string)>();
         var complete = true;
+        LibraryIndex? library = null;
+
+        if (subsonic.IsConfigured)
+        {
+            try
+            {
+                library = new LibraryIndex(await subsonic.AlbumsAsync());
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"erro ao listar a biblioteca: {e.Message}");
+                complete = false;
+            }
+        }
 
         foreach (var user in await db.Users.ToListAsync())
         {
@@ -39,7 +58,7 @@ public sealed class RequestGenerator(BuscarrDbContext db, MusicBrainzClient musi
 
                 foreach (var album in albums)
                 {
-                    Add(artist, album, edition, quality, wanted, keys, now);
+                    Add(artist, album, edition, quality, library, wanted, keys, now);
                 }
             }
         }
@@ -60,6 +79,7 @@ public sealed class RequestGenerator(BuscarrDbContext db, MusicBrainzClient musi
         Album album,
         string edition,
         string quality,
+        LibraryIndex? library,
         HashSet<(string, int, string)> wanted,
         HashSet<(string, int, string)> keys,
         DateTimeOffset now)
@@ -72,6 +92,16 @@ public sealed class RequestGenerator(BuscarrDbContext db, MusicBrainzClient musi
         var chosen = Editions.Choose(album.Editions, edition);
 
         if (chosen.TrackCount == 0)
+        {
+            return;
+        }
+
+        var ids = album.Editions
+            .Select(release => release.Id)
+            .OfType<string>()
+            .Append(album.First.ReleaseGroup!.Id!);
+
+        if (library?.TrackCount(ids, album.First.Title, artist.Name) >= chosen.TrackCount)
         {
             return;
         }
