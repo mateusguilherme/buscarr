@@ -24,4 +24,8 @@
     <ProjectReference Include="..\Buscarr.Server\Buscarr.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Import\fixtures\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
