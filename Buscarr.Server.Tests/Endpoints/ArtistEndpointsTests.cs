@@ -9,7 +9,7 @@ namespace Buscarr.Server.Tests.Endpoints;
 public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<BuscarrApiFactory>
 {
     [Fact]
-    public async Task SearchArtist_WithoutLogin_Returns401()
+    public async Task SearchArtists_WithoutLogin_Returns401()
     {
         var response = await factory.CreateClient().GetAsync("/api/artists?q=nirvana");
 
@@ -17,27 +17,56 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
     }
 
     [Fact]
-    public async Task SearchArtist_ReturnsFirstArtistWhoseNameContainsQuery()
+    public async Task SearchArtists_ReturnsArtistsWhoseNameContainsQuery()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
-        var artist = await client.GetFromJsonAsync<ArtistCard>("/api/artists?q=nirvana");
+        var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/artists?q=nirvana");
 
-        Assert.Equal(new ArtistCard("1", "Approaching Nirvana"), artist);
+        Assert.Equal(
+            [
+                new ArtistCard("1", "Approaching Nirvana", null, null),
+                new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", "90s US grunge band", "United States"),
+            ],
+            artists);
     }
 
     [Fact]
-    public async Task SearchArtist_WhenNothingMatches_Returns404()
+    public async Task SearchArtists_WhenNothingMatches_ReturnsEmptyList()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
-        var response = await client.GetAsync("/api/artists?q=zzqxjvkwplm");
+        var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/artists?q=zzqxjvkwplm");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Empty(artists!);
+    }
+
+    [Theory]
+    [InlineData("group", new[] { "1", BuscarrApiFactory.NirvanaId })]
+    [InlineData("person", new[] { "1" })]
+    public async Task SearchArtists_WithType_KeepsArtistsOfThatTypeAndUntypedOnes(string type, string[] ids)
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var artists = await client.GetFromJsonAsync<List<ArtistCard>>($"/api/artists?q=nirvana&type={type}");
+
+        Assert.Equal(ids, artists!.Select(a => a.Id));
+    }
+
+    [Theory]
+    [InlineData("band")]
+    [InlineData("Group")]
+    public async Task SearchArtists_WithInvalidType_Returns400(string type)
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.GetAsync($"/api/artists?q=nirvana&type={type}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task SearchArtist_WithCountry_FiltersMusicBrainzSearchByCountry()
+    public async Task SearchArtists_WithCountry_FiltersMusicBrainzSearchByCountry()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
@@ -53,7 +82,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
     [InlineData("GBR")]
     [InlineData("G1")]
     [InlineData("GB OR x")]
-    public async Task SearchArtist_WithInvalidCountry_Returns400(string country)
+    public async Task SearchArtists_WithInvalidCountry_Returns400(string country)
     {
         var client = await factory.CreateLoggedInClientAsync();
 

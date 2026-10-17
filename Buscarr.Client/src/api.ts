@@ -1,7 +1,7 @@
 import { t } from './i18n';
 
 export type User = { email: string; name: string };
-export type Artist = { id: string; name: string };
+export type Artist = { id: string; name: string; disambiguation: string | null; area: string | null };
 export type Release = { title: string; date: string; live: boolean };
 export type ArtistReleases = { name: string; releases: Release[] };
 
@@ -67,13 +67,10 @@ function postJson(url: string, body: unknown): Promise<Response> {
   });
 }
 
-export async function findArtist(query: string, country?: string): Promise<Artist | null> {
+export async function findArtists(query: string, country?: string, type?: string): Promise<Artist[]> {
   const countryParam = country ? `&country=${encodeURIComponent(country)}` : '';
-  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}${countryParam}`);
-
-  if (res.status === 404) {
-    return null;
-  }
+  const typeParam = type ? `&type=${encodeURIComponent(type)}` : '';
+  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}${countryParam}${typeParam}`);
 
   if (!res.ok) {
     throw new Error(t.api.searchError(res.status));

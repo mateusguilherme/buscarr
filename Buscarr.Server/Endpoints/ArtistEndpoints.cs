@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Buscarr.Server.Endpoints;
 
-public record ArtistCard(string Id, string Name);
+public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area);
 
 public record ReleaseItem(string Title, string Date, bool Live);
 
@@ -15,42 +15,57 @@ public static class ArtistEndpoints
 {
     private static readonly string[] ReleaseTypes = ["album", "ep", "single", "all"];
 
+    private static readonly Dictionary<string, string[]> ArtistTypes = new()
+    {
+        ["group"] = ["Group", "Orchestra", "Choir"],
+        ["person"] = ["Person"],
+    };
+
     public static void MapArtistEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/artists").RequireAuthorization();
 
-        group.MapGet("/", SearchArtist);
+        group.MapGet("/", SearchArtists);
         group.MapGet("/{id}/releases", GetArtistReleases);
     }
 
-    private static async Task<IResult> SearchArtist(
+    private static async Task<IResult> SearchArtists(
         MusicBrainzClient musicBrainz,
         ClaimsPrincipal user,
         string q,
-        string? country)
+        string? country,
+        string? type)
     {
         if (!string.IsNullOrEmpty(country) && !IsCountryCode(country))
         {
             return Results.BadRequest();
         }
 
-        Artist? artist;
+        string[]? types = null;
+
+        if (!string.IsNullOrEmpty(type) && !ArtistTypes.TryGetValue(type, out types))
+        {
+            return Results.BadRequest();
+        }
+
+        List<Artist> artists;
 
         try
         {
-            artist = await musicBrainz.FindArtistAsync(
+            artists = await musicBrainz.FindArtistsAsync(
                 Contact(user),
                 q,
-                string.IsNullOrEmpty(country) ? null : country.ToUpperInvariant());
+                string.IsNullOrEmpty(country) ? null : country.ToUpperInvariant(),
+                types);
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
             return BadGateway(e);
         }
 
-        return artist is null
-            ? Results.NotFound()
-            : Results.Json(new ArtistCard(artist.Id, artist.Name));
+        return Results.Json(artists
+            .Select(artist => new ArtistCard(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name))
+            .ToList());
     }
 
     private static async Task<IResult> GetArtistReleases(

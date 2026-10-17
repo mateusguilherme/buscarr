@@ -28,34 +28,67 @@ describe('SearchPage', () => {
   it('lista os países pelo nome em português, começando por todos', () => {
     renderSearchPage();
 
-    const select = screen.getByRole('combobox');
+    const select = screen.getByRole('combobox', { name: 'País' });
     expect((select as HTMLSelectElement).value).toBe('');
     expect(screen.getByRole('option', { name: 'Todos os países' })).toBeDefined();
     expect(screen.getByRole('option', { name: 'Reino Unido' })).toBeDefined();
   });
 
-  it('envia o país escolhido na busca', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { id: 'abc-123', name: 'Nirvana' } });
+  it('oferece o tipo de artista, começando por qualquer um', () => {
     renderSearchPage();
 
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'GB');
+    const select = screen.getByRole('combobox', { name: 'Tipo' });
+    expect((select as HTMLSelectElement).value).toBe('');
+    expect(screen.getByRole('option', { name: 'Qualquer tipo' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'Banda' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'Solo' })).toBeDefined();
+  });
+
+  it('envia o país escolhido na busca', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [] });
+    renderSearchPage();
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'País' }), 'GB');
     await search('nirvana');
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
   });
 
-  it('mostra o artista encontrado com link para os releases', async () => {
-    mockFetch({ status: 200, body: { id: 'abc-123', name: 'Nirvana' } });
+  it('envia o tipo escolhido na busca', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
-    await search('nirvana');
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'Banda');
+    await search('rancore');
 
-    const link = await screen.findByRole('link', { name: 'Nirvana' });
-    expect(link.getAttribute('href')).toBe('/artist/abc-123');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&type=group');
+  });
+
+  it('mostra cada candidato com a descrição e o link para os releases', async () => {
+    mockFetch({
+      status: 200,
+      body: [
+        { id: 'e33ee038', name: 'Rancore', disambiguation: 'Italian rapper Tarek Iurcich', area: 'Italy' },
+        { id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' },
+        { id: 'b533daaf', name: 'Rancore', disambiguation: null, area: null },
+      ],
+    });
+    renderSearchPage();
+
+    await search('rancore');
+
+    const links = await screen.findAllByRole('link', { name: 'Rancore' });
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/artist/e33ee038',
+      '/artist/83048ffe',
+      '/artist/b533daaf',
+    ]);
+    expect(screen.getByText(/Italian rapper Tarek Iurcich · Italy/)).toBeDefined();
+    expect(screen.getByText(/Brazillian Rock Band · São Paulo/)).toBeDefined();
   });
 
   it('avisa quando nenhum artista é encontrado', async () => {
-    mockFetch({ status: 404 });
+    mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
     await search('zzqxjvkwplm');

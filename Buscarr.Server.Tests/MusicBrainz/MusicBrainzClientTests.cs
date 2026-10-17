@@ -11,33 +11,35 @@ public class MusicBrainzClientTests
 {
     private const string Contact = "fulano@exemplo.com";
 
+    private static readonly string[] GroupTypes = ["Group", "Orchestra", "Choir"];
+
     [Fact]
-    public async Task FindArtistAsync_ReturnsFirstArtistWhoseNameContainsQuery()
+    public async Task FindArtistsAsync_ReturnsArtistsWhoseNameContainsQuery()
     {
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(
             Artists(("1", "Something Else"), ("2", "Nirvana"), ("3", "Approaching Nirvana"))));
 
-        var artist = await client.FindArtistAsync(Contact, "nirvana");
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
 
-        Assert.Equal(new Artist("2", "Nirvana"), artist);
+        Assert.Equal(["2", "3"], artists.Select(a => a.Id));
     }
 
     [Fact]
-    public async Task FindArtistAsync_ReturnsNullWhenNoNameContainsQuery()
+    public async Task FindArtistsAsync_ReturnsEmptyWhenNoNameContainsQuery()
     {
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("1", "Something Else"))));
 
-        var artist = await client.FindArtistAsync(Contact, "nirvana");
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
 
-        Assert.Null(artist);
+        Assert.Empty(artists);
     }
 
     [Fact]
-    public async Task FindArtistAsync_SendsContactInUserAgentAndAsksForJson()
+    public async Task FindArtistsAsync_SendsContactInUserAgentAndAsksForJson()
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()));
 
-        await client.FindArtistAsync(Contact, "nirvana");
+        await client.FindArtistsAsync(Contact, "nirvana");
 
         var request = Assert.Single(handler.Requests);
         Assert.StartsWith("buscarr/", request.UserAgent);
@@ -47,70 +49,109 @@ public class MusicBrainzClientTests
     }
 
     [Fact]
-    public async Task FindArtistAsync_WithCountry_FiltersByCountryInsteadOfDismax()
+    public async Task FindArtistsAsync_ReadsTypeDisambiguationAndArea()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(SearchResults(
+            SearchResult("2", "Rancore", area: "São Paulo", type: "Group", disambiguation: "Brazillian Rock Band"))));
+
+        var artist = Assert.Single(await client.FindArtistsAsync(Contact, "rancore"));
+
+        Assert.Equal("Group", artist.Type);
+        Assert.Equal("Brazillian Rock Band", artist.Disambiguation);
+        Assert.Equal("São Paulo", artist.Area?.Name);
+    }
+
+    [Fact]
+    public async Task FindArtistsAsync_WithTypes_KeepsArtistsOfThoseTypesAndUntypedOnes()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(SearchResults(
+            SearchResult("1", "Rancore", type: "Person"),
+            SearchResult("2", "Rancore", type: "Group"),
+            SearchResult("3", "Rancore"))));
+
+        var artists = await client.FindArtistsAsync(Contact, "rancore", types: GroupTypes);
+
+        Assert.Equal(["2", "3"], artists.Select(a => a.Id));
+    }
+
+    [Fact]
+    public async Task FindArtistsAsync_WithCountry_SearchesByCountryFirst()
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("1", "Sigur Rós"))));
 
-        await client.FindArtistAsync(Contact, "Sigur Rós", "IS");
+        await client.FindArtistsAsync(Contact, "Sigur Rós", "IS");
 
-        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
         Assert.Equal("(sigur rós) AND country:IS", query["query"]);
         Assert.Null(query["dismax"]);
     }
 
     [Fact]
-    public async Task FindArtistAsync_WithCountry_EscapesSearchSyntaxInName()
+    public async Task FindArtistsAsync_WithCountry_EscapesSearchSyntaxInName()
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()));
 
-        await client.FindArtistAsync(Contact, "AC/DC: Live!", "AU");
+        await client.FindArtistsAsync(Contact, "AC/DC: Live!", "AU");
 
         var query = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
         Assert.Equal(@"(ac\/dc\: live\!) AND country:AU", query["query"]);
     }
 
     [Fact]
-    public async Task FindArtistAsync_WithCountry_LooksUpArtistsWhoseAreaIsInsideACountry()
+    public async Task FindArtistsAsync_WithCountry_AddsArtistsWhoseAreaIsInsideTheCountry()
     {
         var (client, handler) = CreateClient(request => request.RequestUri!.AbsolutePath switch
         {
             "/ws/2/artist" when request.RequestUri.Query.Contains("dismax=true") =>
-                FakeHttpMessageHandler.Json(ArtistsWithArea(
-                    ("1", "Rancore", "IT", "Italy"),
-                    ("2", "Rancore", null, "São Paulo"))),
-            "/ws/2/artist" => FakeHttpMessageHandler.Json(Artists()),
+                FakeHttpMessageHandler.Json(SearchResults(
+                    SearchResult("1", "Rancore", "IT", "Italy"),
+                    SearchResult("2", "Rancore", area: "São Paulo"))),
+            "/ws/2/artist" => FakeHttpMessageHandler.Json(SearchResults(SearchResult("4", "Rancore", "BR", "Brazil"))),
             "/ws/2/artist/2" => FakeHttpMessageHandler.Json(Artist("2", "Rancore", "BR")),
             _ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound),
         });
 
-        var artist = await client.FindArtistAsync(Contact, "rancore", "BR");
+        var artists = await client.FindArtistsAsync(Contact, "rancore", "BR");
 
-        Assert.Equal("2", artist?.Id);
+        Assert.Equal(["4", "2"], artists.Select(a => a.Id));
         Assert.Equal(
             ["/ws/2/artist", "/ws/2/artist", "/ws/2/artist/2"],
             handler.Requests.Select(r => r.Uri.AbsolutePath));
     }
 
     [Fact]
-    public async Task FindArtistAsync_WithCountry_ReturnsNullWithoutLookingUpArtistsWithoutArea()
+    public async Task FindArtistsAsync_WithCountry_ReturnsEmptyWithoutLookingUpArtistsWithoutArea()
     {
         var (client, handler) = CreateClient(request => request.RequestUri!.AbsolutePath switch
         {
             "/ws/2/artist" when request.RequestUri.Query.Contains("dismax=true") =>
-                FakeHttpMessageHandler.Json(ArtistsWithArea(
-                    ("1", "Rancore", null, null),
-                    ("2", "Rancore", null, "Roma"))),
+                FakeHttpMessageHandler.Json(SearchResults(
+                    SearchResult("1", "Rancore"),
+                    SearchResult("2", "Rancore", area: "Roma"))),
             "/ws/2/artist" => FakeHttpMessageHandler.Json(Artists()),
             "/ws/2/artist/2" => FakeHttpMessageHandler.Json(Artist("2", "Rancore", "IT")),
             _ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound),
         });
 
-        var artist = await client.FindArtistAsync(Contact, "rancore", "BR");
+        var artists = await client.FindArtistsAsync(Contact, "rancore", "BR");
 
-        Assert.Null(artist);
+        Assert.Empty(artists);
         Assert.Equal(
             ["/ws/2/artist", "/ws/2/artist", "/ws/2/artist/2"],
             handler.Requests.Select(r => r.Uri.AbsolutePath));
+    }
+
+    [Fact]
+    public async Task FindArtistsAsync_WithCountryAndTypes_DoesNotLookUpArtistsOfOtherTypes()
+    {
+        var (client, handler) = CreateClient(request => request.RequestUri!.Query.Contains("dismax=true")
+            ? FakeHttpMessageHandler.Json(SearchResults(SearchResult("1", "Rancore", area: "Roma", type: "Person")))
+            : FakeHttpMessageHandler.Json(Artists()));
+
+        var artists = await client.FindArtistsAsync(Contact, "rancore", "BR", GroupTypes);
+
+        Assert.Empty(artists);
+        Assert.Equal(2, handler.Requests.Count);
     }
 
     [Fact]
@@ -123,9 +164,9 @@ public class MusicBrainzClientTests
         ]);
         var (client, handler) = CreateClient(_ => responses.Dequeue());
 
-        var artist = await client.FindArtistAsync(Contact, "nirvana");
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
 
-        Assert.Equal("Nirvana", artist?.Name);
+        Assert.Equal("Nirvana", Assert.Single(artists).Name);
         Assert.Equal(2, handler.Requests.Count);
     }
 
@@ -134,7 +175,7 @@ public class MusicBrainzClientTests
     {
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.ServiceUnavailable));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => client.FindArtistAsync(Contact, "nirvana"));
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.FindArtistsAsync(Contact, "nirvana"));
 
         Assert.Equal(3, handler.Requests.Count);
     }
@@ -144,9 +185,9 @@ public class MusicBrainzClientTests
     {
         var time = new FakeTimeProvider();
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()), time);
-        await client.FindArtistAsync(Contact, "nirvana");
+        await client.FindArtistsAsync(Contact, "nirvana");
 
-        var second = client.FindArtistAsync(Contact, "nirvana");
+        var second = client.FindArtistsAsync(Contact, "nirvana");
 
         Assert.False(second.IsCompleted);
         Assert.Single(handler.Requests);

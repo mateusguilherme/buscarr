@@ -50,7 +50,7 @@ O build do servidor compila o React em `Buscarr.Server/wwwroot`, e o servidor en
 ## Como funciona
 
 - **Contas:** cada usuário se cadastra com e-mail, nome e senha (mínimo de 8 caracteres). A senha é guardada como hash (PBKDF2, via `PasswordHasher` do ASP.NET Identity), e a sessão fica num cookie válido por 14 dias.
-- **Busca:** devolve o primeiro artista do MusicBrainz cujo nome contém o texto buscado, ignorando maiúsculas e caracteres tipográficos (como o hífen U+2010 em "blink‐182").
+- **Busca:** devolve os artistas do MusicBrainz cujo nome contém o texto buscado, ignorando maiúsculas e caracteres tipográficos (como o hífen U+2010 em "blink‐182"), cada um com a descrição que o MusicBrainz usa para separar homônimos e a área de origem. Dá para filtrar por país e por tipo (banda ou solo). No país, entram também os artistas cuja área é uma cidade ou um estado dele (o índice de busca do MusicBrainz só preenche o país quando a área é o próprio país, então esses são conferidos um a um). Artista sem tipo cadastrado no MusicBrainz continua aparecendo com o filtro de tipo.
 - **Lançamentos:** só edições oficiais, filtráveis por tipo (álbuns, EPs, singles ou todos). De cada álbum entra apenas a primeira edição, com data completa. Coletâneas, remixes, demos e trilhas sonoras ficam de fora, e os ao vivo aparecem numa seção própria.
 - **Idioma:** a interface sai em português ou em inglês, conforme a preferência do navegador (`navigator.languages`). Qualquer variante de `pt` usa o português, e idiomas sem tradução caem no inglês. Os textos ficam em `Buscarr.Client/src/i18n.ts`, e o nome dos países vem do `Intl.DisplayNames` no mesmo idioma.
 - **MusicBrainz:** as consultas respeitam o limite de 1 requisição por segundo, numa fila compartilhada, e são repetidas até 3 vezes quando a API responde 503. O e-mail de quem está logado vai como contato no `User-Agent`, como a API exige.
@@ -63,7 +63,7 @@ O build do servidor compila o React em `Buscarr.Server/wwwroot`, e o servidor en
 | `POST` | `/api/auth/login` | não | Entra (`{ email, password }`) |
 | `POST` | `/api/auth/logout` | não | Sai |
 | `GET` | `/api/auth/me` | sim | Usuário logado (`{ email, name }`) |
-| `GET` | `/api/artists?q=&country=` | sim | Primeiro artista encontrado (`{ id, name }`); `country` é opcional, com o código ISO de 2 letras (ex.: `GB`) |
+| `GET` | `/api/artists?q=&country=&type=` | sim | Artistas encontrados (`[{ id, name, disambiguation, area }]`); `country` é opcional, com o código ISO de 2 letras (ex.: `GB`), e `type` também (`group` para banda, `person` para solo) |
 | `GET` | `/api/artists/{id}/releases?type=` | sim | Nome do artista e lançamentos (`type`: `album`, `ep`, `single` ou `all`) |
 
 ## Estrutura

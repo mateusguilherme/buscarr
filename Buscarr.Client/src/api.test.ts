@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findArtist, getArtistReleases, getCurrentUser, login, register } from './api';
+import { findArtists, getArtistReleases, getCurrentUser, login, register } from './api';
 import { mockFetch } from './test-utils';
 
 describe('getCurrentUser', () => {
@@ -53,27 +53,42 @@ describe('register', () => {
   });
 });
 
-describe('findArtist', () => {
+describe('findArtists', () => {
   it('codifica a busca na URL', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { id: '1', name: 'Sigur Rós' } });
+    const fetchMock = mockFetch({ status: 200, body: [] });
 
-    await findArtist('sigur rós');
+    await findArtists('sigur rós');
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=sigur%20r%C3%B3s');
   });
 
   it('envia o país quando escolhido', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { id: '1', name: 'Nirvana' } });
+    const fetchMock = mockFetch({ status: 200, body: [] });
 
-    await findArtist('nirvana', 'GB');
+    await findArtists('nirvana', 'GB');
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
   });
 
-  it('devolve null quando nenhum artista é encontrado', async () => {
-    mockFetch({ status: 404 });
+  it('envia o tipo quando escolhido', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [] });
 
-    expect(await findArtist('zzqxjvkwplm')).toBeNull();
+    await findArtists('rancore', 'BR', 'group');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&country=BR&type=group');
+  });
+
+  it('devolve os candidatos encontrados', async () => {
+    const rancore = { id: '1', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' };
+    mockFetch({ status: 200, body: [rancore] });
+
+    expect(await findArtists('rancore')).toEqual([rancore]);
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 502 });
+
+    await expect(findArtists('rancore')).rejects.toThrow('Erro 502 na busca.');
   });
 });
 
