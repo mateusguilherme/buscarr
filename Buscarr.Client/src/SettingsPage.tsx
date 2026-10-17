@@ -1,22 +1,25 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { getSettings, saveSettings, type Settings } from './api';
+import { getServerSettings, getSettings, saveSettings, type ServerSettings, type Settings } from './api';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { t } from './i18n';
 import { editionOptions, qualityOptions } from './options';
+import { ServerSettingsForm } from './ServerSettingsForm';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState<string>();
+  const [server, setServer] = useState<ServerSettings | null>(null);
+  const [serverError, setServerError] = useState<string>();
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadSettings() {
+    async function loadSettings(settings: Promise<Settings>) {
       try {
-        const result = await getSettings();
+        const result = await settings;
 
         if (!ignore) {
           setSettings(result);
@@ -28,7 +31,24 @@ export function SettingsPage() {
       }
     }
 
-    loadSettings();
+    async function loadServer(server: Promise<ServerSettings | null>) {
+      try {
+        const result = await server;
+
+        if (!ignore) {
+          setServer(result);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setServerError((err as Error).message);
+        }
+      }
+    }
+
+    const settings = getSettings();
+    const server = getServerSettings();
+    loadSettings(settings);
+    loadServer(server);
 
     return () => {
       ignore = true;
@@ -100,6 +120,12 @@ export function SettingsPage() {
             {message}
           </p>
         )}
+        {serverError && (
+          <p className="alert" role="alert">
+            {serverError}
+          </p>
+        )}
+        {server && <ServerSettingsForm initial={server} />}
       </main>
     </>
   );

@@ -5,11 +5,15 @@ import {
   getCurrentUser,
   getList,
   getListEntry,
+  getServerSettings,
+  getServerStatus,
   getSettings,
   login,
   register,
   removeFromList,
+  saveServerSettings,
   saveSettings,
+  ServerSettingsError,
 } from './api';
 import { mockFetch } from './test-utils';
 
@@ -188,5 +192,92 @@ describe('saveSettings', () => {
     await expect(saveSettings({ edition: 'remastered', quality: 'mp3-320' })).rejects.toThrow(
       'Erro 400 ao salvar as configurações.',
     );
+  });
+});
+
+const serverSettings = {
+  slskdUrl: 'http://slskd:5030',
+  hasSlskdApiKey: true,
+  downloadsPath: '/downloads/complete',
+  libraryPath: '/music',
+  rejectedPath: '',
+  subsonicUrl: '',
+  subsonicUser: '',
+  hasSubsonicPassword: false,
+  hasFanartTvApiKey: false,
+};
+
+const serverUpdate = {
+  slskdUrl: 'http://slskd:5030',
+  slskdApiKey: null,
+  downloadsPath: '/downloads/complete',
+  libraryPath: '/music',
+  rejectedPath: '',
+  subsonicUrl: '',
+  subsonicUser: '',
+  subsonicPassword: null,
+  fanartTvApiKey: null,
+};
+
+describe('getServerSettings', () => {
+  it('pede as configurações do servidor', async () => {
+    const fetchMock = mockFetch({ status: 200, body: serverSettings });
+
+    expect(await getServerSettings()).toEqual(serverSettings);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/server-settings');
+  });
+
+  it('devolve null para quem não é admin', async () => {
+    mockFetch({ status: 403 });
+
+    expect(await getServerSettings()).toBeNull();
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(getServerSettings()).rejects.toThrow('Erro 500 ao carregar as configurações do servidor.');
+  });
+});
+
+describe('saveServerSettings', () => {
+  it('envia as configurações do servidor', async () => {
+    const fetchMock = mockFetch({ status: 204 });
+
+    await saveServerSettings(serverUpdate);
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/server-settings');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'PUT', body: JSON.stringify(serverUpdate) });
+  });
+
+  it('lança os erros de cada campo quando a API recusa', async () => {
+    mockFetch({ status: 400, body: { errors: { libraryPath: 'not-found' } } });
+
+    const error = await saveServerSettings(serverUpdate).catch((err: unknown) => err);
+
+    expect(error).toBeInstanceOf(ServerSettingsError);
+    expect((error as ServerSettingsError).errors).toEqual({ libraryPath: 'not-found' });
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(saveServerSettings(serverUpdate)).rejects.toThrow('Erro 500 ao salvar as configurações do servidor.');
+  });
+});
+
+describe('getServerStatus', () => {
+  it('pede o estado das conexões', async () => {
+    const status = { slskd: { state: 'ok', message: null }, subsonic: { state: 'not-configured', message: null } };
+    const fetchMock = mockFetch({ status: 200, body: status });
+
+    expect(await getServerStatus()).toEqual(status);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/server-settings/status');
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(getServerStatus()).rejects.toThrow('Erro 500 ao testar as conexões.');
   });
 });

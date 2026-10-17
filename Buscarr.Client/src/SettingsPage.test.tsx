@@ -19,7 +19,7 @@ function radio(name: RegExp) {
 
 describe('SettingsPage', () => {
   it('marca a edição que o usuário prefere', async () => {
-    mockFetch({ status: 200, body: { edition: 'remastered', quality: 'mp3-320' } });
+    mockFetch({ status: 200, body: { edition: 'remastered', quality: 'mp3-320' } }, { status: 403 });
     renderSettingsPage();
 
     expect((await radio(/^A remasterizada/)).checked).toBe(true);
@@ -28,22 +28,26 @@ describe('SettingsPage', () => {
   });
 
   it('salva a edição escolhida, mantendo a qualidade', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { edition: 'original', quality: 'flac' } }, { status: 204 });
+    const fetchMock = mockFetch(
+      { status: 200, body: { edition: 'original', quality: 'flac' } },
+      { status: 403 },
+      { status: 204 },
+    );
     renderSettingsPage();
 
     await userEvent.click(await radio(/^A deluxe/));
 
     expect(await screen.findByText('Salvo.')).toBeDefined();
     expect((await radio(/^A deluxe/)).checked).toBe(true);
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/settings');
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/settings');
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({
       method: 'PUT',
       body: JSON.stringify({ edition: 'deluxe', quality: 'flac' }),
     });
   });
 
   it('marca a qualidade que o usuário prefere, num grupo à parte', async () => {
-    mockFetch({ status: 200, body: { edition: 'original', quality: 'flac' } });
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'flac' } }, { status: 403 });
     renderSettingsPage();
 
     const group = await screen.findByRole('group', { name: 'Baixar os arquivos em:' });
@@ -60,7 +64,11 @@ describe('SettingsPage', () => {
   });
 
   it('salva a qualidade escolhida, mantendo a edição', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { edition: 'deluxe', quality: 'mp3-320' } }, { status: 204 });
+    const fetchMock = mockFetch(
+      { status: 200, body: { edition: 'deluxe', quality: 'mp3-320' } },
+      { status: 403 },
+      { status: 204 },
+    );
     renderSettingsPage();
 
     await userEvent.click(await radio(/^FLAC/));
@@ -68,14 +76,14 @@ describe('SettingsPage', () => {
     expect(await screen.findByText('Salvo.')).toBeDefined();
     expect((await radio(/^FLAC/)).checked).toBe(true);
     expect((await radio(/^A deluxe/)).checked).toBe(true);
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({
       method: 'PUT',
       body: JSON.stringify({ edition: 'deluxe', quality: 'flac' }),
     });
   });
 
   it('volta à qualidade anterior quando não consegue salvar', async () => {
-    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 500 });
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 403 }, { status: 500 });
     renderSettingsPage();
 
     await userEvent.click(await radio(/^FLAC/));
@@ -85,7 +93,7 @@ describe('SettingsPage', () => {
   });
 
   it('avisa quando não consegue salvar', async () => {
-    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 500 });
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 403 }, { status: 500 });
     renderSettingsPage();
 
     await userEvent.click(await radio(/^A deluxe/));
@@ -94,11 +102,52 @@ describe('SettingsPage', () => {
   });
 
   it('volta para a busca', async () => {
-    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } });
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 403 });
     renderSettingsPage();
 
     await radio(/^A original/);
 
     expect(screen.getByRole('link', { name: 'Voltar' }).getAttribute('href')).toBe('/');
+  });
+
+  it('não mostra as configurações do servidor para quem não é admin', async () => {
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 403 });
+    renderSettingsPage();
+
+    await radio(/^A original/);
+
+    expect(screen.queryByRole('heading', { name: 'Servidor' })).toBeNull();
+  });
+
+  it('mostra as configurações do servidor para o admin', async () => {
+    mockFetch(
+      { status: 200, body: { edition: 'original', quality: 'mp3-320' } },
+      {
+        status: 200,
+        body: {
+          slskdUrl: 'http://slskd:5030',
+          hasSlskdApiKey: true,
+          downloadsPath: '',
+          libraryPath: '',
+          rejectedPath: '',
+          subsonicUrl: '',
+          subsonicUser: '',
+          hasSubsonicPassword: false,
+          hasFanartTvApiKey: false,
+        },
+      },
+    );
+    renderSettingsPage();
+
+    expect(await screen.findByRole('heading', { name: 'Servidor' })).toBeDefined();
+    expect((screen.getByLabelText('Endereço do slskd') as HTMLInputElement).value).toBe('http://slskd:5030');
+  });
+
+  it('avisa quando não consegue carregar as configurações do servidor', async () => {
+    mockFetch({ status: 200, body: { edition: 'original', quality: 'mp3-320' } }, { status: 500 });
+    renderSettingsPage();
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Erro 500 ao carregar as configurações do servidor.');
+    expect((await radio(/^A original/)).checked).toBe(true);
   });
 });

@@ -135,6 +135,80 @@ export async function saveSettings(settings: Settings): Promise<void> {
   }
 }
 
+export type ServerSettings = {
+  slskdUrl: string;
+  hasSlskdApiKey: boolean;
+  downloadsPath: string;
+  libraryPath: string;
+  rejectedPath: string;
+  subsonicUrl: string;
+  subsonicUser: string;
+  hasSubsonicPassword: boolean;
+  hasFanartTvApiKey: boolean;
+};
+
+export type ServerSettingsUpdate = {
+  slskdUrl: string;
+  slskdApiKey: string | null;
+  downloadsPath: string;
+  libraryPath: string;
+  rejectedPath: string;
+  subsonicUrl: string;
+  subsonicUser: string;
+  subsonicPassword: string | null;
+  fanartTvApiKey: string | null;
+};
+
+export type ConnectionState = 'ok' | 'not-configured' | 'offline' | 'error';
+export type ConnectionStatus = { state: ConnectionState; message: string | null };
+export type ServerStatus = { slskd: ConnectionStatus; subsonic: ConnectionStatus };
+
+export class ServerSettingsError extends Error {
+  readonly errors: Record<string, string>;
+
+  constructor(errors: Record<string, string>) {
+    super(t.api.saveServerSettingsError(400));
+    this.errors = errors;
+  }
+}
+
+export async function getServerSettings(): Promise<ServerSettings | null> {
+  const res = await fetch('/api/server-settings');
+
+  if (res.status === 403) {
+    return null;
+  }
+
+  if (!res.ok) {
+    throw new Error(t.api.serverSettingsError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function saveServerSettings(update: ServerSettingsUpdate): Promise<void> {
+  const res = await sendJson('PUT', '/api/server-settings', update);
+
+  if (res.status === 400) {
+    const body = await res.json();
+    throw new ServerSettingsError(body.errors ?? {});
+  }
+
+  if (!res.ok) {
+    throw new Error(t.api.saveServerSettingsError(res.status));
+  }
+}
+
+export async function getServerStatus(): Promise<ServerStatus> {
+  const res = await fetch('/api/server-settings/status');
+
+  if (!res.ok) {
+    throw new Error(t.api.serverStatusError(res.status));
+  }
+
+  return res.json();
+}
+
 export type Download = {
   id: number;
   artistName: string;
