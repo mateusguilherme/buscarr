@@ -1,0 +1,65 @@
+using Buscarr.Server.MusicBrainz;
+
+namespace Buscarr.Server.Tests.MusicBrainz;
+
+public class ReleaseTests
+{
+    [Theory]
+    [InlineData("1991-09-24", "1991-09-24", true)]
+    [InlineData("1989-06-15", "1989", true)]
+    [InlineData("1991", "1991", false)]
+    [InlineData("2011-09-26", "1991-09-24", false)]
+    [InlineData("1991-09-24", "", false)]
+    public void IsOriginalRelease_RequiresCompleteDateMatchingFirstRelease(
+        string date,
+        string firstReleaseDate,
+        bool expected)
+    {
+        var release = CreateRelease(date, firstReleaseDate);
+
+        Assert.Equal(expected, release.IsOriginalRelease);
+    }
+
+    [Theory]
+    [InlineData(new string[0], true)]
+    [InlineData(new[] { "Live" }, true)]
+    [InlineData(new[] { "Compilation" }, false)]
+    [InlineData(new[] { "Compilation", "Live" }, false)]
+    public void IsOriginalRelease_AcceptsOnlyStudioAndLiveAlbums(string[] secondaryTypes, bool expected)
+    {
+        var release = CreateRelease("1994-11-01", "1994-11-01", secondaryTypes);
+
+        Assert.Equal(expected, release.IsOriginalRelease);
+    }
+
+    [Fact]
+    public void IsOriginalRelease_IsFalseWithoutReleaseGroup()
+    {
+        var release = new Release { Title = "Nevermind", Date = "1991-09-24" };
+
+        Assert.False(release.IsOriginalRelease);
+    }
+
+    [Theory]
+    [InlineData(new string[0], false)]
+    [InlineData(new[] { "Live" }, true)]
+    [InlineData(new[] { "Compilation", "Live" }, true)]
+    public void IsLive_DependsOnLiveSecondaryType(string[] secondaryTypes, bool expected)
+    {
+        var release = CreateRelease("1994-11-01", "1994-11-01", secondaryTypes);
+
+        Assert.Equal(expected, release.IsLive);
+    }
+
+    private static Release CreateRelease(string date, string firstReleaseDate, string[]? secondaryTypes = null) =>
+        new()
+        {
+            Title = "Nevermind",
+            Date = date,
+            ReleaseGroup = new ReleaseGroup
+            {
+                FirstReleaseDate = firstReleaseDate,
+                SecondaryTypes = [.. secondaryTypes ?? []],
+            },
+        };
+}

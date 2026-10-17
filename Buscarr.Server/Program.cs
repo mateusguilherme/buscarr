@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
-builder.Services.AddSingleton<MusicBrainzClient>();
+builder.Services.AddSingleton(new MusicBrainzClient(new HttpClient(), TimeProvider.System));
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();

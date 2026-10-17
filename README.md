@@ -70,6 +70,7 @@ O build do servidor compila o React em `Buscarr.Server/wwwroot`, e o servidor en
 buscarr/
 ├── Buscarr.slnx
 ├── dotnet-tools.json         ferramentas locais (dotnet-ef)
+├── Buscarr.Server.Tests/     testes do servidor (xUnit)
 ├── Buscarr.Server/
 │   ├── Program.cs            configuração, middleware e registro das rotas
 │   ├── Endpoints/            rotas HTTP agrupadas com MapGroup
@@ -92,8 +93,21 @@ cd Buscarr.Server
 dotnet ef migrations add NomeDaMudanca -o Data/Migrations
 ```
 
+## Testes
+
+```sh
+dotnet test                    # servidor, na raiz do repositório
+cd Buscarr.Client && npm test  # cliente
+```
+
+- **Servidor (`Buscarr.Server.Tests`, xUnit):** testes de unidade do cliente do MusicBrainz, dos filtros de lançamentos e das contas (com SQLite em memória), e testes de integração da API com `WebApplicationFactory`, cada classe com um banco SQLite temporário.
+- **Cliente (Vitest + Testing Library):** chamadas da `api.ts` e as telas de login, busca e lançamentos.
+
+Os testes nunca acessam o MusicBrainz de verdade: as respostas são simuladas por um `HttpMessageHandler` falso, e o intervalo de 1 segundo é controlado por um `FakeTimeProvider`.
+
 ## Convenções de código
 
+- TDD: toda funcionalidade ou correção começa por um teste que falha.
 - Uma linha em branco antes e depois de blocos (`if`, `for`, `while`, `try`…) e antes do último `return` de cada função.
 - `async`/`await` no lugar de `.then()`.
 - Sem comentários no código.

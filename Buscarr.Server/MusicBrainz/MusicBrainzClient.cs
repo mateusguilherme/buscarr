@@ -1,17 +1,15 @@
-using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Buscarr.Server.MusicBrainz;
 
-public sealed class MusicBrainzClient
+public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
 {
     private const string UserAgentProduct = "buscarr/0.1.0";
     private const int MaxAttempts = 3;
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(1);
 
-    private readonly HttpClient _http = new();
     private readonly SemaphoreSlim _turn = new(1, 1);
     private long? _lastRequest;
 
@@ -91,7 +89,7 @@ public sealed class MusicBrainzClient
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
-            response = await _http.SendAsync(request);
+            response = await http.SendAsync(request);
 
             if (response.StatusCode != HttpStatusCode.ServiceUnavailable || attempts == MaxAttempts)
             {
@@ -119,15 +117,15 @@ public sealed class MusicBrainzClient
         {
             if (_lastRequest is { } last)
             {
-                var wait = Interval - Stopwatch.GetElapsedTime(last);
+                var wait = Interval - time.GetElapsedTime(last);
 
                 if (wait > TimeSpan.Zero)
                 {
-                    await Task.Delay(wait);
+                    await Task.Delay(wait, time);
                 }
             }
 
-            _lastRequest = Stopwatch.GetTimestamp();
+            _lastRequest = time.GetTimestamp();
         }
         finally
         {
