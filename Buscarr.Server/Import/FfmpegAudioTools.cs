@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -7,11 +6,16 @@ namespace Buscarr.Server.Import;
 
 public sealed partial class FfmpegAudioTools : AudioTools
 {
+    private static readonly TimeSpan ProbeLimit = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan AnalysisLimit = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan TranscodeLimit = TimeSpan.FromMinutes(5);
+
     public async Task<AudioProbe?> ProbeAsync(string path)
     {
-        var (exitCode, output, _) = await RunAsync(
+        var (exitCode, output, _, _) = await ProcessRunner.RunAsync(
             "ffprobe",
-            ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", path]);
+            ["-v", "error", "-print_format", "json", "-show_format", "-show_streams", path],
+            ProbeLimit);
 
         if (exitCode != 0)
         {
@@ -61,9 +65,10 @@ public sealed partial class FfmpegAudioTools : AudioTools
 
     public async Task<bool> TranscodeToMp3Async(string source, string target)
     {
-        var (exitCode, _, _) = await RunAsync(
+        var (exitCode, _, _, _) = await ProcessRunner.RunAsync(
             "ffmpeg",
-            ["-v", "error", "-y", "-i", source, "-codec:a", "libmp3lame", "-b:a", "320k", target]);
+            ["-v", "error", "-y", "-i", source, "-codec:a", "libmp3lame", "-b:a", "320k", target],
+            TranscodeLimit);
 
         return exitCode == 0;
     }
@@ -73,9 +78,10 @@ public sealed partial class FfmpegAudioTools : AudioTools
         var filter = highpass is { } cutoff
             ? $"highpass=f={cutoff},astats=measure_perchannel=none:measure_overall=RMS_level"
             : "astats=measure_perchannel=none:measure_overall=RMS_level";
-        var (exitCode, _, log) = await RunAsync(
+        var (exitCode, _, log, _) = await ProcessRunner.RunAsync(
             "ffmpeg",
-            ["-nostats", "-i", path, "-af", filter, "-f", "null", "-"]);
+            ["-nostats", "-i", path, "-af", filter, "-f", "null", "-"],
+            AnalysisLimit);
 
         if (exitCode != 0)
         {
@@ -92,36 +98,6 @@ public sealed partial class FfmpegAudioTools : AudioTools
         return match.Groups[1].Value == "-inf"
             ? double.NegativeInfinity
             : double.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
-    }
-
-    private static async Task<(int ExitCode, string Output, string Error)> RunAsync(string tool, string[] arguments)
-    {
-        using var process = new Process();
-        process.StartInfo.FileName = tool;
-        process.StartInfo.RedirectStandardOutput = true;
-        process.StartInfo.RedirectStandardError = true;
-
-        foreach (var argument in arguments)
-        {
-            process.StartInfo.ArgumentList.Add(argument);
-        }
-
-        try
-        {
-            process.Start();
-        }
-        catch (Exception e)
-        {
-            Console.Error.WriteLine($"erro ao rodar o {tool}: {e.Message}");
-
-            return (-1, "", "");
-        }
-
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-
-        return (process.ExitCode, await output, await error);
     }
 
     private static int? Number(JsonElement element, string property)
