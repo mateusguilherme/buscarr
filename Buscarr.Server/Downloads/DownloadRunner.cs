@@ -10,7 +10,8 @@ public sealed class DownloadRunner(
     IServiceScopeFactory scopes,
     AlbumDownload download,
     TimeProvider time,
-    ImportPipeline pipeline)
+    ImportPipeline pipeline,
+    Notifier notifier)
 {
     private const int MaxConcurrent = 3;
 
@@ -60,11 +61,21 @@ public sealed class DownloadRunner(
                     cancellation);
                 Persist(requestId, request => Finish(request, result));
 
+                if (result.Outcome == AlbumDownloadOutcome.Failed)
+                {
+                    await NotifyFailureAsync(snapshot, requestId, FailureOf(result));
+                }
+
                 if (result.Outcome == AlbumDownloadOutcome.Downloaded && tracks is not null)
                 {
                     Persist(requestId, request => request.State = DownloadState.Importing);
                     var failure = await pipeline.ImportAsync(snapshot!, tracks, result.Folder!);
                     Persist(requestId, request => FinishImport(request, failure));
+
+                    if (failure is not null)
+                    {
+                        await NotifyFailureAsync(snapshot, requestId, failure);
+                    }
                 }
             }
             finally
@@ -110,10 +121,20 @@ public sealed class DownloadRunner(
         else
         {
             request.State = DownloadState.Failed;
-            request.Failure = result.Failures.Count > 0 ? Reason(result.Failures[^1]) : "transfer-failed";
+            request.Failure = FailureOf(result);
             request.Attempts++;
             request.NextAttemptAt = RetrySchedule.NextRetry(time.GetUtcNow(), request.Attempts);
         }
+    }
+
+    private static string FailureOf(AlbumDownloadResult result) =>
+        result.Failures.Count > 0 ? Reason(result.Failures[^1]) : "transfer-failed";
+
+    private Task NotifyFailureAsync(DownloadRequest? snapshot, int requestId, string reason)
+    {
+        var name = snapshot is null ? $"pedido {requestId}" : $"{snapshot.Title} ({snapshot.ArtistName})";
+
+        return notifier.NotifyAsync($"{name} falhou: {FailureText.Describe(reason)}");
     }
 
     private void FinishImport(DownloadRequest request, string? failure)

@@ -21,6 +21,7 @@ public sealed class DownloadRunnerTests : IDisposable
     private readonly ServiceProvider _provider;
     private readonly FakeSlskd _slskd = new();
     private readonly FakeTimeProvider _time = new();
+    private readonly FakeHttpMessageHandler _ntfy = new(_ => FakeHttpMessageHandler.Status(System.Net.HttpStatusCode.OK));
     private readonly DownloadRunner _runner;
 
     public DownloadRunnerTests()
@@ -39,7 +40,8 @@ public sealed class DownloadRunnerTests : IDisposable
             _provider.GetRequiredService<IServiceScopeFactory>(),
             new AlbumDownload(client, _time),
             _time,
-            DisabledPipeline());
+            DisabledPipeline(),
+            new Notifier(new HttpClient(_ntfy), "https://ntfy.exemplo.com/buscarr"));
     }
 
     internal static ImportPipeline DisabledPipeline()
@@ -109,6 +111,31 @@ public sealed class DownloadRunnerTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_NotifiesWhenTheRequestFails()
+    {
+        var request = await AddRequestAsync("g1");
+        _slskd.RefuseDownloadsFrom("fulano");
+
+        _runner.Start(request.Id, [Folder("fulano")]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+        await WaitUntilAsync(() => Task.FromResult(_ntfy.Requests.Count > 0));
+
+        var sent = Assert.Single(_ntfy.Requests);
+        Assert.Equal("Nevermind (Nirvana) falhou: o peer recusou", sent.Body);
+    }
+
+    [Fact]
+    public async Task Start_DoesNotNotifyADownloadThatWorked()
+    {
+        var request = await AddRequestAsync("g1");
+
+        _runner.Start(request.Id, [Folder("fulano")]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Downloaded);
+
+        Assert.Empty(_ntfy.Requests);
+    }
+
+    [Fact]
     public async Task Start_FailsWithTheLastFoldersReasonAndSchedulesARetry()
     {
         var request = await AddRequestAsync("g1");
@@ -134,7 +161,8 @@ public sealed class DownloadRunnerTests : IDisposable
             _provider.GetRequiredService<IServiceScopeFactory>(),
             new AlbumDownload(client, _time),
             _time,
-            DisabledPipeline());
+            DisabledPipeline(),
+            new Notifier(new HttpClient(_ntfy), null));
         var request = await AddRequestAsync("g1");
 
         runner.Start(request.Id, [Folder("fulano")]);

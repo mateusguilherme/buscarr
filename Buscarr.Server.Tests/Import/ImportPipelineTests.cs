@@ -66,7 +66,10 @@ public sealed class ImportPipelineTests : IDisposable
             _provider.GetRequiredService<IServiceScopeFactory>(),
             new AlbumDownload(slskd, _time),
             _time,
-            pipeline);
+            pipeline,
+            new Notifier(
+                new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(System.Net.HttpStatusCode.OK))),
+                null));
     }
 
     public void Dispose()

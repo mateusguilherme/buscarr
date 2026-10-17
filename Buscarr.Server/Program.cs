@@ -42,6 +42,9 @@ builder.Services.AddSingleton(new ImportOptions(
     builder.Configuration["Slskd:DownloadsPath"],
     builder.Configuration["Library:RejectedPath"]));
 builder.Services.AddSingleton<ImportPipeline>();
+builder.Services.AddSingleton(new Notifier(
+    new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+    builder.Configuration["Ntfy:Url"]));
 builder.Services.AddSingleton<DownloadRunner>();
 builder.Services.AddScoped<SearchQueue>();
 builder.Services.AddHostedService<GeneratorWorker>();
