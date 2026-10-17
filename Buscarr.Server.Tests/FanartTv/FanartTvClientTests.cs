@@ -107,6 +107,66 @@ public class FanartTvClientTests
         Assert.Equal("outra-chave", HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query)["api_key"]);
     }
 
+    [Fact]
+    public async Task PingAsync_AsksForAKnownArtistToCheckTheApiKey()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artist()));
+
+        await client.PingAsync();
+
+        var request = Assert.Single(handler.Requests);
+        Assert.StartsWith("https://webservice.fanart.tv/v3/music/", request.Uri.GetLeftPart(UriPartial.Path));
+        Assert.Equal(ApiKey, HttpUtility.ParseQueryString(request.Uri.Query)["api_key"]);
+        Assert.StartsWith("buscarr/", request.UserAgent);
+    }
+
+    [Fact]
+    public async Task PingAsync_AcceptsANotFoundBecauseTheKeyWorked()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(NotFound(), HttpStatusCode.NotFound));
+
+        await client.PingAsync();
+    }
+
+    [Fact]
+    public async Task PingAsync_ThrowsAnInvalidKeyErrorWhenFanartTvRefuses()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.Unauthorized));
+
+        var error = await Assert.ThrowsAsync<HttpRequestException>(client.PingAsync);
+
+        Assert.Equal("chave inválida", error.Message);
+    }
+
+    [Fact]
+    public async Task PingAsync_ThrowsWhenFanartTvFails()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+
+        await Assert.ThrowsAsync<HttpRequestException>(client.PingAsync);
+    }
+
+    [Fact]
+    public async Task PingAsync_ThrowsWhenNotConfigured()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artist()), apiKey: null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(client.PingAsync);
+
+        Assert.Empty(handler.Requests);
+    }
+
+    [Theory]
+    [InlineData(null, false)]
+    [InlineData("", false)]
+    [InlineData(ApiKey, true)]
+    public void IsConfigured_NeedsAnApiKey(string? apiKey, bool configured)
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Artist()), apiKey);
+
+        Assert.Equal(configured, client.IsConfigured);
+    }
+
     private static (FanartTvClient Client, FakeHttpMessageHandler Handler) CreateClient(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
         string? apiKey = ApiKey)

@@ -46,7 +46,7 @@ function secretUpdate(secret: Secret): string | null {
   return secret.cleared ? '' : null;
 }
 
-function describe(name: 'slskdStatus' | 'subsonicStatus', status: ConnectionStatus) {
+function describe(name: 'slskdStatus' | 'subsonicStatus' | 'fanartTvStatus', status: ConnectionStatus) {
   const texts = t.server[name];
 
   return status.state === 'error' ? texts.error(status.message ?? '') : texts[status.state];
@@ -233,6 +233,7 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
           <ul className="server-status">
             <li data-state={status.slskd.state}>{describe('slskdStatus', status.slskd)}</li>
             <li data-state={status.subsonic.state}>{describe('subsonicStatus', status.subsonic)}</li>
+            <li data-state={status.fanartTv.state}>{describe('fanartTvStatus', status.fanartTv)}</li>
           </ul>
         )}
       </form>

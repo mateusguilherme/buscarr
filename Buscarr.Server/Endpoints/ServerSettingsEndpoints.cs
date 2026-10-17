@@ -1,4 +1,5 @@
 using Buscarr.Server.Data;
+using Buscarr.Server.FanartTv;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
 using Buscarr.Server.Subsonic;
@@ -32,7 +33,7 @@ public record ServerSettingsErrors(Dictionary<string, string> Errors);
 
 public record ConnectionStatus(string State, string? Message);
 
-public record ServerStatus(ConnectionStatus Slskd, ConnectionStatus Subsonic);
+public record ServerStatus(ConnectionStatus Slskd, ConnectionStatus Subsonic, ConnectionStatus FanartTv);
 
 public static class ServerSettingsEndpoints
 {
@@ -104,8 +105,8 @@ public static class ServerSettingsEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<ServerStatus> GetStatus(SlskdClient slskd, SubsonicClient subsonic) =>
-        new(await SlskdStatusAsync(slskd), await SubsonicStatusAsync(subsonic));
+    private static async Task<ServerStatus> GetStatus(SlskdClient slskd, SubsonicClient subsonic, FanartTvClient fanartTv) =>
+        new(await SlskdStatusAsync(slskd), await SubsonicStatusAsync(subsonic), await FanartTvStatusAsync(fanartTv));
 
     private static async Task<ConnectionStatus> SlskdStatusAsync(SlskdClient slskd)
     {
@@ -136,6 +137,25 @@ public static class ServerSettingsEndpoints
         try
         {
             await subsonic.PingAsync();
+        }
+        catch (Exception e)
+        {
+            return new("error", e.Message);
+        }
+
+        return new("ok", null);
+    }
+
+    private static async Task<ConnectionStatus> FanartTvStatusAsync(FanartTvClient fanartTv)
+    {
+        if (!fanartTv.IsConfigured)
+        {
+            return new("not-configured", null);
+        }
+
+        try
+        {
+            await fanartTv.PingAsync();
         }
         catch (Exception e)
         {

@@ -213,6 +213,19 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
         Assert.Equal(new ConnectionStatus("ok", null), notConfigured!.Slskd);
         Assert.Equal(new ConnectionStatus("not-configured", null), notConfigured.Subsonic);
         Assert.Equal(new ConnectionStatus("ok", null), configured!.Subsonic);
+        Assert.Equal(new ConnectionStatus("ok", null), configured.FanartTv);
+    }
+
+    [Fact]
+    public async Task Status_TellsWhenTheFanartTvKeyIsInvalid()
+    {
+        using var factory = new BuscarrApiFactory();
+        factory.FanartTv.Respond = _ => FakeHttpMessageHandler.Status(HttpStatusCode.Unauthorized);
+        var admin = await factory.CreateLoggedInClientAsync(admin: true);
+
+        var status = await admin.GetFromJsonAsync<ServerStatus>("/api/server-settings/status");
+
+        Assert.Equal(new ConnectionStatus("error", "chave inválida"), status!.FanartTv);
     }
 
     [Fact]

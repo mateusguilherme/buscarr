@@ -161,7 +161,7 @@ export type ServerSettingsUpdate = {
 
 export type ConnectionState = 'ok' | 'not-configured' | 'offline' | 'error';
 export type ConnectionStatus = { state: ConnectionState; message: string | null };
-export type ServerStatus = { slskd: ConnectionStatus; subsonic: ConnectionStatus };
+export type ServerStatus = { slskd: ConnectionStatus; subsonic: ConnectionStatus; fanartTv: ConnectionStatus };
 
 export class ServerSettingsError extends Error {
   readonly errors: Record<string, string>;

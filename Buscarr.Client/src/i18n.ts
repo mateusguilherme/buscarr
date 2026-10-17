@@ -138,6 +138,12 @@ const ptBR = {
       offline: 'Servidor de música: fora do ar.',
       error: (message: string) => `Servidor de música: erro (${message}).`,
     },
+    fanartTvStatus: {
+      ok: 'fanart.tv: conectado.',
+      'not-configured': 'fanart.tv: não configurado.',
+      offline: 'fanart.tv: fora do ar.',
+      error: (message: string) => `fanart.tv: erro (${message}).`,
+    },
   },
   downloads: {
     title: 'Downloads',
@@ -321,6 +327,12 @@ const en: Messages = {
       'not-configured': 'Music server: not configured.',
       offline: 'Music server: offline.',
       error: (message) => `Music server: error (${message}).`,
+    },
+    fanartTvStatus: {
+      ok: 'fanart.tv: connected.',
+      'not-configured': 'fanart.tv: not configured.',
+      offline: 'fanart.tv: offline.',
+      error: (message) => `fanart.tv: error (${message}).`,
     },
   },
   downloads: {

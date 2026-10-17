@@ -20,6 +20,7 @@ const saved: ServerSettings = {
 const statusOk = {
   slskd: { state: 'ok', message: null },
   subsonic: { state: 'ok', message: null },
+  fanartTv: { state: 'ok', message: null },
 };
 
 function field(label: string) {
@@ -108,6 +109,7 @@ describe('ServerSettingsForm', () => {
       body: {
         slskd: { state: 'offline', message: null },
         subsonic: { state: 'error', message: 'Wrong username or password' },
+        fanartTv: { state: 'error', message: 'chave inválida' },
       },
     });
     render(<ServerSettingsForm initial={saved} />);
@@ -117,6 +119,7 @@ describe('ServerSettingsForm', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/server-settings/status');
     expect(await screen.findByText('slskd: responde, mas não está conectado ao Soulseek.')).toBeDefined();
     expect(screen.getByText('Servidor de música: erro (Wrong username or password).')).toBeDefined();
+    expect(screen.getByText('fanart.tv: erro (chave inválida).')).toBeDefined();
   });
 
   it('desabilita o testar enquanto há mudanças não salvas', async () => {
@@ -145,12 +148,17 @@ describe('ServerSettingsForm', () => {
   it('diz quando uma conexão não está configurada', async () => {
     mockFetch({
       status: 200,
-      body: { slskd: { state: 'ok', message: null }, subsonic: { state: 'not-configured', message: null } },
+      body: {
+        slskd: { state: 'ok', message: null },
+        subsonic: { state: 'not-configured', message: null },
+        fanartTv: { state: 'not-configured', message: null },
+      },
     });
     render(<ServerSettingsForm initial={saved} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Testar conexões' }));
 
     expect(await screen.findByText('Servidor de música: não configurado.')).toBeDefined();
+    expect(screen.getByText('fanart.tv: não configurado.')).toBeDefined();
   });
 });
