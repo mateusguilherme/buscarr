@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Buscarr.Server": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://127.0.0.1:3000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy"
+      }
+    }
+  }
+}

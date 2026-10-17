@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Buscarr.Server</RootNamespace>
+    <ClientRoot>$(MSBuildProjectDirectory)/../Buscarr.Client/</ClientRoot>
+    <SpaRoot>$(ClientRoot)</SpaRoot>
+    <SpaProxyLaunchCommand>npm run dev</SpaProxyLaunchCommand>
+    <SpaProxyServerUrl>http://localhost:5173</SpaProxyServerUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ClientSource Include="$(ClientRoot)src/**" />
+    <ClientSource Include="$(ClientRoot)index.html;$(ClientRoot)package.json;$(ClientRoot)package-lock.json;$(ClientRoot)vite.config.ts;$(ClientRoot)tsconfig.json;$(ClientRoot)eslint.config.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="10.0.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.13" />
+  </ItemGroup>
+
+  <Target Name="InstallClientDependencies" Condition="!Exists('$(ClientRoot)node_modules')">
+    <Exec Command="npm install" WorkingDirectory="$(ClientRoot)" />
+  </Target>
+
+  <Target Name="BuildClient" BeforeTargets="Build" DependsOnTargets="InstallClientDependencies" Inputs="@(ClientSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/index.html">
+    <Exec Command="npm run build" WorkingDirectory="$(ClientRoot)" />
+  </Target>
+
+</Project>
