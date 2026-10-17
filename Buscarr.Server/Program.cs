@@ -67,6 +67,7 @@ app.MapAuthEndpoints();
 app.MapArtistEndpoints();
 app.MapSettingsEndpoints();
 app.MapListEndpoints();
+app.MapDownloadEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
