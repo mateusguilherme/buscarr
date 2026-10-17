@@ -23,7 +23,6 @@ namespace Buscarr.Server.Data.Migrations
                     SubsonicUrl = table.Column<string>(type: "TEXT", nullable: true),
                     SubsonicUser = table.Column<string>(type: "TEXT", nullable: true),
                     SubsonicPassword = table.Column<string>(type: "TEXT", nullable: true),
-                    NtfyUrl = table.Column<string>(type: "TEXT", nullable: true),
                     FanartTvApiKey = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>

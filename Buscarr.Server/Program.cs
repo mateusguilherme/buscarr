@@ -45,9 +45,6 @@ builder.Services.AddSingleton(services =>
         services.GetRequiredService<AudioTools>(),
         () => settings().Import);
 });
-builder.Services.AddSingleton(services => new Notifier(
-    new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
-    CurrentSettings(services)));
 builder.Services.AddSingleton<DownloadRunner>();
 builder.Services.AddScoped<SearchQueue>();
 builder.Services.AddHostedService<GeneratorWorker>();

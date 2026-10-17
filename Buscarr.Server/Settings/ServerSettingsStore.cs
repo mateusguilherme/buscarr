@@ -57,7 +57,6 @@ public sealed class ServerSettingsStore
             SubsonicUrl = Value("Subsonic:Url"),
             SubsonicUser = Value("Subsonic:User"),
             SubsonicPassword = Value("Subsonic:Password"),
-            NtfyUrl = Value("Ntfy:Url"),
             FanartTvApiKey = Value("FanartTv:ApiKey"),
         };
     }

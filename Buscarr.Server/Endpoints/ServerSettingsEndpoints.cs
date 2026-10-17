@@ -15,7 +15,6 @@ public record ServerSettingsView(
     string SubsonicUrl,
     string SubsonicUser,
     bool HasSubsonicPassword,
-    string NtfyUrl,
     bool HasFanartTvApiKey);
 
 public record ServerSettingsUpdate(
@@ -27,7 +26,6 @@ public record ServerSettingsUpdate(
     string? SubsonicUrl,
     string? SubsonicUser,
     string? SubsonicPassword,
-    string? NtfyUrl,
     string? FanartTvApiKey);
 
 public record ServerSettingsErrors(Dictionary<string, string> Errors);
@@ -73,7 +71,6 @@ public static class ServerSettingsEndpoints
             settings.SubsonicUrl ?? "",
             settings.SubsonicUser ?? "",
             settings.SubsonicPassword is not null,
-            settings.NtfyUrl ?? "",
             settings.FanartTvApiKey is not null);
     }
 
@@ -93,7 +90,6 @@ public static class ServerSettingsEndpoints
             SubsonicUrl = Clean(update.SubsonicUrl),
             SubsonicUser = Clean(update.SubsonicUser),
             SubsonicPassword = Secret(update.SubsonicPassword, current.SubsonicPassword),
-            NtfyUrl = Clean(update.NtfyUrl),
             FanartTvApiKey = Secret(update.FanartTvApiKey, current.FanartTvApiKey),
         };
         var errors = ServerSettingsValidator.Validate(settings);

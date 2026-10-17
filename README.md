@@ -14,6 +14,6 @@ The next step is managing downloads through [slskd](https://github.com/slskd/sls
 
 ## Running it
 
-Configuration lives in `appsettings.json` or environment variables (`Section__Key`): `Slskd__Url`/`Slskd__ApiKey` for the Soulseek daemon, `Slskd__DownloadsPath` + `Library__Path` to verify and import what it downloads, `Subsonic__*` to skip albums an OpenSubsonic library already has, and `Ntfy__Url` for failure notifications. All of them are optional: with none set, buscarr is just the search and the list.
+Configuration lives in `appsettings.json` or environment variables (`Section__Key`): `Slskd__Url`/`Slskd__ApiKey` for the Soulseek daemon, `Slskd__DownloadsPath` + `Library__Path` to verify and import what it downloads and `Subsonic__*` to skip albums an OpenSubsonic library already has. All of them are optional: with none set, buscarr is just the search and the list.
 
 `GET /health` reports the workers, the database and slskd for any HTTP monitor. See [docs/deploy.md](docs/deploy.md) for a Docker image and compose example.

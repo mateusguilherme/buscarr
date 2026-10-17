@@ -56,14 +56,14 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
     public async Task Put_ForAUserWhoIsNotAdmin_Returns403AndKeepsTheSettings()
     {
         var admin = await _factory.CreateLoggedInClientAsync(admin: true);
-        await admin.PutAsJsonAsync("/api/server-settings", Update() with { NtfyUrl = "https://ntfy.sh/antes" });
+        await admin.PutAsJsonAsync("/api/server-settings", Update() with { SubsonicUser = "antes" });
         var other = await _factory.CreateLoggedInClientAsync();
 
-        var response = await other.PutAsJsonAsync("/api/server-settings", Update() with { NtfyUrl = "https://ntfy.sh/depois" });
+        var response = await other.PutAsJsonAsync("/api/server-settings", Update() with { SubsonicUser = "depois" });
         var settings = await admin.GetFromJsonAsync<ServerSettingsView>("/api/server-settings");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        Assert.Equal("https://ntfy.sh/antes", settings!.NtfyUrl);
+        Assert.Equal("antes", settings!.SubsonicUser);
     }
 
     [Fact]
@@ -85,7 +85,6 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
                 "http://navidrome:4533",
                 "fulano",
                 true,
-                "https://ntfy.sh/buscarr",
                 true),
             JsonSerializer.Deserialize<ServerSettingsView>(body, JsonSerializerOptions.Web));
         Assert.DoesNotContain("chave-slskd", body);
@@ -116,26 +115,24 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
 
         await admin.PutAsJsonAsync(
             "/api/server-settings",
-            Update() with { SubsonicUser = "  fulano  ", NtfyUrl = "   ", RejectedPath = null });
+            Update() with { SubsonicUser = "  fulano  ", SubsonicUrl = "   ", RejectedPath = null });
         var settings = await admin.GetFromJsonAsync<ServerSettingsView>("/api/server-settings");
 
         Assert.Equal("fulano", settings!.SubsonicUser);
-        Assert.Equal("", settings.NtfyUrl);
+        Assert.Equal("", settings.SubsonicUrl);
         Assert.Equal("", settings.RejectedPath);
     }
 
     [Theory]
     [InlineData("slskdUrl")]
     [InlineData("subsonicUrl")]
-    [InlineData("ntfyUrl")]
     public async Task Put_RefusesAnAddressThatIsNotHttp(string field)
     {
         var admin = await _factory.CreateLoggedInClientAsync(admin: true);
         var update = field switch
         {
             "slskdUrl" => Update() with { SlskdUrl = "slskd:5030" },
-            "subsonicUrl" => Update() with { SubsonicUrl = "ftp://navidrome" },
-            _ => Update() with { NtfyUrl = "ntfy" },
+            _ => Update() with { SubsonicUrl = "ftp://navidrome" },
         };
 
         var errors = await PutExpectingErrorsAsync(admin, update);
@@ -195,10 +192,10 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
         var admin = await _factory.CreateLoggedInClientAsync(admin: true);
         await admin.PutAsJsonAsync("/api/server-settings", Update());
 
-        await admin.PutAsJsonAsync("/api/server-settings", Update() with { NtfyUrl = "https://ntfy.sh/outro", SlskdUrl = "ruim" });
+        await admin.PutAsJsonAsync("/api/server-settings", Update() with { SubsonicUser = "outro", SlskdUrl = "ruim" });
         var settings = await admin.GetFromJsonAsync<ServerSettingsView>("/api/server-settings");
 
-        Assert.Equal("https://ntfy.sh/buscarr", settings!.NtfyUrl);
+        Assert.Equal("fulano", settings!.SubsonicUser);
     }
 
     [Fact]
@@ -253,7 +250,6 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
             "http://navidrome:4533",
             "fulano",
             "senha-navidrome",
-            "https://ntfy.sh/buscarr",
             "chave-fanart");
 
     private static async Task<Dictionary<string, string>> PutExpectingErrorsAsync(HttpClient client, ServerSettingsUpdate update)

@@ -35,7 +35,6 @@ services:
       Subsonic__Url: "http://navidrome:4533"
       Subsonic__User: "…"
       Subsonic__Password: "…"
-      Ntfy__Url: "https://ntfy.sh/your-topic"
       FanartTv__ApiKey: "…"
     restart: unless-stopped
 ```
@@ -45,7 +44,7 @@ Notes:
 - **`user`** must be able to write to the library, to slskd's `complete/` folder and to the `/data` volume (the SQLite database lives there, and the startup migration writes to it).
 - **Paths are what buscarr sees.** `Slskd__DownloadsPath` is the `complete/` folder as mounted *in this container*; it does not have to match slskd's internal path, because buscarr finds each album's folder by its file names.
 - **`Library__RejectedPath`** defaults to a `rejected/` folder next to the downloads; folders that fail verification are moved there with a `.reason.txt` explaining why, never deleted.
-- **Optional pieces degrade gracefully.** Without `Library__Path` + `Slskd__DownloadsPath`, buscarr only downloads into `complete/` (state "Downloaded") and never touches the library. Without `Subsonic__*`, it does not skip albums the library already has. Without `Ntfy__Url`, it does not notify.
+- **Optional pieces degrade gracefully.** Without `Library__Path` + `Slskd__DownloadsPath`, buscarr only downloads into `complete/` (state "Downloaded") and never touches the library. Without `Subsonic__*`, it does not skip albums the library already has.
 - Every external call has a timeout (HTTP clients and the ffmpeg processes), so a stuck dependency cannot hang a worker forever; no external watchdog is needed.
 
 ## Soulseek account
@@ -55,7 +54,6 @@ slskd logs into Soulseek, not buscarr — and **one Soulseek account holds one s
 ## Monitoring
 
 - **`GET /health`** needs no login and suits any HTTP monitor (Uptime Kuma, for example). It returns 200 when healthy and 503 when the database is unreachable or a worker stopped beating (search worker: 10 min; generator: 13 h, one beat per 12 h cycle). The JSON body carries the reasons, plus slskd's connection state — slskd being down does *not* degrade `/health`, so watch slskd separately if you want an alert for it.
-- **ntfy:** with `Ntfy__Url` set, buscarr posts one message per failed request ("Nevermind (Nirvana) falhou: …"). Successful imports are silent.
 
 ## Before trusting rejections
 

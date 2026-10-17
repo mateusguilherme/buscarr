@@ -15,7 +15,6 @@ public sealed record ServerSettings
     public string? SubsonicUrl { get; init; }
     public string? SubsonicUser { get; init; }
     public string? SubsonicPassword { get; init; }
-    public string? NtfyUrl { get; init; }
     public string? FanartTvApiKey { get; init; }
 
     public ImportOptions Import => new(LibraryPath, DownloadsPath, RejectedPath);

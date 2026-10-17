@@ -7,7 +7,6 @@ public static class ServerSettingsValidator
         var errors = new Dictionary<string, string>();
         CheckUrl(errors, "slskdUrl", settings.SlskdUrl);
         CheckUrl(errors, "subsonicUrl", settings.SubsonicUrl);
-        CheckUrl(errors, "ntfyUrl", settings.NtfyUrl);
         CheckFolder(errors, "downloadsPath", settings.DownloadsPath, mustExist: true);
         CheckFolder(errors, "libraryPath", settings.LibraryPath, mustExist: true);
         CheckFolder(errors, "rejectedPath", settings.RejectedPath, mustExist: false);

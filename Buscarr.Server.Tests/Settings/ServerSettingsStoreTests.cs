@@ -40,7 +40,6 @@ public sealed class ServerSettingsStoreTests : IDisposable
             ["Subsonic:Url"] = "http://navidrome:4533",
             ["Subsonic:User"] = "fulano",
             ["Subsonic:Password"] = "senha",
-            ["Ntfy:Url"] = "https://ntfy.sh/buscarr",
             ["FanartTv:ApiKey"] = "fanart",
         }));
 
@@ -54,7 +53,6 @@ public sealed class ServerSettingsStoreTests : IDisposable
             SubsonicUrl = "http://navidrome:4533",
             SubsonicUser = "fulano",
             SubsonicPassword = "senha",
-            NtfyUrl = "https://ntfy.sh/buscarr",
             FanartTvApiKey = "fanart",
         };
         Assert.Equal(expected, store.Current);
@@ -102,10 +100,10 @@ public sealed class ServerSettingsStoreTests : IDisposable
         var store = new ServerSettingsStore();
         await store.LoadAsync(_db, Configuration(new()));
 
-        await store.SaveAsync(_db, new ServerSettings { NtfyUrl = "https://ntfy.sh/a" });
-        await store.SaveAsync(_db, new ServerSettings { NtfyUrl = "https://ntfy.sh/b" });
+        await store.SaveAsync(_db, new ServerSettings { SubsonicUser = "a" });
+        await store.SaveAsync(_db, new ServerSettings { SubsonicUser = "b" });
 
-        Assert.Equal("https://ntfy.sh/b", (await NewContext().ServerSettings.SingleAsync()).NtfyUrl);
+        Assert.Equal("b", (await NewContext().ServerSettings.SingleAsync()).SubsonicUser);
     }
 
     [Fact]

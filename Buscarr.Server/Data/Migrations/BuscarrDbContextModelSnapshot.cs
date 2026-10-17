@@ -140,9 +140,6 @@ namespace Buscarr.Server.Data.Migrations
                     b.Property<string>("LibraryPath")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("NtfyUrl")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("RejectedPath")
                         .HasColumnType("TEXT");
 

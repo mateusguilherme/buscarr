@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Buscarr.Server.Data.Migrations
 {
     [DbContext(typeof(BuscarrDbContext))]
-    [Migration("20261017182301_ServerSettings")]
+    [Migration("20261017183354_ServerSettings")]
     partial class ServerSettings
     {
         /// <inheritdoc />
@@ -141,9 +141,6 @@ namespace Buscarr.Server.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LibraryPath")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("NtfyUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RejectedPath")
