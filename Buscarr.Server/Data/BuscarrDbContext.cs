@@ -1,3 +1,4 @@
+using Buscarr.Server.Downloads;
 using Buscarr.Server.Lists;
 using Buscarr.Server.Users;
 using Microsoft.EntityFrameworkCore;
@@ -9,6 +10,8 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
     public DbSet<User> Users => Set<User>();
 
     public DbSet<ListedArtist> ListedArtists => Set<ListedArtist>();
+
+    public DbSet<DownloadRequest> DownloadRequests => Set<DownloadRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +25,11 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
         {
             artist.HasKey(a => new { a.UserId, a.ArtistId });
             artist.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DownloadRequest>(request =>
+        {
+            request.HasIndex(r => new { r.ReleaseGroupId, r.TrackCount, r.Quality }).IsUnique();
         });
     }
 }
