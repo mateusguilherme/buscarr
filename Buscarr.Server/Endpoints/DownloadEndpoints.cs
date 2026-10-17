@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,7 @@ public static class DownloadEndpoints
 
         group.MapGet("/", GetDownloads);
         group.MapPost("/{id:int}/cancel", CancelDownload);
+        group.MapGet("/events", StreamEvents);
     }
 
     private static Task<List<DownloadItem>> GetDownloads(BuscarrDbContext db) => ItemsAsync(db);
@@ -58,6 +60,43 @@ public static class DownloadEndpoints
         }
 
         return Results.NoContent();
+    }
+
+    private static readonly TimeSpan EventInterval = TimeSpan.FromSeconds(3);
+
+    private static readonly JsonSerializerOptions EventJson = new(JsonSerializerDefaults.Web);
+
+    private static async Task StreamEvents(HttpContext context, IServiceScopeFactory scopes, TimeProvider time)
+    {
+        context.Response.Headers.ContentType = "text/event-stream";
+        context.Response.Headers.CacheControl = "no-cache";
+        string? last = null;
+
+        try
+        {
+            while (true)
+            {
+                string snapshot;
+
+                using (var scope = scopes.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+                    snapshot = JsonSerializer.Serialize(await ItemsAsync(db), EventJson);
+                }
+
+                if (snapshot != last)
+                {
+                    last = snapshot;
+                    await context.Response.WriteAsync($"data: {snapshot}\n\n", context.RequestAborted);
+                    await context.Response.Body.FlushAsync(context.RequestAborted);
+                }
+
+                await Task.Delay(EventInterval, time, context.RequestAborted);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     internal static async Task<List<DownloadItem>> ItemsAsync(BuscarrDbContext db)

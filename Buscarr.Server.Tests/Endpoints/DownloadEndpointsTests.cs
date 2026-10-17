@@ -128,6 +128,69 @@ public sealed class DownloadEndpointsTests
         Assert.Equal("downloaded", await StateAsync(client, request.Id));
     }
 
+    [Fact]
+    public async Task Events_WithoutLogin_Returns401()
+    {
+        using var factory = new BuscarrApiFactory();
+
+        var response = await factory.CreateClient().GetAsync("/api/downloads/events");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Events_StreamTheSnapshotAndThenEachChange()
+    {
+        using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.Searching));
+
+        using var response = await client.GetAsync("/api/downloads/events", HttpCompletionOption.ResponseHeadersRead);
+        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
+
+        Assert.Equal("text/event-stream", response.Content.Headers.ContentType!.MediaType);
+        Assert.Contains("\"state\":\"searching\"", await ReadEventAsync(reader));
+
+        await SetStateAsync(factory, request.Id, DownloadState.Downloaded);
+
+        Assert.Contains("\"state\":\"downloaded\"", await NextEventAsync(factory, reader));
+    }
+
+    private static async Task<string> ReadEventAsync(StreamReader reader)
+    {
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            if (line.StartsWith("data: ", StringComparison.Ordinal))
+            {
+                return line["data: ".Length..];
+            }
+        }
+
+        throw new InvalidOperationException("o stream acabou sem um evento");
+    }
+
+    private static async Task<string> NextEventAsync(BuscarrApiFactory factory, StreamReader reader)
+    {
+        var read = ReadEventAsync(reader);
+
+        while (!read.IsCompleted)
+        {
+            factory.Time.Advance(TimeSpan.FromSeconds(3));
+            await Task.Delay(10);
+        }
+
+        return await read;
+    }
+
+    private static async Task SetStateAsync(BuscarrApiFactory factory, int id, DownloadState state)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+        var request = await db.DownloadRequests.FindAsync(id);
+        request!.State = state;
+        await db.SaveChangesAsync();
+    }
+
     private static DownloadRequest Request(string releaseGroupId, DownloadState state, int nextAttemptInDays = 0)
     {
         var request = DownloadRequestTests.Request(releaseGroupId);

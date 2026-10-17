@@ -38,6 +38,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     public FakeHttpMessageHandler FanartTv { get; }
 
+    public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
+
     public bool FanartTvDown { get; init; }
 
     public async Task<HttpClient> CreateLoggedInClientAsync()
@@ -59,6 +61,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         {
             services.ConfigureDbContext<BuscarrDbContext>(options =>
                 options.UseSqlite($"Data Source={_databasePath}"));
+            services.RemoveAll<TimeProvider>();
+            services.AddSingleton<TimeProvider>(Time);
             services.RemoveAll<MusicBrainzClient>();
             services.AddSingleton(new MusicBrainzClient(
                 new HttpClient(MusicBrainz),
