@@ -27,11 +27,11 @@
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
   </ItemGroup>
 
-  <Target Name="InstallClientDependencies" Condition="!Exists('$(ClientRoot)node_modules')">
+  <Target Name="InstallClientDependencies" Condition="!Exists('$(ClientRoot)node_modules') and '$(SkipClient)' != 'true'">
     <Exec Command="npm install" WorkingDirectory="$(ClientRoot)" />
   </Target>
 
-  <Target Name="BuildClient" BeforeTargets="Build" DependsOnTargets="InstallClientDependencies" Inputs="@(ClientSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/index.html">
+  <Target Name="BuildClient" BeforeTargets="Build" DependsOnTargets="InstallClientDependencies" Inputs="@(ClientSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/index.html" Condition="'$(SkipClient)' != 'true'">
     <Exec Command="npm run build" WorkingDirectory="$(ClientRoot)" />
   </Target>
 

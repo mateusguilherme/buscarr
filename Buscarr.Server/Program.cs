@@ -83,5 +83,6 @@ app.MapDownloadEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 
-app.Lifetime.ApplicationStarted.Register(() => Console.WriteLine("Buscarr.Server rodando em http://127.0.0.1:3000"));
-app.Run("http://127.0.0.1:3000");
+var url = builder.Configuration["urls"] ?? "http://127.0.0.1:3000";
+app.Lifetime.ApplicationStarted.Register(() => Console.WriteLine($"Buscarr.Server rodando em {url}"));
+app.Run(url);

@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/node_modules
+Buscarr.Server/wwwroot
+*.db
+*.db-*
+.git
+.githooks
+.claude
+docs
+Dockerfile
