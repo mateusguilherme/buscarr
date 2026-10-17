@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { HomePage } from './HomePage';
 import { ReleasesPage } from './ReleasesPage';
+import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
