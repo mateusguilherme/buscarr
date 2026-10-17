@@ -17,7 +17,7 @@ public class UserStore(BuscarrDbContext db)
             return null;
         }
 
-        var user = new User { Email = email, Name = name };
+        var user = new User { Email = email, Name = name, IsAdmin = !await db.Users.AnyAsync() };
         user.PasswordHash = Hasher.HashPassword(user, password);
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -45,6 +45,28 @@ public class UserStore(BuscarrDbContext db)
         await db.Users
             .Where(u => u.Id == userId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.QualityPreference, quality));
+    }
+
+    public Task<bool> IsAdminAsync(int userId) =>
+        db.Users.AnyAsync(u => u.Id == userId && u.IsAdmin);
+
+    public async Task EnsureAdminAsync()
+    {
+        if (await db.Users.AnyAsync(u => u.IsAdmin))
+        {
+            return;
+        }
+
+        var oldest = await db.Users.OrderBy(u => u.Id).Select(u => (int?)u.Id).FirstOrDefaultAsync();
+
+        if (oldest is null)
+        {
+            return;
+        }
+
+        await db.Users
+            .Where(u => u.Id == oldest)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, true));
     }
 
     public async Task<User?> VerifyAsync(string email, string password)

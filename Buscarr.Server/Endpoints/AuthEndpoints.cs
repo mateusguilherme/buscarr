@@ -9,7 +9,7 @@ public record RegisterRequest(string Email, string Name, string Password);
 
 public record LoginRequest(string Email, string Password);
 
-public record UserInfo(string Email, string Name);
+public record UserInfo(string Email, string Name, bool IsAdmin);
 
 public static class AuthEndpoints
 {
@@ -25,10 +25,11 @@ public static class AuthEndpoints
         group.MapGet("/me", Me).RequireAuthorization();
     }
 
-    private static IResult Me(ClaimsPrincipal user) =>
+    private static async Task<IResult> Me(ClaimsPrincipal user, UserStore users) =>
         Results.Json(new UserInfo(
             user.FindFirstValue(ClaimTypes.Email) ?? "",
-            user.FindFirstValue(ClaimTypes.Name) ?? ""));
+            user.FindFirstValue(ClaimTypes.Name) ?? "",
+            await users.IsAdminAsync(user.UserId())));
 
     private static async Task<IResult> Register(
         RegisterRequest request,
@@ -53,7 +54,7 @@ public static class AuthEndpoints
 
         await SignInAsync(context, user);
 
-        return Results.Json(new UserInfo(user.Email, user.Name));
+        return Results.Json(new UserInfo(user.Email, user.Name, user.IsAdmin));
     }
 
     private static async Task<IResult> Login(
@@ -70,7 +71,7 @@ public static class AuthEndpoints
 
         await SignInAsync(context, user);
 
-        return Results.Json(new UserInfo(user.Email, user.Name));
+        return Results.Json(new UserInfo(user.Email, user.Name, user.IsAdmin));
     }
 
     private static IResult Logout() =>

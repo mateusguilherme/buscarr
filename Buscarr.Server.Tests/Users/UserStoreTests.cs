@@ -73,4 +73,54 @@ public sealed class UserStoreTests : IDisposable
 
         Assert.Null(user);
     }
+
+    [Fact]
+    public async Task CreateAsync_MakesOnlyTheFirstUserAnAdmin()
+    {
+        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+
+        Assert.True(await _users.IsAdminAsync(first!.Id));
+        Assert.False(await _users.IsAdminAsync(second!.Id));
+    }
+
+    [Fact]
+    public async Task EnsureAdminAsync_PromotesTheOldestUserWhenNoneIsAdmin()
+    {
+        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+        await _db.Users.ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, false));
+
+        await _users.EnsureAdminAsync();
+
+        Assert.True(await _users.IsAdminAsync(first!.Id));
+        Assert.False(await _users.IsAdminAsync(second!.Id));
+    }
+
+    [Fact]
+    public async Task EnsureAdminAsync_KeepsTheAdminThereIs()
+    {
+        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+        await _db.Users.ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, u => u.Id == second!.Id));
+
+        await _users.EnsureAdminAsync();
+
+        Assert.False(await _users.IsAdminAsync(first!.Id));
+        Assert.True(await _users.IsAdminAsync(second!.Id));
+    }
+
+    [Fact]
+    public async Task EnsureAdminAsync_DoesNothingWithoutUsers()
+    {
+        await _users.EnsureAdminAsync();
+
+        Assert.False(await _db.Users.AnyAsync());
+    }
+
+    [Fact]
+    public async Task IsAdminAsync_IsFalseForAnUnknownUser()
+    {
+        Assert.False(await _users.IsAdminAsync(42));
+    }
 }

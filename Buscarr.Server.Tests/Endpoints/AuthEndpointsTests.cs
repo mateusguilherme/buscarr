@@ -25,7 +25,24 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
         var me = await client.GetFromJsonAsync<UserInfo>("/api/auth/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(new UserInfo(email, "Fulano"), me);
+        Assert.Equal(email, me?.Email);
+        Assert.Equal("Fulano", me?.Name);
+    }
+
+    [Fact]
+    public async Task Register_MakesOnlyTheFirstUserAnAdmin()
+    {
+        using var fresh = new BuscarrApiFactory();
+        var first = fresh.CreateClient();
+        var second = fresh.CreateClient();
+        var firstEmail = NewEmail();
+        var secondEmail = NewEmail();
+
+        await first.PostAsJsonAsync("/api/auth/register", new RegisterRequest(firstEmail, "Fulano", "segredo123"));
+        await second.PostAsJsonAsync("/api/auth/register", new RegisterRequest(secondEmail, "Beltrano", "segredo123"));
+
+        Assert.Equal(new UserInfo(firstEmail, "Fulano", true), await first.GetFromJsonAsync<UserInfo>("/api/auth/me"));
+        Assert.Equal(new UserInfo(secondEmail, "Beltrano", false), await second.GetFromJsonAsync<UserInfo>("/api/auth/me"));
     }
 
     [Fact]

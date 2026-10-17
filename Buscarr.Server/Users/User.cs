@@ -8,4 +8,5 @@ public class User
     public string PasswordHash { get; set; } = "";
     public string? EditionPreference { get; set; }
     public string? QualityPreference { get; set; }
+    public bool IsAdmin { get; set; }
 }

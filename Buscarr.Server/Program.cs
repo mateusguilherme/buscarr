@@ -68,6 +68,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<BuscarrDbContext>().Database.Migrate();
+    await scope.ServiceProvider.GetRequiredService<UserStore>().EnsureAdminAsync();
 }
 
 app.UseStaticFiles();
