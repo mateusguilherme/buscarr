@@ -91,7 +91,7 @@ public class MusicBrainzClientTests
         var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()), time);
         await client.FindArtistsAsync(Contact, "nirvana");
 
-        var second = client.FindArtistsAsync(Contact, "nirvana");
+        var second = client.FindArtistsAsync(Contact, "korn");
 
         Assert.False(second.IsCompleted);
         Assert.Single(handler.Requests);
@@ -100,6 +100,64 @@ public class MusicBrainzClientTests
         await second;
 
         Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Requests_AreAnsweredFromTheCacheWhenRepeated()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("2", "Nirvana"))));
+        await client.FindArtistsAsync(Contact, "nirvana");
+
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
+
+        Assert.Equal("Nirvana", Assert.Single(artists).Name);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Requests_SkipTheWaitWhenAnsweredFromTheCache()
+    {
+        var time = new FakeTimeProvider();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("2", "Nirvana"))), time);
+        await client.FindArtistsAsync(Contact, "nirvana");
+
+        var second = client.FindArtistsAsync(Contact, "nirvana");
+
+        Assert.True(second.IsCompleted);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task Requests_AreRepeatedWhenTheCacheExpires()
+    {
+        var time = new FakeTimeProvider();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("2", "Nirvana"))), time);
+        await client.FindArtistsAsync(Contact, "nirvana");
+
+        time.Advance(TimeSpan.FromHours(24));
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
+
+        Assert.Equal("Nirvana", Assert.Single(artists).Name);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Requests_AreNotCachedWhenTheyFail()
+    {
+        var responses = new Queue<HttpResponseMessage>(
+        [
+            FakeHttpMessageHandler.Status(HttpStatusCode.ServiceUnavailable),
+            FakeHttpMessageHandler.Status(HttpStatusCode.ServiceUnavailable),
+            FakeHttpMessageHandler.Status(HttpStatusCode.ServiceUnavailable),
+            FakeHttpMessageHandler.Json(Artists(("2", "Nirvana"))),
+        ]);
+        var (client, handler) = CreateClient(_ => responses.Dequeue());
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.FindArtistsAsync(Contact, "nirvana"));
+        var artists = await client.FindArtistsAsync(Contact, "nirvana");
+
+        Assert.Equal("Nirvana", Assert.Single(artists).Name);
+        Assert.Equal(4, handler.Requests.Count);
     }
 
     [Fact]

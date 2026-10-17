@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,8 +10,10 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     private const string UserAgentProduct = "buscarr/0.1.0";
     private const int MaxAttempts = 3;
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan CacheLife = TimeSpan.FromHours(24);
 
     private readonly SemaphoreSlim _turn = new(1, 1);
+    private readonly ConcurrentDictionary<string, (long Timestamp, object Value)> _cache = new();
     private long? _lastRequest;
 
     public async Task<List<Artist>> FindArtistsAsync(string contact, string query)
@@ -83,6 +86,11 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
         var url = $"https://musicbrainz.org/ws/2/{path}?{query}";
         var userAgent = $"{UserAgentProduct} ( {contact} )";
 
+        if (_cache.TryGetValue(url, out var cached) && time.GetElapsedTime(cached.Timestamp) < CacheLife)
+        {
+            return (T)cached.Value;
+        }
+
         HttpResponseMessage response;
         var attempts = 0;
 
@@ -107,9 +115,11 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
         using (response)
         {
             response.EnsureSuccessStatusCode();
-
-            return await response.Content.ReadFromJsonAsync<T>()
+            var value = await response.Content.ReadFromJsonAsync<T>()
                 ?? throw new JsonException($"resposta vazia do MusicBrainz em {path}");
+            _cache[url] = (time.GetTimestamp(), value);
+
+            return value;
         }
     }
 
