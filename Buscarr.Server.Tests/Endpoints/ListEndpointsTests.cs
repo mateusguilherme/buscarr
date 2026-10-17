@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.Tests.Fakes;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Buscarr.Server.Tests.Endpoints;
 
@@ -41,6 +43,23 @@ public class ListEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
         Assert.Equal(
             [new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null, BuscarrApiFactory.NirvanaImage, true)],
             artists);
+    }
+
+    [Fact]
+    public async Task PutAndDeleteList_FireTheRequestGenerator()
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+        var trigger = factory.Services.GetRequiredService<GeneratorTrigger>();
+        trigger.Drain();
+
+        await AddNirvanaAsync(client);
+
+        Assert.True(trigger.Pending);
+        trigger.Drain();
+
+        await client.DeleteAsync(Nirvana);
+
+        Assert.True(trigger.Pending);
     }
 
     [Fact]

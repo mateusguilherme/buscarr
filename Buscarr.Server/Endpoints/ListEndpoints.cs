@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Buscarr.Server.Downloads;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
@@ -39,6 +40,7 @@ public static class ListEndpoints
         MusicBrainzClient musicBrainz,
         FanartTvClient fanartTv,
         ArtistListStore list,
+        GeneratorTrigger generator,
         ClaimsPrincipal user,
         string id,
         ListSettings settings)
@@ -75,11 +77,16 @@ public static class ListEndpoints
             Image = await image,
             ReleaseTypes = [.. ListReleaseTypes.All.Where(settings.ReleaseTypes.Contains)],
         });
+        generator.Fire();
 
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RemoveArtist(ArtistListStore list, ClaimsPrincipal user, string id)
+    private static async Task<IResult> RemoveArtist(
+        ArtistListStore list,
+        GeneratorTrigger generator,
+        ClaimsPrincipal user,
+        string id)
     {
         if (!ArtistEndpoints.IsMusicBrainzId(id))
         {
@@ -87,6 +94,7 @@ public static class ListEndpoints
         }
 
         await list.RemoveAsync(user.UserId(), id);
+        generator.Fire();
 
         return Results.NoContent();
     }
