@@ -63,17 +63,19 @@ public sealed class SearchQueueTests : IDisposable
     public async Task ProcessNextAsync_SpreadsTheRetriesOfANotFoundAlbumOverDays()
     {
         var request = await AddRequestAsync();
+        var before = _time.GetUtcNow();
 
         await ProcessAsync();
 
         Assert.Equal((DownloadState.NotFound, "nothing-found", 1), (request.State, request.Failure, request.Attempts));
-        Assert.Equal(_time.GetUtcNow().AddDays(1), request.NextAttemptAt, TimeSpan.FromSeconds(2));
+        AssertScheduledIn(request, TimeSpan.FromDays(1), before);
 
         _time.Advance(TimeSpan.FromDays(1));
+        before = _time.GetUtcNow();
         await ProcessAsync();
 
         Assert.Equal(2, request.Attempts);
-        Assert.Equal(_time.GetUtcNow().AddDays(2), request.NextAttemptAt, TimeSpan.FromSeconds(2));
+        AssertScheduledIn(request, TimeSpan.FromDays(2), before);
     }
 
     [Fact]
@@ -93,11 +95,12 @@ public sealed class SearchQueueTests : IDisposable
     {
         var request = await AddRequestAsync();
         _slskd.BusyFor(3);
+        var before = _time.GetUtcNow();
 
         await ProcessAsync();
 
         Assert.Equal((DownloadState.Waiting, null, 0), (request.State, request.Failure, request.Attempts));
-        Assert.Equal(_time.GetUtcNow().AddMinutes(5), request.NextAttemptAt, TimeSpan.FromSeconds(2));
+        AssertScheduledIn(request, TimeSpan.FromMinutes(5), before);
     }
 
     [Fact]
@@ -105,11 +108,12 @@ public sealed class SearchQueueTests : IDisposable
     {
         var request = await AddRequestAsync();
         _slskd.States = ["InProgress"];
+        var before = _time.GetUtcNow();
 
         await ProcessAsync();
 
         Assert.Equal((DownloadState.Waiting, null, 0), (request.State, request.Failure, request.Attempts));
-        Assert.Equal(_time.GetUtcNow().AddHours(1), request.NextAttemptAt, TimeSpan.FromSeconds(2));
+        AssertScheduledIn(request, TimeSpan.FromHours(1), before);
     }
 
     [Fact]
@@ -218,6 +222,9 @@ public sealed class SearchQueueTests : IDisposable
 
     private BuscarrDbContext NewContext() =>
         new(new DbContextOptionsBuilder<BuscarrDbContext>().UseSqlite(_connection).Options);
+
+    private void AssertScheduledIn(DownloadRequest request, TimeSpan delay, DateTimeOffset before) =>
+        Assert.InRange(request.NextAttemptAt, before + delay, _time.GetUtcNow() + delay);
 
     private async Task<SearchedRequest?> ProcessAsync()
     {
