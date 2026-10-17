@@ -85,6 +85,7 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
                 options.LibraryPath!,
                 request.ArtistName,
                 request.Title,
+                request.Type,
                 [.. files.Select((file, i) => new ImportFile(file, tracks.Tracks[i].Position, tracks.Tracks[i].Title))]);
             Directory.Delete(local.Value.Directory, true);
 

@@ -23,12 +23,23 @@ public sealed class LibraryImporterTests : IDisposable
     public void Dispose() => Directory.Delete(_root, true);
 
     [Fact]
+    public void Import_KeepsAnEpApartFromTheAlbumWithTheSameTitle()
+    {
+        _importer.Import(_library, "Metallica", "St. Anger", "album", [new(Source("a.mp3"), 1, "St. Anger")]);
+        var ep = _importer.Import(_library, "Metallica", "St. Anger", "ep", [new(Source("b.mp3"), 1, "St. Anger")]);
+
+        Assert.Equal(Path.Combine(_library, "Metallica", "St. Anger (EP)"), ep);
+        Assert.True(File.Exists(Path.Combine(_library, "Metallica", "St. Anger", "01 St. Anger.mp3")));
+    }
+
+    [Fact]
     public void Import_PlacesTheAlbumInTheLibraryTree()
     {
         var album = _importer.Import(
             _library,
             "Nirvana",
             "Nevermind",
+            "album",
             [
                 new(Source("a.mp3"), 1, "Smells Like Teen Spirit"),
                 new(Source("b.mp3"), 2, "In Bloom"),
@@ -51,6 +62,7 @@ public sealed class LibraryImporterTests : IDisposable
             _library,
             "AC/DC",
             "Live: 1992",
+            "album",
             [new(Source("a.mp3"), 1, longTitle)]);
 
         var file = Assert.Single(Directory.GetFiles(album));
@@ -73,6 +85,7 @@ public sealed class LibraryImporterTests : IDisposable
             _library,
             "Nirvana",
             "Nevermind",
+            "album",
             [new(Source("a.mp3"), 1, "Smells Like Teen Spirit")]);
 
         Assert.Equal(

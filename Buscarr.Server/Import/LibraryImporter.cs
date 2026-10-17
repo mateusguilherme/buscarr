@@ -11,11 +11,23 @@ public sealed class LibraryImporter
     private static readonly char[] InvalidChars =
         [.. Path.GetInvalidFileNameChars(), '/', '\\', ':', '*', '?', '"', '<', '>', '|'];
 
-    public string Import(string libraryPath, string artist, string album, IReadOnlyList<ImportFile> files)
+    private static readonly Dictionary<string, string> TypeSuffixes = new()
+    {
+        ["ep"] = " (EP)",
+        ["single"] = " (Single)",
+        ["live"] = " (Live)",
+        ["compilation"] = " (Compilation)",
+        ["soundtrack"] = " (Soundtrack)",
+        ["remix"] = " (Remix)",
+        ["demo"] = " (Demo)",
+    };
+
+    public string Import(string libraryPath, string artist, string album, string type, IReadOnlyList<ImportFile> files)
     {
         var temp = Path.Combine(libraryPath, $".buscarr-{Guid.NewGuid()}");
         var artistSegment = Segment(artist, "");
-        var albumSegment = Segment(album, "");
+        var typeSuffix = TypeSuffixes.GetValueOrDefault(type, "");
+        var albumSegment = Segment(album, typeSuffix) + typeSuffix;
 
         try
         {
