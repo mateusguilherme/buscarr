@@ -10,10 +10,13 @@ The next step is managing downloads through [slskd](https://github.com/slskd/sls
 - **My list:** a button next to each search result adds the artist to a personal list, choosing the kinds of releases to get, and shows whether the artist is already in it. The list shows each artist with their photo, description and area, and the same button edits or removes them.
 - **Editions:** a global setting picks which edition of each album to get: the original, the most recent remaster or the deluxe, falling back to the original when an album has no such edition.
 - **Quality:** a global setting picks the files to download: MP3 at 320 kbps or FLAC.
+- **Server settings:** the admin sets slskd, the folders, the music server and the fanart.tv key on the settings page, and tests the connections from there. Changes apply without a restart.
 - **Languages:** the interface follows the browser's language, in Portuguese or English.
 
 ## Running it
 
-Configuration lives in `appsettings.json` or environment variables (`Section__Key`): `Slskd__Url`/`Slskd__ApiKey` for the Soulseek daemon, `Slskd__DownloadsPath` + `Library__Path` to verify and import what it downloads and `Subsonic__*` to skip albums an OpenSubsonic library already has. All of them are optional: with none set, buscarr is just the search and the list.
+The first account created is the admin, and only the admin sees the server part of the settings page: the slskd address and API key, the downloads, library and rejected folders, the OpenSubsonic server and the fanart.tv key. Saved values apply at once; folders are checked for existence and write access when saved, and API keys and passwords are never sent back to the browser.
+
+On first start, those settings are seeded from `appsettings.json` or environment variables (`Section__Key`): `Slskd__Url`/`Slskd__ApiKey` for the Soulseek daemon, `Slskd__DownloadsPath` + `Library__Path` to verify and import what it downloads, `Library__RejectedPath`, `Subsonic__Url`/`__User`/`__Password` to skip albums an OpenSubsonic library already has, and `FanartTv__ApiKey` for artist photos. After that the settings page owns them, and changing the variables has no effect. All of them are optional: with none set, buscarr is just the search and the list.
 
 `GET /health` reports the workers, the database and slskd for any HTTP monitor. See [docs/deploy.md](docs/deploy.md) for a Docker image and compose example.

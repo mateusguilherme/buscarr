@@ -39,6 +39,8 @@ services:
     restart: unless-stopped
 ```
 
+The variables under `environment` (other than the connection string) only seed the server settings on the first start. After that they live in the database and are changed on the settings page by the admin, the first account created. The page checks each folder when saving, so a wrong path is caught there rather than at the first import.
+
 Notes:
 
 - **`user`** must be able to write to the library, to slskd's `complete/` folder and to the `/data` volume (the SQLite database lives there, and the startup migration writes to it).
