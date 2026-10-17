@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { login, register, type User } from './api';
+import { Brand } from './Header';
 import { t } from './i18n';
 
 export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
@@ -27,45 +28,51 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <p>
-        <input
-          type="email"
-          placeholder={t.login.email}
-          required
-          autoFocus
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-      </p>
-      {creating && (
-        <p>
+    <main className="auth">
+      <div className="card auth-card">
+        <h1 className="brand brand-large">
+          <Brand />
+        </h1>
+        <p className="tagline">{t.login.tagline}</p>
+        <form className="stack" onSubmit={handleSubmit}>
           <input
-            placeholder={t.login.name}
+            type="email"
+            placeholder={t.login.email}
             required
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
-        </p>
-      )}
-      <p>
-        <input
-          type="password"
-          placeholder={t.login.password}
-          required
-          minLength={creating ? 8 : undefined}
-          autoComplete={creating ? 'new-password' : 'current-password'}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-      </p>
-      <button>{creating ? t.login.createUser : t.login.signIn}</button>{' '}
-      <button type="button" onClick={toggleMode}>
-        {creating ? t.login.haveUser : t.login.createUser}
-      </button>
-      {error && <p>{error}</p>}
-    </form>
+          {creating && (
+            <input
+              placeholder={t.login.name}
+              required
+              autoComplete="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          )}
+          <input
+            type="password"
+            placeholder={t.login.password}
+            required
+            minLength={creating ? 8 : undefined}
+            autoComplete={creating ? 'new-password' : 'current-password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && (
+            <p className="alert" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="button-primary">{creating ? t.login.createUser : t.login.signIn}</button>
+          <button type="button" className="button-ghost" onClick={toggleMode}>
+            {creating ? t.login.haveUser : t.login.createUser}
+          </button>
+        </form>
+      </div>
+    </main>
   );
 }

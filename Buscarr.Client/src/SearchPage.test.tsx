@@ -64,7 +64,19 @@ describe('SearchPage', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&type=group');
   });
 
-  it('mostra cada candidato com a descrição e o link para os releases', async () => {
+  it('explica a busca antes da primeira pesquisa', async () => {
+    mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
+    renderSearchPage();
+
+    expect(screen.getByText('Busque pelo nome. País e tipo ajudam a separar homônimos.')).toBeDefined();
+
+    await search('rancore');
+    await screen.findByRole('link', { name: 'Rancore' });
+
+    expect(screen.queryByText('Busque pelo nome. País e tipo ajudam a separar homônimos.')).toBeNull();
+  });
+
+  it('mostra cada candidato com a descrição, a área e o link para os releases', async () => {
     mockFetch({
       status: 200,
       body: [
@@ -83,8 +95,20 @@ describe('SearchPage', () => {
       '/artist/83048ffe',
       '/artist/b533daaf',
     ]);
-    expect(screen.getByText(/Italian rapper Tarek Iurcich · Italy/)).toBeDefined();
-    expect(screen.getByText(/Brazillian Rock Band · São Paulo/)).toBeDefined();
+    expect(screen.getByText('Italian rapper Tarek Iurcich')).toBeDefined();
+    expect(screen.getByText('Italy')).toBeDefined();
+    expect(screen.getByText('Brazillian Rock Band')).toBeDefined();
+    expect(screen.getByText('São Paulo')).toBeDefined();
+    expect(screen.getByText('3 artistas encontrados')).toBeDefined();
+  });
+
+  it('conta um único candidato no singular', async () => {
+    mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
+    renderSearchPage();
+
+    await search('rancore');
+
+    expect(await screen.findByText('1 artista encontrado')).toBeDefined();
   });
 
   it('avisa quando nenhum artista é encontrado', async () => {

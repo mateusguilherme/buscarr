@@ -17,6 +17,7 @@ const ptBR = {
     signIn: 'Entrar',
     createUser: 'Criar usuário',
     haveUser: 'Já tenho usuário',
+    tagline: 'Encontre o artista certo.',
   },
   search: {
     greeting: (name: string) => `Olá, ${name}`,
@@ -32,6 +33,8 @@ const ptBR = {
     searching: 'Buscando…',
     notFound: 'Nenhum artista encontrado.',
     error: 'Erro na busca.',
+    hint: 'Busque pelo nome. País e tipo ajudam a separar homônimos.',
+    found: (count: number) => (count === 1 ? '1 artista encontrado' : `${count} artistas encontrados`),
   },
   releases: {
     back: 'Voltar',
@@ -43,6 +46,7 @@ const ptBR = {
     empty: 'Nenhum release oficial encontrado.',
     studio: 'Estúdio',
     live: 'Ao vivo',
+    type: 'Tipo de release',
   },
 };
 
@@ -67,6 +71,7 @@ const en: Messages = {
     signIn: 'Sign in',
     createUser: 'Create account',
     haveUser: 'I already have an account',
+    tagline: 'Find the right artist.',
   },
   search: {
     greeting: (name) => `Hi, ${name}`,
@@ -82,6 +87,8 @@ const en: Messages = {
     searching: 'Searching…',
     notFound: 'No artist found.',
     error: 'Search failed.',
+    hint: 'Search by name. Country and type help tell namesakes apart.',
+    found: (count) => (count === 1 ? '1 artist found' : `${count} artists found`),
   },
   releases: {
     back: 'Back',
@@ -93,6 +100,7 @@ const en: Messages = {
     empty: 'No official releases found.',
     studio: 'Studio',
     live: 'Live',
+    type: 'Release type',
   },
 };
 

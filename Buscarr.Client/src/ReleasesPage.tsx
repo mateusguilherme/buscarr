@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router';
 import { getArtistReleases, type ArtistReleases, type Release } from './api';
-import { t } from './i18n';
+import { Avatar } from './Avatar';
+import { Header } from './Header';
+import { ArrowLeftIcon } from './icons';
+import { locale, t } from './i18n';
 
 const releaseTypes = [
   { value: 'album', label: t.releases.albums },
@@ -10,9 +13,16 @@ const releaseTypes = [
   { value: 'all', label: t.releases.all },
 ];
 
+const dateFormat = new Intl.DateTimeFormat(locale, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
+
 export function ReleasesPage() {
   const { id = '' } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const type = searchParams.get('type') ?? 'album';
   const [data, setData] = useState<ArtistReleases | null>(null);
   const [error, setError] = useState<string>();
@@ -46,27 +56,53 @@ export function ReleasesPage() {
 
   return (
     <>
-      <p>
-        <Link to="/">{t.releases.back}</Link>
-      </p>
-      {data && <h1>{data.name}</h1>}
-      <select value={type} onChange={(e) => setSearchParams({ type: e.target.value })}>
-        {releaseTypes.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <Header />
 
-      {error && <p>{error}</p>}
-      {!data && !error && <p>{t.releases.loading}</p>}
-      {data && data.releases.length === 0 && <p>{t.releases.empty}</p>}
-      {data && (
-        <>
-          <ReleaseSection title={t.releases.studio} releases={data.releases.filter((r) => !r.live)} />
-          <ReleaseSection title={t.releases.live} releases={data.releases.filter((r) => r.live)} />
-        </>
-      )}
+      <main className="page">
+        <Link to="/" className="back">
+          <ArrowLeftIcon />
+          {t.releases.back}
+        </Link>
+
+        <div className="artist-hero">
+          {data && (
+            <>
+              <Avatar name={data.name} large />
+              <h1>{data.name}</h1>
+            </>
+          )}
+        </div>
+
+        <nav className="segmented" aria-label={t.releases.type}>
+          {releaseTypes.map((option) => (
+            <Link
+              key={option.value}
+              to={`?type=${option.value}`}
+              aria-current={option.value === type ? 'page' : undefined}
+            >
+              {option.label}
+            </Link>
+          ))}
+        </nav>
+
+        {error && (
+          <p className="alert" role="alert">
+            {error}
+          </p>
+        )}
+        {!data && !error && (
+          <p className="status" role="status">
+            {t.releases.loading}
+          </p>
+        )}
+        {data && data.releases.length === 0 && <p className="status">{t.releases.empty}</p>}
+        {data && (
+          <>
+            <ReleaseSection title={t.releases.studio} releases={data.releases.filter((r) => !r.live)} />
+            <ReleaseSection title={t.releases.live} releases={data.releases.filter((r) => r.live)} />
+          </>
+        )}
+      </main>
     </>
   );
 }
@@ -77,15 +113,16 @@ function ReleaseSection({ title, releases }: { title: string; releases: Release[
   }
 
   return (
-    <>
+    <section className="release-section">
       <h2>{title}</h2>
-      <ul>
+      <ul className="card release-list">
         {releases.map((release) => (
-          <li key={release.title}>
-            {release.date} · {release.title}
+          <li key={release.title} className="release">
+            <span className="release-title">{release.title}</span>
+            <time dateTime={release.date}>{dateFormat.format(new Date(release.date))}</time>
           </li>
         ))}
       </ul>
-    </>
+    </section>
   );
 }

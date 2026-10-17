@@ -20,7 +20,13 @@ export function HomePage() {
   }, []);
 
   if (error) {
-    return <p>{error}</p>;
+    return (
+      <main className="auth">
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      </main>
+    );
   }
 
   if (user === undefined) {
