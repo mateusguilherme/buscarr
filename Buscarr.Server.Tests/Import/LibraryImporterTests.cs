@@ -39,7 +39,7 @@ public sealed class LibraryImporterTests : IDisposable
             ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3"],
             Directory.GetFiles(album).Select(Path.GetFileName).Order());
         Assert.Empty(Directory.GetFiles(_downloads));
-        Assert.Empty(Directory.GetDirectories(_library).Where(dir => Path.GetFileName(dir).StartsWith('.')));
+        Assert.DoesNotContain(Directory.GetDirectories(_library), dir => Path.GetFileName(dir).StartsWith('.'));
     }
 
     [Fact]
@@ -78,8 +78,9 @@ public sealed class LibraryImporterTests : IDisposable
         Assert.Equal(
             ["01 Smells Like Teen Spirit.mp3"],
             Directory.GetFiles(album).Select(Path.GetFileName));
-        Assert.Empty(Directory.GetDirectories(Path.Combine(_library, "Nirvana"))
-            .Where(dir => Path.GetFileName(dir) != "Nevermind"));
+        Assert.DoesNotContain(
+            Directory.GetDirectories(Path.Combine(_library, "Nirvana")),
+            dir => Path.GetFileName(dir) != "Nevermind");
     }
 
     private string Source(string name)
