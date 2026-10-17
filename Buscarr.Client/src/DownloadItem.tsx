@@ -17,6 +17,20 @@ function failureLabel(failure: string | null): string {
       return t.downloads.stalled;
     case 'transfer-failed':
       return t.downloads.transferFailed;
+    case 'missing-files':
+      return t.downloads.missingFiles;
+    case 'wrong-tracks':
+      return t.downloads.wrongTracks;
+    case 'bad-audio':
+      return t.downloads.badAudio;
+    case 'fake-audio':
+      return t.downloads.fakeAudio;
+    case 'transcode-failed':
+      return t.downloads.transcodeFailed;
+    case 'import-failed':
+      return t.downloads.importFailed;
+    case 'rejected':
+      return t.downloads.rejected;
     default:
       return failure ?? '';
   }
@@ -41,6 +55,10 @@ function stateLabel(download: Download): string {
         : t.downloads.downloading(download.tracksDone, download.trackCount);
     case 'downloaded':
       return t.downloads.downloaded;
+    case 'importing':
+      return t.downloads.importing;
+    case 'imported':
+      return t.downloads.imported;
     case 'failed':
       return t.downloads.failed(failureLabel(download.failure));
     case 'cancelled':

@@ -88,6 +88,24 @@ describe('DownloadsPage', () => {
     expect(screen.getByText(/^Próxima tentativa em/)).toBeDefined();
   });
 
+  it('mostra os estados e as razões do import', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderPage();
+    await screen.findByText('Nenhum download ainda. Adicione artistas à lista.');
+
+    FakeEventSource.instances[0].emit([
+      download({ id: 1, state: 'importing' }),
+      download({ id: 2, title: 'In Utero', state: 'imported' }),
+      download({ id: 3, title: 'Bleach', state: 'failed', failure: 'fake-audio' }),
+      download({ id: 4, title: 'Incesticide', state: 'failed', failure: 'wrong-tracks' }),
+    ]);
+
+    expect(await screen.findByText('Importando')).toBeDefined();
+    expect(screen.getByText('Importado')).toBeDefined();
+    expect(screen.getByText('Falhou: a qualidade anunciada é falsa')).toBeDefined();
+    expect(screen.getByText('Falhou: as faixas não batem com a edição')).toBeDefined();
+  });
+
   it('cancela um download e não o deixa voltar', async () => {
     const fetchMock = mockFetch(
       { status: 200, body: [download({ state: 'waiting' })] },

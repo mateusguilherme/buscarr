@@ -31,12 +31,31 @@ public sealed class DownloadEndpointsTests
         await SeedAsync(factory, Request("g-downloaded", DownloadState.Downloaded));
         await SeedAsync(factory, Request("g-downloading", DownloadState.Downloading));
         await SeedAsync(factory, Request("g-cancelled", DownloadState.Cancelled));
+        await SeedAsync(factory, Request("g-importing", DownloadState.Importing));
+        await SeedAsync(factory, Request("g-imported", DownloadState.Imported));
 
         var downloads = await client.GetFromJsonAsync<List<DownloadItem>>("/api/downloads");
 
         Assert.Equal(
-            ["downloading", "not-found", "waiting", "downloaded", "cancelled"],
+            ["downloading", "importing", "not-found", "waiting", "downloaded", "imported", "cancelled"],
             downloads!.Select(download => download.State));
+    }
+
+    [Fact]
+    public async Task CancelDownload_RefusesImportingAndImported()
+    {
+        using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var importing = await SeedAsync(factory, Request("g-importing", DownloadState.Importing));
+        var imported = await SeedAsync(factory, Request("g-imported", DownloadState.Imported));
+
+        var one = await client.PostAsync($"/api/downloads/{importing.Id}/cancel", null);
+        var two = await client.PostAsync($"/api/downloads/{imported.Id}/cancel", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, one.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, two.StatusCode);
+        Assert.Equal("importing", await StateAsync(client, importing.Id));
+        Assert.Equal("imported", await StateAsync(client, imported.Id));
     }
 
     [Fact]

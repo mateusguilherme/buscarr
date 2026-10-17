@@ -45,7 +45,11 @@ public static class DownloadEndpoints
             return Results.NotFound();
         }
 
-        if (request.State is DownloadState.Downloaded or DownloadState.Cancelled)
+        if (request.State
+            is DownloadState.Downloaded
+            or DownloadState.Cancelled
+            or DownloadState.Importing
+            or DownloadState.Imported)
         {
             return Results.Conflict();
         }
@@ -113,10 +117,10 @@ public static class DownloadEndpoints
     private static int Rank(DownloadRequest request) =>
         request.State switch
         {
-            DownloadState.Downloading => 0,
+            DownloadState.Downloading or DownloadState.Importing => 0,
             DownloadState.Searching => 1,
             DownloadState.Waiting or DownloadState.NotFound or DownloadState.Failed => 2,
-            DownloadState.Downloaded => 3,
+            DownloadState.Downloaded or DownloadState.Imported => 3,
             _ => 4,
         };
 
