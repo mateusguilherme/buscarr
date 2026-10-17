@@ -151,7 +151,7 @@ public class AlbumDownloadTests
         var folder = Folder("fulano");
         _slskd.Peer("fulano", (_, file) => file.EndsWith("01.mp3") ? new(Succeeded) : new("InProgress", 10));
         using var cancellation = new CancellationTokenSource();
-        var download = _download.DownloadAsync([folder], _progress, cancellation.Token);
+        var download = _download.DownloadAsync([folder], _progress, cancellation: cancellation.Token);
 
         while (_progress.All.Count == 0)
         {
@@ -164,9 +164,47 @@ public class AlbumDownloadTests
         Assert.Equal([("fulano", folder.Files[1].Filename), ("fulano", folder.Files[2].Filename)], _slskd.Cancelled);
     }
 
-    private async Task<AlbumDownloadResult> DownloadAsync(params SoulseekFolder[] folders)
+    [Fact]
+    public async Task DownloadAsync_MovesToTheNextFolderWhenVerificationRejectsIt()
     {
-        var download = _download.DownloadAsync(folders, _progress);
+        var rejected = Folder("fulano");
+        var next = Folder("beltrano");
+
+        var result = await DownloadAsync(
+            folder => Task.FromResult(folder.Username == "fulano" ? "fake-audio" : null),
+            rejected,
+            next);
+
+        Assert.Equal(AlbumDownloadOutcome.Downloaded, result.Outcome);
+        Assert.Same(next, result.Folder);
+        var failure = Assert.Single(result.Failures);
+        Assert.Equal(
+            (rejected, FolderFailureReason.Rejected, "fake-audio"),
+            (failure.Folder, failure.Reason, failure.Detail));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_FailsWhenEveryFolderIsRejected()
+    {
+        var result = await DownloadAsync(
+            _ => Task.FromResult<string?>("wrong-tracks"),
+            Folder("fulano"),
+            Folder("beltrano"));
+
+        Assert.Equal(AlbumDownloadOutcome.Failed, result.Outcome);
+        Assert.Equal(2, result.Failures.Count);
+        Assert.All(result.Failures, failure =>
+            Assert.Equal((FolderFailureReason.Rejected, "wrong-tracks"), (failure.Reason, failure.Detail)));
+    }
+
+    private Task<AlbumDownloadResult> DownloadAsync(params SoulseekFolder[] folders) =>
+        DownloadAsync(null, folders);
+
+    private async Task<AlbumDownloadResult> DownloadAsync(
+        Func<SoulseekFolder, Task<string?>>? verify,
+        params SoulseekFolder[] folders)
+    {
+        var download = _download.DownloadAsync(folders, _progress, verify);
 
         while (!download.IsCompleted)
         {

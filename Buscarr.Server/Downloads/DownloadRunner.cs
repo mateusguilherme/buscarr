@@ -42,7 +42,10 @@ public sealed class DownloadRunner(IServiceScopeFactory scopes, AlbumDownload do
 
             try
             {
-                var result = await download.DownloadAsync(folders, new RowProgress(this, requestId), cancellation);
+                var result = await download.DownloadAsync(
+                    folders,
+                    new RowProgress(this, requestId),
+                    cancellation: cancellation);
                 Persist(requestId, request => Finish(request, result));
             }
             finally

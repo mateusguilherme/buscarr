@@ -11,6 +11,7 @@ public enum FolderFailureReason
     Refused,
     TransferFailed,
     Stalled,
+    Rejected,
 }
 
 public record FolderFailure(SoulseekFolder Folder, FolderFailureReason Reason, string? Detail);
@@ -33,6 +34,7 @@ public sealed class AlbumDownload(SlskdClient slskd, TimeProvider time)
     public async Task<AlbumDownloadResult> DownloadAsync(
         IEnumerable<SoulseekFolder> folders,
         IProgress<DownloadProgress>? progress = null,
+        Func<SoulseekFolder, Task<string?>>? verify = null,
         CancellationToken cancellation = default)
     {
         var failures = new List<FolderFailure>();
@@ -40,6 +42,11 @@ public sealed class AlbumDownload(SlskdClient slskd, TimeProvider time)
         foreach (var folder in folders)
         {
             var failure = await DownloadFolderAsync(folder, progress, cancellation);
+
+            if (failure is null && verify is not null && await verify(folder) is { } reason)
+            {
+                failure = new(folder, FolderFailureReason.Rejected, reason);
+            }
 
             if (failure is null)
             {
