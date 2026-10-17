@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Web;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.Tests.Fakes;
 
@@ -33,6 +34,32 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
         var response = await client.GetAsync("/api/artists?q=zzqxjvkwplm");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SearchArtist_WithCountry_FiltersMusicBrainzSearchByCountry()
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.GetAsync("/api/artists?q=nirvana&country=gb");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains(
+            factory.MusicBrainz.Requests,
+            request => HttpUtility.ParseQueryString(request.Uri.Query)["query"] == "(nirvana) AND country:GB");
+    }
+
+    [Theory]
+    [InlineData("GBR")]
+    [InlineData("G1")]
+    [InlineData("GB OR x")]
+    public async Task SearchArtist_WithInvalidCountry_Returns400(string country)
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.GetAsync($"/api/artists?q=nirvana&country={Uri.EscapeDataString(country)}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

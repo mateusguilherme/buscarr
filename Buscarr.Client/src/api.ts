@@ -65,8 +65,9 @@ function postJson(url: string, body: unknown): Promise<Response> {
   });
 }
 
-export async function findArtist(query: string): Promise<Artist | null> {
-  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}`);
+export async function findArtist(query: string, country?: string): Promise<Artist | null> {
+  const countryParam = country ? `&country=${encodeURIComponent(country)}` : '';
+  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}${countryParam}`);
 
   if (res.status === 404) {
     return null;

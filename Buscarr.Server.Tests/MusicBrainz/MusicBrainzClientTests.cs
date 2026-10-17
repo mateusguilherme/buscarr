@@ -1,4 +1,5 @@
 using System.Net;
+using System.Web;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Tests.Fakes;
 using Microsoft.Extensions.Time.Testing;
@@ -43,6 +44,29 @@ public class MusicBrainzClientTests
         Assert.Contains(Contact, request.UserAgent);
         Assert.Contains("fmt=json", request.Uri.Query);
         Assert.Contains("dismax=true", request.Uri.Query);
+    }
+
+    [Fact]
+    public async Task FindArtistAsync_WithCountry_FiltersByCountryInsteadOfDismax()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()));
+
+        await client.FindArtistAsync(Contact, "Sigur Rós", "IS");
+
+        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        Assert.Equal("(sigur rós) AND country:IS", query["query"]);
+        Assert.Null(query["dismax"]);
+    }
+
+    [Fact]
+    public async Task FindArtistAsync_WithCountry_EscapesSearchSyntaxInName()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists()));
+
+        await client.FindArtistAsync(Contact, "AC/DC: Live!", "AU");
+
+        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        Assert.Equal(@"(ac\/dc\: live\!) AND country:AU", query["query"]);
     }
 
     [Fact]

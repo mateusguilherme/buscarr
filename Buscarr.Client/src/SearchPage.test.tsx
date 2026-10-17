@@ -25,6 +25,25 @@ describe('SearchPage', () => {
     expect(screen.getByText(/Olá, Fulano/)).toBeDefined();
   });
 
+  it('lista os países pelo nome em português, começando por todos', () => {
+    renderSearchPage();
+
+    const select = screen.getByRole('combobox');
+    expect((select as HTMLSelectElement).value).toBe('');
+    expect(screen.getByRole('option', { name: 'Todos os países' })).toBeDefined();
+    expect(screen.getByRole('option', { name: 'Reino Unido' })).toBeDefined();
+  });
+
+  it('envia o país escolhido na busca', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { id: 'abc-123', name: 'Nirvana' } });
+    renderSearchPage();
+
+    await userEvent.selectOptions(screen.getByRole('combobox'), 'GB');
+    await search('nirvana');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
+  });
+
   it('mostra o artista encontrado com link para os releases', async () => {
     mockFetch({ status: 200, body: { id: 'abc-123', name: 'Nirvana' } });
     renderSearchPage();

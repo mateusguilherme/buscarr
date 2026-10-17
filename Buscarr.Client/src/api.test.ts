@@ -62,6 +62,14 @@ describe('findArtist', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=sigur%20r%C3%B3s');
   });
 
+  it('envia o país quando escolhido', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { id: '1', name: 'Nirvana' } });
+
+    await findArtist('nirvana', 'GB');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
+  });
+
   it('devolve null quando nenhum artista é encontrado', async () => {
     mockFetch({ status: 404 });
 

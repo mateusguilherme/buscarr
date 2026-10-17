@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Web;
 using Buscarr.Server.Data;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.MusicBrainz;
@@ -61,11 +62,11 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
     private static HttpResponseMessage RespondLikeMusicBrainz(HttpRequestMessage request)
     {
         var path = request.RequestUri!.AbsolutePath;
-        var query = request.RequestUri.Query;
+        var search = HttpUtility.ParseQueryString(request.RequestUri.Query)["query"] ?? "";
 
         if (path == "/ws/2/artist")
         {
-            return FakeHttpMessageHandler.Json(query.Contains("query=nirvana")
+            return FakeHttpMessageHandler.Json(search.Contains("nirvana")
                 ? Artists(("1", "Approaching Nirvana"), (NirvanaId, "Nirvana"))
                 : Artists());
         }

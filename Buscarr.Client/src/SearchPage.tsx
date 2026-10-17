@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { findArtist, logout, type Artist, type User } from './api';
+import { countries } from './countries';
 
 export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
   const [query, setQuery] = useState('');
+  const [country, setCountry] = useState('');
   const [artist, setArtist] = useState<Artist | null>(null);
   const [message, setMessage] = useState('');
 
@@ -13,7 +15,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
     setMessage('Buscando…');
 
     try {
-      const found = await findArtist(query);
+      const found = await findArtist(query, country);
       setArtist(found);
       setMessage(found ? '' : 'Nenhum artista encontrado.');
     } catch {
@@ -45,6 +47,14 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />{' '}
+          <select value={country} onChange={(e) => setCountry(e.target.value)}>
+            <option value="">Todos os países</option>
+            {countries.map(({ code, name }) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </select>{' '}
           <button>Buscar</button>
         </p>
       </form>

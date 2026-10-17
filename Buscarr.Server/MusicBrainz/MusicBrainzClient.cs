@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Buscarr.Server.MusicBrainz;
 
@@ -13,13 +14,13 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     private readonly SemaphoreSlim _turn = new(1, 1);
     private long? _lastRequest;
 
-    public async Task<Artist?> FindArtistAsync(string contact, string query)
+    public async Task<Artist?> FindArtistAsync(string contact, string query, string? country = null)
     {
-        var search = await GetAsync<ArtistSearch>(
-            contact,
-            "artist",
-            [("query", query), ("dismax", "true"), ("limit", "10")]);
+        List<(string, string)> parameters = country is null
+            ? [("query", query), ("dismax", "true"), ("limit", "10")]
+            : [("query", $"({EscapeSearchSyntax(query.ToLowerInvariant())}) AND country:{country}"), ("limit", "10")];
 
+        var search = await GetAsync<ArtistSearch>(contact, "artist", parameters);
         var q = Names.Normalize(query);
 
         return search.Artists.FirstOrDefault(artist => Names.Normalize(artist.Name).Contains(q));
@@ -132,6 +133,9 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             _turn.Release();
         }
     }
+
+    private static string EscapeSearchSyntax(string text) =>
+        Regex.Replace(text, @"[+\-&|!(){}\[\]^""~*?:\\/]", @"\$0");
 
     private sealed class ArtistSearch
     {

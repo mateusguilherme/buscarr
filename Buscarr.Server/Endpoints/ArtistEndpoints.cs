@@ -26,13 +26,22 @@ public static class ArtistEndpoints
     private static async Task<IResult> SearchArtist(
         MusicBrainzClient musicBrainz,
         ClaimsPrincipal user,
-        string q)
+        string q,
+        string? country)
     {
+        if (!string.IsNullOrEmpty(country) && !IsCountryCode(country))
+        {
+            return Results.BadRequest();
+        }
+
         Artist? artist;
 
         try
         {
-            artist = await musicBrainz.FindArtistAsync(Contact(user), q);
+            artist = await musicBrainz.FindArtistAsync(
+                Contact(user),
+                q,
+                string.IsNullOrEmpty(country) ? null : country.ToUpperInvariant());
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
@@ -84,6 +93,9 @@ public static class ArtistEndpoints
 
         return Results.Json(new ArtistReleases(artist.Name, items));
     }
+
+    private static bool IsCountryCode(string country) =>
+        country.Length == 2 && country.All(char.IsAsciiLetter);
 
     private static string Contact(ClaimsPrincipal user) =>
         user.FindFirstValue(ClaimTypes.Email) ?? "";

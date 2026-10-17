@@ -62,7 +62,7 @@ O build do servidor compila o React em `Buscarr.Server/wwwroot`, e o servidor en
 | `POST` | `/api/auth/login` | não | Entra (`{ email, password }`) |
 | `POST` | `/api/auth/logout` | não | Sai |
 | `GET` | `/api/auth/me` | sim | Usuário logado (`{ email, name }`) |
-| `GET` | `/api/artists?q=` | sim | Primeiro artista encontrado (`{ id, name }`) |
+| `GET` | `/api/artists?q=&country=` | sim | Primeiro artista encontrado (`{ id, name }`); `country` é opcional, com o código ISO de 2 letras (ex.: `GB`) |
 | `GET` | `/api/artists/{id}/releases?type=` | sim | Nome do artista e lançamentos (`type`: `album`, `ep`, `single` ou `all`) |
 
 ## Estrutura
