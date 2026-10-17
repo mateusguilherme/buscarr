@@ -1,11 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.Tests.Fakes;
 
 namespace Buscarr.Server.Tests.Endpoints;
 
+[UnsupportedOSPlatform("windows")]
 public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFactory>, IDisposable
 {
     private readonly BuscarrApiFactory _factory;
