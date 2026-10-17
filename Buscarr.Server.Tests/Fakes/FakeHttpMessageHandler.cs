@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Buscarr.Server.Tests.Fakes;
 
-public record RecordedRequest(Uri Uri, string UserAgent);
+public record RecordedRequest(Uri Uri, string UserAgent, IReadOnlyDictionary<string, string> Headers);
 
 public sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> respond)
     : HttpMessageHandler
@@ -19,10 +19,8 @@ public sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponse
         HttpRequestMessage request,
         CancellationToken cancellationToken)
     {
-        var userAgent = request.Headers.TryGetValues("User-Agent", out var values)
-            ? string.Join(" ", values)
-            : "";
-        Requests.Add(new RecordedRequest(request.RequestUri!, userAgent));
+        var headers = request.Headers.ToDictionary(header => header.Key, header => string.Join(" ", header.Value));
+        Requests.Add(new RecordedRequest(request.RequestUri!, headers.GetValueOrDefault("User-Agent", ""), headers));
 
         return Task.FromResult(respond(request));
     }
