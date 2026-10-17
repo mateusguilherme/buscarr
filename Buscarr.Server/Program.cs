@@ -43,6 +43,7 @@ builder.Services.AddSingleton(services =>
     return new ImportPipeline(
         services.GetRequiredService<MusicBrainzClient>(),
         services.GetRequiredService<AudioTools>(),
+        new CoverArt(new HttpClient { Timeout = TimeSpan.FromSeconds(30) }),
         () => settings().Import);
 });
 builder.Services.AddSingleton<DownloadRunner>();

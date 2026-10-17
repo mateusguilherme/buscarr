@@ -22,7 +22,13 @@ public sealed class LibraryImporter
         ["demo"] = " (Demo)",
     };
 
-    public string Import(string libraryPath, string artist, string album, string type, IReadOnlyList<ImportFile> files)
+    public string Import(
+        string libraryPath,
+        string artist,
+        string album,
+        string type,
+        IReadOnlyList<ImportFile> files,
+        CoverImage? cover = null)
     {
         var temp = Path.Combine(libraryPath, $".buscarr-{Guid.NewGuid()}");
         var artistSegment = Segment(artist, "");
@@ -40,6 +46,11 @@ public sealed class LibraryImporter
                 var prefix = $"{file.Position:00} ";
                 var name = prefix + Segment(file.Title, extension, MaxSegmentBytes - prefix.Length) + extension;
                 File.Move(file.Source, Path.Combine(staged, name));
+            }
+
+            if (cover is not null)
+            {
+                File.WriteAllBytes(Path.Combine(staged, "cover" + cover.Extension), cover.Bytes);
             }
 
             var target = Path.Combine(libraryPath, artistSegment, albumSegment);

@@ -96,6 +96,22 @@ public sealed class LibraryImporterTests : IDisposable
             dir => Path.GetFileName(dir) != "Nevermind");
     }
 
+    [Fact]
+    public void Import_WritesTheCoverInTheAlbumFolder()
+    {
+        var cover = new CoverImage([0xFF, 0xD8, 0xFF], "image/jpeg", ".jpg");
+
+        var album = _importer.Import(
+            _library,
+            "Nirvana",
+            "Nevermind",
+            "album",
+            [new(Source("a.mp3"), 1, "Smells Like Teen Spirit")],
+            cover);
+
+        Assert.Equal(cover.Bytes, File.ReadAllBytes(Path.Combine(album, "cover.jpg")));
+    }
+
     private string Source(string name)
     {
         var path = Path.Combine(_downloads, name);

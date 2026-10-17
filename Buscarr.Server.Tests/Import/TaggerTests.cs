@@ -60,6 +60,23 @@ public sealed class TaggerTests : IDisposable
         Assert.Equal("r1", tagged.Tag.MusicBrainzReleaseId);
     }
 
+    [Theory]
+    [InlineData("silence.mp3")]
+    [InlineData("silence.flac")]
+    public void Tag_EmbedsTheCover(string fixture)
+    {
+        var path = CopyFixture(fixture);
+        var cover = new CoverImage([0xFF, 0xD8, 0xFF, 0xE0], "image/jpeg", ".jpg");
+
+        _tagger.Tag(path, Album(), new ReleaseTrack(1, "Faixa", null, null), 1, cover);
+
+        using var file = TagLib.File.Create(path);
+        var picture = Assert.Single(file.Tag.Pictures);
+        Assert.Equal(TagLib.PictureType.FrontCover, picture.Type);
+        Assert.Equal("image/jpeg", picture.MimeType);
+        Assert.Equal(cover.Bytes, picture.Data.Data);
+    }
+
     [Fact]
     public void Tag_LeavesTheYearEmptyWithoutAReleaseDate()
     {

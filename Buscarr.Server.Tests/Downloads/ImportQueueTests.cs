@@ -90,6 +90,10 @@ public sealed class ImportQueueTests : IDisposable
             new HttpClient(new FakeHttpMessageHandler(_ => throw new HttpRequestException("não deveria ser chamado"))),
             new FakeTimeProvider());
 
-        return new ImportPipeline(musicBrainz, new FakeAudioTools(), new ImportOptions("/music", "/downloads", null));
+        return new ImportPipeline(
+            musicBrainz,
+            new FakeAudioTools(),
+            new CoverArt(new HttpClient()),
+            new ImportOptions("/music", "/downloads", null));
     }
 }

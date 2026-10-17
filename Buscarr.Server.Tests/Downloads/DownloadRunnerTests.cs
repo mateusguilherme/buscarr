@@ -48,7 +48,11 @@ public sealed class DownloadRunnerTests : IDisposable
             new HttpClient(new FakeHttpMessageHandler(_ => throw new HttpRequestException("não deveria ser chamado"))),
             new FakeTimeProvider());
 
-        return new ImportPipeline(musicBrainz, new FakeAudioTools(), new ImportOptions(null, null, null));
+        return new ImportPipeline(
+            musicBrainz,
+            new FakeAudioTools(),
+            new CoverArt(new HttpClient()),
+            new ImportOptions(null, null, null));
     }
 
     public void Dispose()

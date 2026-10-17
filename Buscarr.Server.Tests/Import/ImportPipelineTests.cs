@@ -1,3 +1,4 @@
+using System.Net;
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Import;
@@ -18,6 +19,8 @@ public sealed class ImportPipelineTests : IDisposable
     private readonly string _root =
         Path.Combine(Path.GetTempPath(), $"buscarr-pipeline-{Guid.NewGuid()}");
 
+    private static readonly byte[] CoverBytes = [0xFF, 0xD8, 0xFF, 0xE0, 0x01];
+
     private readonly string _library;
     private readonly string _downloads;
     private readonly string _rejected;
@@ -27,6 +30,9 @@ public sealed class ImportPipelineTests : IDisposable
     private readonly FakeAudioTools _tools = new();
     private readonly FakeTimeProvider _time = new();
     private readonly DownloadRunner _runner;
+
+    private readonly FakeHttpMessageHandler _covers =
+        new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(CoverBytes) });
 
     public ImportPipelineTests()
     {
@@ -61,6 +67,7 @@ public sealed class ImportPipelineTests : IDisposable
         var pipeline = new ImportPipeline(
             musicBrainz,
             _tools,
+            new CoverArt(new HttpClient(_covers)),
             new ImportOptions(_library, _downloads, null));
         _runner = new DownloadRunner(
             _provider.GetRequiredService<IServiceScopeFactory>(),
@@ -83,6 +90,7 @@ public sealed class ImportPipelineTests : IDisposable
         var pipeline = new ImportPipeline(
             new MusicBrainzClient(new HttpClient(), _time),
             new FakeAudioTools(),
+            new CoverArt(new HttpClient()),
             () => options);
 
         Assert.False(pipeline.Enabled);
@@ -106,8 +114,9 @@ public sealed class ImportPipelineTests : IDisposable
 
         var album = Path.Combine(_library, "Nirvana", "Nevermind");
         Assert.Equal(
-            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3"],
+            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3", "cover.jpg"],
             Directory.GetFiles(album).Select(Path.GetFileName).Order());
+        Assert.Equal(CoverBytes, File.ReadAllBytes(Path.Combine(album, "cover.jpg")));
         Assert.False(Directory.Exists(local));
         Assert.Null((await RequestAsync(request.Id)).Failure);
 
@@ -116,6 +125,25 @@ public sealed class ImportPipelineTests : IDisposable
             tagged.Tag.Title,
             tagged.Tag.MusicBrainzReleaseId,
             tagged.Tag.MusicBrainzTrackId));
+        Assert.Equal(CoverBytes, Assert.Single(tagged.Tag.Pictures).Data.Data);
+    }
+
+    [Fact]
+    public async Task Start_ImportsEvenWhenTheCoverDownloadFails()
+    {
+        _covers.Respond = _ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);
+        var request = await AddRequestAsync();
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+        _tools.GoodMp3(Path.Combine(local, "01.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "02.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "03.mp3"), 0.1);
+
+        _runner.Start(request.Id, [Folder(false)]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var album = Path.Combine(_library, "Nirvana", "Nevermind");
+        Assert.DoesNotContain("cover.jpg", Directory.GetFiles(album).Select(Path.GetFileName));
+        Assert.Null((await RequestAsync(request.Id)).Failure);
     }
 
     [Fact]
@@ -176,7 +204,7 @@ public sealed class ImportPipelineTests : IDisposable
 
         var album = Path.Combine(_library, "Nirvana", "Nevermind");
         Assert.Equal(
-            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3"],
+            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3", "cover.jpg"],
             Directory.GetFiles(album).Select(Path.GetFileName).Order());
         Assert.False(Directory.Exists(local));
         Assert.Null((await RequestAsync(request.Id)).Failure);
@@ -243,6 +271,7 @@ public sealed class ImportPipelineTests : IDisposable
         var request = DownloadRequestTests.Request("g1", trackCount: 3);
         request.State = state;
         request.Directory = directory;
+        request.CoverUrl = "https://coverartarchive.org/release/r1/front-250";
         db.DownloadRequests.Add(request);
         await db.SaveChangesAsync();
 

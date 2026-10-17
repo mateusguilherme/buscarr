@@ -4,15 +4,19 @@ using Buscarr.Server.Slskd;
 
 namespace Buscarr.Server.Import;
 
-public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, Func<ImportOptions> currentOptions)
+public sealed class ImportPipeline(
+    MusicBrainzClient musicBrainz,
+    AudioTools tools,
+    CoverArt covers,
+    Func<ImportOptions> currentOptions)
 {
     private readonly AlbumVerifier _verifier = new(tools);
     private readonly Transcoder _transcoder = new(tools);
     private readonly Tagger _tagger = new();
     private readonly LibraryImporter _importer = new();
 
-    public ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, ImportOptions options)
-        : this(musicBrainz, tools, () => options)
+    public ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, CoverArt covers, ImportOptions options)
+        : this(musicBrainz, tools, covers, () => options)
     {
     }
 
@@ -117,10 +121,11 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
                 tracks.ArtistId ?? request.ArtistId,
                 tracks.ReleaseGroupId ?? request.ReleaseGroupId,
                 request.EditionReleaseId);
+            var cover = await covers.DownloadAsync(request.CoverUrl);
 
             for (var i = 0; i < files.Count; i++)
             {
-                _tagger.Tag(files[i], album, tracks.Tracks[i], tracks.Tracks.Count);
+                _tagger.Tag(files[i], album, tracks.Tracks[i], tracks.Tracks.Count, cover);
             }
 
             _importer.Import(
@@ -128,7 +133,8 @@ public sealed class ImportPipeline(MusicBrainzClient musicBrainz, AudioTools too
                 request.ArtistName,
                 request.Title,
                 request.Type,
-                [.. files.Select((file, i) => new ImportFile(file, tracks.Tracks[i].Position, tracks.Tracks[i].Title))]);
+                [.. files.Select((file, i) => new ImportFile(file, tracks.Tracks[i].Position, tracks.Tracks[i].Title))],
+                cover);
             Directory.Delete(directory, true);
 
             return null;

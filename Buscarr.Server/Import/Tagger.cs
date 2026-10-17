@@ -14,7 +14,7 @@ public sealed record AlbumTags(
 
 public sealed class Tagger
 {
-    public void Tag(string path, AlbumTags album, ReleaseTrack track, int trackCount)
+    public void Tag(string path, AlbumTags album, ReleaseTrack track, int trackCount, CoverImage? cover = null)
     {
         using var file = TagLib.File.Create(path);
         file.RemoveTags(TagTypes.AllTags);
@@ -36,6 +36,14 @@ public sealed class Tagger
         if (album.Date is { Length: >= 4 } date && uint.TryParse(date[..4], out var year))
         {
             tag.Year = year;
+        }
+
+        if (cover is not null)
+        {
+            file.Tag.Pictures =
+            [
+                new Picture(new ByteVector(cover.Bytes)) { Type = PictureType.FrontCover, MimeType = cover.MimeType },
+            ];
         }
 
         file.Save();
