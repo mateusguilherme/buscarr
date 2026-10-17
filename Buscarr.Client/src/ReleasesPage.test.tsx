@@ -125,7 +125,9 @@ describe('ReleasesPage', () => {
 
     expect(studio.className).toBe('release-grid');
     expect(nevermind.querySelector('.cover')).not.toBeNull();
-    expect(nevermind.textContent).toBe('Nevermind24 de set. de 1991 · 12 faixas');
+    expect(nevermind.querySelector('.release-title')?.textContent).toBe('Nevermind');
+    expect(nevermind.querySelector('time')?.textContent).toBe('24 de set. de 1991');
+    expect(nevermind.querySelector('.release-tracks')?.textContent).toBe('12 faixas');
     expect(screen.getByText('MTV Unplugged in New York').closest('li')!.textContent).toContain('1 faixa');
     expect(screen.queryByRole('table')).toBeNull();
   });

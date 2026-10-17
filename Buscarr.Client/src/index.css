@@ -548,7 +548,8 @@ button {
   -webkit-line-clamp: 2;
 }
 
-.release-meta {
+.release time,
+.release-tracks {
   color: var(--muted);
   font-size: 0.875rem;
   font-variant-numeric: tabular-nums;

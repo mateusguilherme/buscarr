@@ -167,10 +167,8 @@ function ReleaseSection({ title, releases }: { title: string; releases: Release[
           <li key={`${release.type}:${release.title}`} className="release">
             <Cover src={release.cover} />
             <span className="release-title">{release.title}</span>
-            <span className="release-meta">
-              <time dateTime={release.date}>{dateFormat.format(new Date(release.date))}</time> ·{' '}
-              {t.releases.tracks(release.tracks)}
-            </span>
+            <time dateTime={release.date}>{dateFormat.format(new Date(release.date))}</time>
+            <span className="release-tracks">{t.releases.tracks(release.tracks)}</span>
           </li>
         ))}
       </ul>
