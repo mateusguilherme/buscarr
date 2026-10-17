@@ -19,6 +19,17 @@ const savedFlags: Record<SecretField, 'hasSlskdApiKey' | 'hasSubsonicPassword' |
   fanartTvApiKey: 'hasFanartTvApiKey',
 };
 
+function valuesFrom(settings: ServerSettings): Record<TextField, string> {
+  return {
+    slskdUrl: settings.slskdUrl,
+    downloadsPath: settings.downloadsPath,
+    libraryPath: settings.libraryPath,
+    rejectedPath: settings.rejectedPath,
+    subsonicUrl: settings.subsonicUrl,
+    subsonicUser: settings.subsonicUser,
+  };
+}
+
 function secretsFrom(settings: ServerSettings): Record<SecretField, Secret> {
   return {
     slskdApiKey: { value: '', saved: settings.hasSlskdApiKey, cleared: false },
@@ -42,20 +53,17 @@ function describe(name: 'slskdStatus' | 'subsonicStatus', status: ConnectionStat
 }
 
 export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
-  const [values, setValues] = useState<Record<TextField, string>>({
-    slskdUrl: initial.slskdUrl,
-    downloadsPath: initial.downloadsPath,
-    libraryPath: initial.libraryPath,
-    rejectedPath: initial.rejectedPath,
-    subsonicUrl: initial.subsonicUrl,
-    subsonicUser: initial.subsonicUser,
-  });
+  const [values, setValues] = useState(() => valuesFrom(initial));
+  const [savedValues, setSavedValues] = useState(() => valuesFrom(initial));
   const [secrets, setSecrets] = useState(() => secretsFrom(initial));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<'saving' | 'testing'>();
   const [message, setMessage] = useState('');
   const [alert, setAlert] = useState<string>();
   const [status, setStatus] = useState<ServerStatus>();
+  const dirty =
+    (Object.keys(values) as TextField[]).some((field) => values[field] !== savedValues[field]) ||
+    Object.values(secrets).some((secret) => secret.value !== '' || secret.cleared);
 
   function change(field: TextField, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -115,6 +123,7 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
 
       return next;
     });
+    setSavedValues(values);
     setMessage(t.server.saved);
     await test();
   }
@@ -209,9 +218,10 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
           <button className="button-primary" disabled={busy !== undefined}>
             {busy === 'saving' ? t.server.saving : t.server.save}
           </button>
-          <button type="button" className="button-ghost" disabled={busy !== undefined} onClick={test}>
+          <button type="button" className="button-ghost" disabled={busy !== undefined || dirty} onClick={test}>
             {busy === 'testing' ? t.server.testing : t.server.test}
           </button>
+          {dirty && <span className="field-hint">{t.server.saveToTest}</span>}
         </div>
 
         {message && (

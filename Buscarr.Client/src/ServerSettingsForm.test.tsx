@@ -119,6 +119,29 @@ describe('ServerSettingsForm', () => {
     expect(screen.getByText('Servidor de música: erro (Wrong username or password).')).toBeDefined();
   });
 
+  it('desabilita o testar enquanto há mudanças não salvas', async () => {
+    render(<ServerSettingsForm initial={saved} />);
+
+    await userEvent.type(field('Senha'), 'segredo');
+
+    const test = screen.getByRole('button', { name: 'Testar conexões' }) as HTMLButtonElement;
+    expect(test.disabled).toBe(true);
+    expect(screen.getByText('Salve para testar.')).toBeDefined();
+  });
+
+  it('reabilita o testar depois de salvar', async () => {
+    mockFetch({ status: 204 }, { status: 200, body: statusOk });
+    render(<ServerSettingsForm initial={saved} />);
+
+    await userEvent.type(field('Senha'), 'segredo');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText('Salvo.')).toBeDefined();
+    const test = screen.getByRole('button', { name: 'Testar conexões' }) as HTMLButtonElement;
+    expect(test.disabled).toBe(false);
+    expect(screen.queryByText('Salve para testar.')).toBeNull();
+  });
+
   it('diz quando uma conexão não está configurada', async () => {
     mockFetch({
       status: 200,

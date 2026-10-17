@@ -117,6 +117,7 @@ const ptBR = {
     saving: 'Salvando…',
     test: 'Testar conexões',
     testing: 'Testando…',
+    saveToTest: 'Salve para testar.',
     saved: 'Salvo.',
     errors: {
       'invalid-url': 'Endereço inválido. Use http:// ou https://.',
@@ -300,6 +301,7 @@ const en: Messages = {
     saving: 'Saving…',
     test: 'Test connections',
     testing: 'Testing…',
+    saveToTest: 'Save to test.',
     saved: 'Saved.',
     errors: {
       'invalid-url': 'Invalid address. Use http:// or https://.',
