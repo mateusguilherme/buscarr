@@ -36,7 +36,6 @@ function renderSearchAndReleases() {
 
 async function openArtistFromSearch() {
   renderSearchAndReleases();
-  await userEvent.selectOptions(screen.getByRole('combobox', { name: 'País' }), 'BR');
   await userEvent.type(screen.getByPlaceholderText('Nome do artista'), 'rancore');
   await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
   await userEvent.click(await screen.findByRole('link', { name: 'Rancore' }));
@@ -169,7 +168,7 @@ describe('ReleasesPage', () => {
     await screen.findByRole('link', { name: 'Rancore' });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[2][0]).toBe('/api/artists?q=rancore&country=BR');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/artists?q=rancore');
   });
 
   it('volta para a busca vazia quando não veio de uma busca', async () => {

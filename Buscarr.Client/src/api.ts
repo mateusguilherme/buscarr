@@ -67,10 +67,8 @@ function postJson(url: string, body: unknown): Promise<Response> {
   });
 }
 
-export async function findArtists(query: string, country?: string, type?: string): Promise<Artist[]> {
-  const countryParam = country ? `&country=${encodeURIComponent(country)}` : '';
-  const typeParam = type ? `&type=${encodeURIComponent(type)}` : '';
-  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}${countryParam}${typeParam}`);
+export async function findArtists(query: string): Promise<Artist[]> {
+  const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}`);
 
   if (!res.ok) {
     throw new Error(t.api.searchError(res.status));

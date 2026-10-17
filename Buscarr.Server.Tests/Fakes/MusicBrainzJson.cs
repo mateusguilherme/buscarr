@@ -10,25 +10,17 @@ public static class MusicBrainzJson
     public static string SearchResults(params object[] artists) =>
         JsonSerializer.Serialize(new { artists });
 
-    public static object SearchResult(
-        string id,
-        string name,
-        string? country = null,
-        string? area = null,
-        string? type = null,
-        string? disambiguation = null) =>
+    public static object SearchResult(string id, string name, string? area = null, string? disambiguation = null) =>
         new
         {
             id,
             name,
-            country,
             area = area is null ? null : new { name = area },
-            type,
             disambiguation,
         };
 
-    public static string Artist(string id, string name, string? country = null) =>
-        JsonSerializer.Serialize(new { id, name, country });
+    public static string Artist(string id, string name) =>
+        JsonSerializer.Serialize(new { id, name });
 
     public static string Releases(int releaseCount, params Dictionary<string, object>[] releases) =>
         JsonSerializer.Serialize(new Dictionary<string, object>

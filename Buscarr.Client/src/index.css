@@ -14,7 +14,6 @@
   --danger-soft: #fdecea;
   --shadow: 0 1px 2px rgb(28 27 25 / 0.06), 0 4px 16px rgb(28 27 25 / 0.06);
   --radius: 0.875rem;
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23948f86' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -61,14 +60,12 @@ a {
 }
 
 input,
-select,
 button {
   font: inherit;
   color: inherit;
 }
 
-input,
-select {
+input {
   padding: 0.625rem 0.875rem;
   border: 1px solid var(--border);
   border-radius: 0.625rem;
@@ -76,20 +73,11 @@ select {
   transition: border-color 0.15s;
 }
 
-input:focus,
-select:focus {
+input:focus {
   border-color: var(--accent);
 }
 
-select {
-  appearance: none;
-  padding-right: 2.25rem;
-  background: var(--surface) var(--chevron) no-repeat right 0.75rem center / 1rem;
-  cursor: pointer;
-}
-
 input:focus-visible,
-select:focus-visible,
 button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--accent);
@@ -264,8 +252,6 @@ button {
 }
 
 .search {
-  display: grid;
-  gap: 0.75rem;
   margin-bottom: 2rem;
 }
 
@@ -308,19 +294,6 @@ button {
   outline: none;
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.filters select {
-  max-width: 100%;
-  padding-block: 0.4375rem;
-  border-radius: 999px;
-  font-size: 0.9375rem;
-}
-
 .result-count {
   margin: 0 0 0.75rem;
   color: var(--muted);
@@ -337,9 +310,6 @@ button {
 
 .artist-card {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
   padding: 0.875rem 1.125rem;
   animation: rise 0.25s ease both;
   transition:
@@ -350,11 +320,6 @@ button {
 .artist-card:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
   transform: translateY(-1px);
-}
-
-.artist-info {
-  flex: 1;
-  min-width: 0;
 }
 
 .artist-name {
@@ -406,25 +371,6 @@ button {
   height: 0.875rem;
 }
 
-.avatar {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 1.125rem;
-  font-weight: 700;
-}
-
-.avatar-large {
-  width: 4rem;
-  height: 4rem;
-  font-size: 1.75rem;
-}
-
 .back {
   display: inline-flex;
   align-items: center;
@@ -444,10 +390,7 @@ button {
 }
 
 .artist-hero {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  min-height: 4rem;
+  min-height: 3rem;
   margin: 1.25rem 0 1.5rem;
 }
 

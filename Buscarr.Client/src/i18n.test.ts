@@ -32,6 +32,6 @@ describe('t', () => {
     const { locale, t } = await import('./i18n');
 
     expect(locale).toBe('en');
-    expect(t.search.allCountries).toBe('All countries');
+    expect(t.search.artistName).toBe('Artist name');
   });
 });

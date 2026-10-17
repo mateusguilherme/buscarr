@@ -15,12 +15,6 @@ public static class ArtistEndpoints
 {
     private static readonly string[] ReleaseTypes = ["album", "ep", "single", "all"];
 
-    private static readonly Dictionary<string, string[]> ArtistTypes = new()
-    {
-        ["group"] = ["Group", "Orchestra", "Choir"],
-        ["person"] = ["Person"],
-    };
-
     public static void MapArtistEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/artists").RequireAuthorization();
@@ -32,31 +26,13 @@ public static class ArtistEndpoints
     private static async Task<IResult> SearchArtists(
         MusicBrainzClient musicBrainz,
         ClaimsPrincipal user,
-        string q,
-        string? country,
-        string? type)
+        string q)
     {
-        if (!string.IsNullOrEmpty(country) && !IsCountryCode(country))
-        {
-            return Results.BadRequest();
-        }
-
-        string[]? types = null;
-
-        if (!string.IsNullOrEmpty(type) && !ArtistTypes.TryGetValue(type, out types))
-        {
-            return Results.BadRequest();
-        }
-
         List<Artist> artists;
 
         try
         {
-            artists = await musicBrainz.FindArtistsAsync(
-                Contact(user),
-                q,
-                string.IsNullOrEmpty(country) ? null : country.ToUpperInvariant(),
-                types);
+            artists = await musicBrainz.FindArtistsAsync(Contact(user), q);
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
@@ -108,9 +84,6 @@ public static class ArtistEndpoints
 
         return Results.Json(new ArtistReleases(artist.Name, items));
     }
-
-    private static bool IsCountryCode(string country) =>
-        country.Length == 2 && country.All(char.IsAsciiLetter);
 
     private static string Contact(ClaimsPrincipal user) =>
         user.FindFirstValue(ClaimTypes.Email) ?? "";

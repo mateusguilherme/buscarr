@@ -25,55 +25,27 @@ describe('SearchPage', () => {
     expect(screen.getByText(/Olá, Fulano/)).toBeDefined();
   });
 
-  it('lista os países pelo nome em português, começando por todos', () => {
-    renderSearchPage();
-
-    const select = screen.getByRole('combobox', { name: 'País' });
-    expect((select as HTMLSelectElement).value).toBe('');
-    expect(screen.getByRole('option', { name: 'Todos os países' })).toBeDefined();
-    expect(screen.getByRole('option', { name: 'Reino Unido' })).toBeDefined();
-  });
-
-  it('oferece o tipo de artista, começando por qualquer um', () => {
-    renderSearchPage();
-
-    const select = screen.getByRole('combobox', { name: 'Tipo' });
-    expect((select as HTMLSelectElement).value).toBe('');
-    expect(screen.getByRole('option', { name: 'Qualquer tipo' })).toBeDefined();
-    expect(screen.getByRole('option', { name: 'Banda' })).toBeDefined();
-    expect(screen.getByRole('option', { name: 'Solo' })).toBeDefined();
-  });
-
-  it('envia o país escolhido na busca', async () => {
+  it('busca só pelo nome, sem filtros', async () => {
     const fetchMock = mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'País' }), 'GB');
+    expect(screen.queryByRole('combobox')).toBeNull();
+
     await search('nirvana');
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
-  });
-
-  it('envia o tipo escolhido na busca', async () => {
-    const fetchMock = mockFetch({ status: 200, body: [] });
-    renderSearchPage();
-
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Tipo' }), 'Banda');
-    await search('rancore');
-
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&type=group');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana');
   });
 
   it('explica a busca antes da primeira pesquisa', async () => {
     mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
     renderSearchPage();
 
-    expect(screen.getByText('Busque pelo nome. País e tipo ajudam a separar homônimos.')).toBeDefined();
+    expect(screen.getByText('Busque pelo nome do artista.')).toBeDefined();
 
     await search('rancore');
     await screen.findByRole('link', { name: 'Rancore' });
 
-    expect(screen.queryByText('Busque pelo nome. País e tipo ajudam a separar homônimos.')).toBeNull();
+    expect(screen.queryByText('Busque pelo nome do artista.')).toBeNull();
   });
 
   it('mostra cada candidato com a descrição, a área e o link para os releases', async () => {
@@ -113,13 +85,11 @@ describe('SearchPage', () => {
 
   it('refaz a busca que está na URL', async () => {
     const fetchMock = mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
-    renderSearchPage({ url: '/?q=rancore&country=BR&type=group' });
+    renderSearchPage({ url: '/?q=rancore' });
 
     expect(await screen.findByRole('link', { name: 'Rancore' })).toBeDefined();
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&country=BR&type=group');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore');
     expect((screen.getByPlaceholderText('Nome do artista') as HTMLInputElement).value).toBe('rancore');
-    expect((screen.getByRole('combobox', { name: 'País' }) as HTMLSelectElement).value).toBe('BR');
-    expect((screen.getByRole('combobox', { name: 'Tipo' }) as HTMLSelectElement).value).toBe('group');
   });
 
   it('busca de novo ao repetir a mesma busca', async () => {

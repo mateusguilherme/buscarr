@@ -62,22 +62,6 @@ describe('findArtists', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=sigur%20r%C3%B3s');
   });
 
-  it('envia o país quando escolhido', async () => {
-    const fetchMock = mockFetch({ status: 200, body: [] });
-
-    await findArtists('nirvana', 'GB');
-
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana&country=GB');
-  });
-
-  it('envia o tipo quando escolhido', async () => {
-    const fetchMock = mockFetch({ status: 200, body: [] });
-
-    await findArtists('rancore', 'BR', 'group');
-
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&country=BR&type=group');
-  });
-
   it('devolve os candidatos encontrados', async () => {
     const rancore = { id: '1', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' };
     mockFetch({ status: 200, body: [rancore] });

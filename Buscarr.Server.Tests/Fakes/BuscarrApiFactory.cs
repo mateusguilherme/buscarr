@@ -69,7 +69,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
             return FakeHttpMessageHandler.Json(search.Contains("nirvana")
                 ? SearchResults(
                     SearchResult("1", "Approaching Nirvana"),
-                    SearchResult(NirvanaId, "Nirvana", "US", "United States", "Group", "90s US grunge band"))
+                    SearchResult(NirvanaId, "Nirvana", "United States", "90s US grunge band"))
                 : Artists());
         }
 

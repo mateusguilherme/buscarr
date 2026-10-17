@@ -1,7 +1,6 @@
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 
 namespace Buscarr.Server.MusicBrainz;
 
@@ -14,36 +13,17 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     private readonly SemaphoreSlim _turn = new(1, 1);
     private long? _lastRequest;
 
-    public async Task<List<Artist>> FindArtistsAsync(
-        string contact,
-        string query,
-        string? country = null,
-        string[]? types = null)
+    public async Task<List<Artist>> FindArtistsAsync(string contact, string query)
     {
-        List<(string, string)> byName = [("query", query), ("dismax", "true")];
-
-        if (country is null)
-        {
-            return await SearchArtistsAsync(contact, query, types, byName);
-        }
-
-        var found = await SearchArtistsAsync(
+        var search = await GetAsync<ArtistSearch>(
             contact,
-            query,
-            types,
-            [("query", $"({EscapeSearchSyntax(query.ToLowerInvariant())}) AND country:{country}")]);
+            "artist",
+            [("query", query), ("dismax", "true"), ("limit", "10")]);
+        var name = Names.Normalize(query);
 
-        foreach (var artist in await SearchArtistsAsync(contact, query, types, byName))
-        {
-            if (artist.Country is null
-                && artist.Area is not null
-                && (await ArtistAsync(contact, artist.Id)).Country == country)
-            {
-                found.Add(artist);
-            }
-        }
-
-        return found;
+        return search.Artists
+            .Where(artist => Names.Normalize(artist.Name).Contains(name))
+            .ToList();
     }
 
     public Task<Artist> ArtistAsync(string contact, string id) =>
@@ -84,21 +64,6 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             .Select(group => group.OrderBy(release => release.Date, StringComparer.Ordinal).First())
             .OrderBy(release => release.Date, StringComparer.Ordinal)
             .ThenBy(release => Names.Normalize(release.Title), StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private async Task<List<Artist>> SearchArtistsAsync(
-        string contact,
-        string query,
-        string[]? types,
-        List<(string, string)> parameters)
-    {
-        var search = await GetAsync<ArtistSearch>(contact, "artist", [.. parameters, ("limit", "10")]);
-        var name = Names.Normalize(query);
-
-        return search.Artists
-            .Where(artist => Names.Normalize(artist.Name).Contains(name))
-            .Where(artist => types is null || artist.Type is null || types.Contains(artist.Type))
             .ToList();
     }
 
@@ -168,9 +133,6 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             _turn.Release();
         }
     }
-
-    private static string EscapeSearchSyntax(string text) =>
-        Regex.Replace(text, @"[+\-&|!(){}\[\]^""~*?:\\/]", @"\$0");
 
     private sealed class ArtistSearch
     {

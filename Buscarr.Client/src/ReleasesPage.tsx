@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { getArtistReleases, type ArtistReleases, type Release } from './api';
-import { Avatar } from './Avatar';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { locale, t } from './i18n';
@@ -68,12 +67,7 @@ export function ReleasesPage() {
         </Link>
 
         <div className="artist-hero">
-          {data && (
-            <>
-              <Avatar name={data.name} large />
-              <h1>{data.name}</h1>
-            </>
-          )}
+          {data && <h1>{data.name}</h1>}
         </div>
 
         <nav className="segmented" aria-label={t.releases.type}>

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Web;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.Tests.Fakes;
 
@@ -39,56 +38,6 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
         var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/artists?q=zzqxjvkwplm");
 
         Assert.Empty(artists!);
-    }
-
-    [Theory]
-    [InlineData("group", new[] { "1", BuscarrApiFactory.NirvanaId })]
-    [InlineData("person", new[] { "1" })]
-    public async Task SearchArtists_WithType_KeepsArtistsOfThatTypeAndUntypedOnes(string type, string[] ids)
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var artists = await client.GetFromJsonAsync<List<ArtistCard>>($"/api/artists?q=nirvana&type={type}");
-
-        Assert.Equal(ids, artists!.Select(a => a.Id));
-    }
-
-    [Theory]
-    [InlineData("band")]
-    [InlineData("Group")]
-    public async Task SearchArtists_WithInvalidType_Returns400(string type)
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync($"/api/artists?q=nirvana&type={type}");
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task SearchArtists_WithCountry_FiltersMusicBrainzSearchByCountry()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync("/api/artists?q=nirvana&country=gb");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains(
-            factory.MusicBrainz.Requests,
-            request => HttpUtility.ParseQueryString(request.Uri.Query)["query"] == "(nirvana) AND country:GB");
-    }
-
-    [Theory]
-    [InlineData("GBR")]
-    [InlineData("G1")]
-    [InlineData("GB OR x")]
-    public async Task SearchArtists_WithInvalidCountry_Returns400(string country)
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync($"/api/artists?q=nirvana&country={Uri.EscapeDataString(country)}");
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]

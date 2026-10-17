@@ -1,8 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { findArtists, logout, type Artist, type User } from './api';
-import { Avatar } from './Avatar';
-import { countries } from './countries';
 import { Header } from './Header';
 import { PinIcon, SearchIcon } from './icons';
 import { t } from './i18n';
@@ -20,8 +18,6 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
   useEffect(() => {
     const cached = (location.state as SearchState | null)?.artists;
     const query = searchParams.get('q') ?? '';
-    const country = searchParams.get('country') ?? '';
-    const type = searchParams.get('type') ?? '';
     let ignore = false;
 
     async function search() {
@@ -29,7 +25,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
       setMessage(t.search.searching);
 
       try {
-        const found = await findArtists(query, country, type);
+        const found = await findArtists(query);
 
         if (!ignore) {
           setArtists(found);
@@ -56,8 +52,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
 
   function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fields = [...new FormData(e.currentTarget)].filter(([, value]) => value !== '');
-    setSearchParams(fields as [string, string][]);
+    setSearchParams({ q: String(new FormData(e.currentTarget).get('q')) });
   }
 
   async function handleLogout() {
@@ -91,21 +86,6 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             />
             <button className="button-primary">{t.search.search}</button>
           </div>
-          <div className="filters">
-            <select name="country" aria-label={t.search.country} defaultValue={searchParams.get('country') ?? ''}>
-              <option value="">{t.search.allCountries}</option>
-              {countries.map(({ code, name }) => (
-                <option key={code} value={code}>
-                  {name}
-                </option>
-              ))}
-            </select>
-            <select name="type" aria-label={t.search.type} defaultValue={searchParams.get('type') ?? ''}>
-              <option value="">{t.search.anyType}</option>
-              <option value="group">{t.search.band}</option>
-              <option value="person">{t.search.solo}</option>
-            </select>
-          </div>
         </form>
 
         {message && (
@@ -120,28 +100,25 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             <ul className="artist-list">
               {artists.map((artist) => (
                 <li key={artist.id} className="card artist-card">
-                  <Avatar name={artist.name} />
-                  <div className="artist-info">
-                    <Link
-                      className="artist-name"
-                      to={`/artist/${artist.id}`}
-                      state={linkState}
-                      onClick={() => navigate(location, { replace: true, state: linkState })}
-                    >
-                      {artist.name}
-                    </Link>
-                    {(artist.disambiguation || artist.area) && (
-                      <div className="artist-meta">
-                        {artist.disambiguation && <span>{artist.disambiguation}</span>}
-                        {artist.area && (
-                          <span className="chip">
-                            <PinIcon />
-                            {artist.area}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <Link
+                    className="artist-name"
+                    to={`/artist/${artist.id}`}
+                    state={linkState}
+                    onClick={() => navigate(location, { replace: true, state: linkState })}
+                  >
+                    {artist.name}
+                  </Link>
+                  {(artist.disambiguation || artist.area) && (
+                    <div className="artist-meta">
+                      {artist.disambiguation && <span>{artist.disambiguation}</span>}
+                      {artist.area && (
+                        <span className="chip">
+                          <PinIcon />
+                          {artist.area}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
