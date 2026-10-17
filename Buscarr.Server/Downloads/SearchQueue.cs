@@ -42,7 +42,7 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
         request.State = DownloadState.Searching;
         await db.SaveChangesAsync();
 
-        AlbumSearchResult result;
+        AlbumSearchResult? result = null;
 
         try
         {
@@ -51,6 +51,17 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
         catch (Exception e)
         {
             Console.Error.WriteLine($"erro ao buscar {request.ArtistName} {request.Title}: {e.Message}");
+        }
+
+        await db.Entry(request).ReloadAsync();
+
+        if (request.State != DownloadState.Searching)
+        {
+            return new SearchedRequest(request.Id, []);
+        }
+
+        if (result is null)
+        {
             PutBack(request, RetrySchedule.AfterBusy(time.GetUtcNow()));
             await db.SaveChangesAsync();
 
