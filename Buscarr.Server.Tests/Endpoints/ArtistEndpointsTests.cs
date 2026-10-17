@@ -24,13 +24,14 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
 
         Assert.Equal(
             [
-                new ArtistCard("1", "Approaching Nirvana", null, null, null),
+                new ArtistCard("1", "Approaching Nirvana", null, null, null, false),
                 new ArtistCard(
                     BuscarrApiFactory.NirvanaId,
                     "Nirvana",
                     "90s US grunge band",
                     "United States",
-                    BuscarrApiFactory.NirvanaImage),
+                    BuscarrApiFactory.NirvanaImage,
+                    false),
             ],
             artists);
     }
@@ -55,96 +56,6 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
         var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/artists?q=zzqxjvkwplm");
 
         Assert.Empty(artists!);
-    }
-
-    [Fact]
-    public async Task GetArtist_ReturnsTheArtist()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var artist = await client.GetFromJsonAsync<ArtistCard>($"/api/artists/{BuscarrApiFactory.NirvanaId}");
-
-        Assert.Equal(
-            new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null, BuscarrApiFactory.NirvanaImage),
-            artist);
-    }
-
-    [Fact]
-    public async Task GetArtist_WhenFanartTvFails_ReturnsTheArtistWithoutImage()
-    {
-        await using var fanartTvDown = new BuscarrApiFactory { FanartTvDown = true };
-        var client = await fanartTvDown.CreateLoggedInClientAsync();
-
-        var artist = await client.GetFromJsonAsync<ArtistCard>($"/api/artists/{BuscarrApiFactory.NirvanaId}");
-
-        Assert.Equal("Nirvana", artist!.Name);
-        Assert.Null(artist.Image);
-    }
-
-    [Fact]
-    public async Task GetArtist_WithInvalidId_Returns404()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync("/api/artists/not-an-mbid!");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetArtistReleases_ReturnsReleasesOfEveryTypeWithLiveMarkCoverAndTracksOfTheOriginal()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var releases = await client.GetFromJsonAsync<List<ReleaseItem>>(
-            $"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
-
-        Assert.Equal(
-            [
-                new ReleaseItem(
-                    "Smells Like Teen Spirit",
-                    "1991-09-10",
-                    false,
-                    "single",
-                    "https://coverartarchive.org/release/r1/front-250",
-                    3),
-                new ReleaseItem(
-                    "Nevermind",
-                    "1991-09-24",
-                    false,
-                    "album",
-                    "https://coverartarchive.org/release/r2/front-250",
-                    12),
-                new ReleaseItem(
-                    "MTV Unplugged in New York",
-                    "1994-11-01",
-                    true,
-                    "album",
-                    "https://coverartarchive.org/release-group/g3/front-250",
-                    14),
-            ],
-            releases);
-    }
-
-    [Fact]
-    public async Task GetArtistReleases_DoesNotLookUpTheArtist()
-    {
-        await using var api = new BuscarrApiFactory();
-        var client = await api.CreateLoggedInClientAsync();
-
-        await client.GetFromJsonAsync<List<ReleaseItem>>($"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
-
-        Assert.Equal(["/ws/2/release"], api.MusicBrainz.Requests.Select(request => request.Uri.AbsolutePath));
-    }
-
-    [Fact]
-    public async Task GetArtistReleases_WithInvalidId_Returns404()
-    {
-        var client = await factory.CreateLoggedInClientAsync();
-
-        var response = await client.GetAsync("/api/artists/not-an-mbid!/releases");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

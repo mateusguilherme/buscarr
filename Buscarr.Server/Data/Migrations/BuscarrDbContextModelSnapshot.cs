@@ -16,6 +16,36 @@ namespace Buscarr.Server.Data.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.13");
 
+            modelBuilder.Entity("Buscarr.Server.Lists.ListedArtist", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ArtistId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Area")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Disambiguation")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Image")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.PrimitiveCollection<string>("ReleaseTypes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "ArtistId");
+
+                    b.ToTable("ListedArtists");
+                });
+
             modelBuilder.Entity("Buscarr.Server.Users.User", b =>
                 {
                     b.Property<int>("Id")
@@ -44,6 +74,15 @@ namespace Buscarr.Server.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Buscarr.Server.Lists.ListedArtist", b =>
+                {
+                    b.HasOne("Buscarr.Server.Users.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

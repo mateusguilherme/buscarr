@@ -1,23 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { findArtists, logout, type Artist, type User } from './api';
-import { Avatar } from './Avatar';
+import { ArtistItem } from './ArtistItem';
 import { Header } from './Header';
-import { PinIcon, SearchIcon } from './icons';
+import { SearchIcon } from './icons';
 import { t } from './i18n';
-
-export type SearchState = { search: string; artists: Artist[] };
 
 export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [message, setMessage] = useState('');
-  const linkState: SearchState = { search: location.search, artists };
 
   useEffect(() => {
-    const cached = (location.state as SearchState | null)?.artists;
     const query = searchParams.get('q') ?? '';
     let ignore = false;
 
@@ -39,10 +34,10 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
       }
     }
 
-    if (query && !cached) {
+    if (query) {
       search();
     } else {
-      setArtists(cached ?? []);
+      setArtists([]);
       setMessage('');
     }
 
@@ -69,6 +64,9 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
     <>
       <Header>
         <span className="greeting">{t.search.greeting(user.name)}</span>
+        <Link to="/list" className="header-link">
+          {t.search.list}
+        </Link>
         <Link to="/settings" className="header-link">
           {t.search.settings}
         </Link>
@@ -101,30 +99,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
         {artists.length > 0 && (
           <ul className="artist-list">
             {artists.map((artist) => (
-              <li key={artist.id} className="card artist-card">
-                <Avatar image={artist.image} />
-                <div className="artist-info">
-                  <Link
-                    className="artist-name"
-                    to={`/artist/${artist.id}`}
-                    state={linkState}
-                    onClick={() => navigate(location, { replace: true, state: linkState })}
-                  >
-                    {artist.name}
-                  </Link>
-                  {(artist.disambiguation || artist.area) && (
-                    <div className="artist-meta">
-                      {artist.disambiguation && <span>{artist.disambiguation}</span>}
-                      {artist.area && (
-                        <span className="chip">
-                          <PinIcon />
-                          {artist.area}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </li>
+              <ArtistItem key={artist.id} artist={artist} />
             ))}
           </ul>
         )}

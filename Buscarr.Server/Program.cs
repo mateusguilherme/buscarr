@@ -1,6 +1,7 @@
 using Buscarr.Server.Data;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
+using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Users;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -15,6 +16,7 @@ builder.Services.AddSingleton(new FanartTvClient(
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();
+builder.Services.AddScoped<ArtistListStore>();
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -43,6 +45,7 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapArtistEndpoints();
 app.MapSettingsEndpoints();
+app.MapListEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 

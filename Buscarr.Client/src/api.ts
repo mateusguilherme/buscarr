@@ -7,17 +7,12 @@ export type Artist = {
   disambiguation: string | null;
   area: string | null;
   image: string | null;
-};
-export type Release = {
-  title: string;
-  date: string;
-  live: boolean;
-  type: string | null;
-  cover: string | null;
-  tracks: number;
+  listed: boolean;
 };
 export type Edition = 'original' | 'remastered' | 'deluxe';
 export type Settings = { edition: Edition };
+export type ReleaseType = 'album' | 'ep' | 'single' | 'live' | 'compilation' | 'soundtrack' | 'remix' | 'demo';
+export type ListSettings = { releaseTypes: ReleaseType[] };
 
 export async function getCurrentUser(): Promise<User | null> {
   const res = await fetch('/api/auth/me');
@@ -85,6 +80,42 @@ function sendJson(method: string, url: string, body: unknown): Promise<Response>
   });
 }
 
+export async function getList(): Promise<Artist[]> {
+  const res = await fetch('/api/list');
+
+  if (!res.ok) {
+    throw new Error(t.api.listError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function getListEntry(id: string): Promise<ListSettings> {
+  const res = await fetch(`/api/list/${encodeURIComponent(id)}`);
+
+  if (!res.ok) {
+    throw new Error(t.api.listError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function addToList(id: string, settings: ListSettings): Promise<void> {
+  const res = await sendJson('PUT', `/api/list/${encodeURIComponent(id)}`, settings);
+
+  if (!res.ok) {
+    throw new Error(t.api.addToListError(res.status));
+  }
+}
+
+export async function removeFromList(id: string): Promise<void> {
+  const res = await fetch(`/api/list/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+  if (!res.ok) {
+    throw new Error(t.api.removeFromListError(res.status));
+  }
+}
+
 export async function getSettings(): Promise<Settings> {
   const res = await fetch('/api/settings');
 
@@ -108,26 +139,6 @@ export async function findArtists(query: string): Promise<Artist[]> {
 
   if (!res.ok) {
     throw new Error(t.api.searchError(res.status));
-  }
-
-  return res.json();
-}
-
-export async function getArtist(id: string): Promise<Artist> {
-  const res = await fetch(`/api/artists/${encodeURIComponent(id)}`);
-
-  if (!res.ok) {
-    throw new Error(t.api.artistError(res.status));
-  }
-
-  return res.json();
-}
-
-export async function getArtistReleases(id: string): Promise<Release[]> {
-  const res = await fetch(`/api/artists/${encodeURIComponent(id)}/releases`);
-
-  if (!res.ok) {
-    throw new Error(t.api.releasesError(res.status));
   }
 
   return res.json();

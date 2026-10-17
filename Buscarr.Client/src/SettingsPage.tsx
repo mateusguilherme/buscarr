@@ -4,12 +4,7 @@ import { getSettings, saveSettings, type Edition, type Settings } from './api';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { t } from './i18n';
-
-const editions: { value: Edition; label: string; hint: string }[] = [
-  { value: 'original', label: t.settings.original, hint: t.settings.originalHint },
-  { value: 'remastered', label: t.settings.remastered, hint: t.settings.remasteredHint },
-  { value: 'deluxe', label: t.settings.deluxe, hint: t.settings.deluxeHint },
-];
+import { editionOptions } from './options';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -62,7 +57,7 @@ export function SettingsPage() {
       <main className="page">
         <Link to="/" className="back">
           <ArrowLeftIcon />
-          {t.releases.back}
+          {t.common.back}
         </Link>
 
         <h1 className="page-title">{t.settings.title}</h1>
@@ -81,7 +76,7 @@ export function SettingsPage() {
           <div className="card settings">
             <fieldset>
               <legend>{t.settings.edition}</legend>
-              {editions.map((option) => (
+              {editionOptions.map((option) => (
                 <label key={option.value} className="option">
                   <input
                     type="radio"

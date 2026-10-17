@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addToList,
   findArtists,
-  getArtist,
-  getArtistReleases,
   getCurrentUser,
+  getList,
+  getListEntry,
   getSettings,
   login,
   register,
+  removeFromList,
   saveSettings,
 } from './api';
 import { mockFetch } from './test-utils';
@@ -85,6 +87,73 @@ describe('findArtists', () => {
   });
 });
 
+describe('getList', () => {
+  it('pede a lista de artistas do usuário', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [] });
+
+    expect(await getList()).toEqual([]);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/list');
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(getList()).rejects.toThrow('Erro 500 ao carregar a lista.');
+  });
+});
+
+describe('addToList', () => {
+  it('põe o artista na lista', async () => {
+    const fetchMock = mockFetch({ status: 204 });
+
+    await addToList('abc-123', { releaseTypes: ['album', 'live'] });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/list/abc-123');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({ releaseTypes: ['album', 'live'] }),
+    });
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 502 });
+
+    await expect(addToList('abc-123', { releaseTypes: ['album'] })).rejects.toThrow('Erro 502 ao adicionar à lista.');
+  });
+});
+
+describe('getListEntry', () => {
+  it('pede como o artista está na lista', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { releaseTypes: ['single'] } });
+
+    expect(await getListEntry('abc-123')).toEqual({ releaseTypes: ['single'] });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/list/abc-123');
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 404 });
+
+    await expect(getListEntry('abc-123')).rejects.toThrow('Erro 404 ao carregar a lista.');
+  });
+});
+
+describe('removeFromList', () => {
+  it('tira o artista da lista', async () => {
+    const fetchMock = mockFetch({ status: 204 });
+
+    await removeFromList('abc-123');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/list/abc-123');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(removeFromList('abc-123')).rejects.toThrow('Erro 500 ao tirar da lista.');
+  });
+});
+
 describe('getSettings', () => {
   it('pede as configurações do usuário', async () => {
     const fetchMock = mockFetch({ status: 200, body: { edition: 'deluxe' } });
@@ -117,37 +186,5 @@ describe('saveSettings', () => {
     mockFetch({ status: 400 });
 
     await expect(saveSettings({ edition: 'remastered' })).rejects.toThrow('Erro 400 ao salvar as configurações.');
-  });
-});
-
-describe('getArtist', () => {
-  it('pede o artista pelo id', async () => {
-    const nirvana = { id: 'abc-123', name: 'Nirvana', disambiguation: null, area: null };
-    const fetchMock = mockFetch({ status: 200, body: nirvana });
-
-    expect(await getArtist('abc-123')).toEqual(nirvana);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123');
-  });
-
-  it('lança erro quando a API falha', async () => {
-    mockFetch({ status: 502 });
-
-    await expect(getArtist('abc-123')).rejects.toThrow('Erro 502 ao carregar o artista.');
-  });
-});
-
-describe('getArtistReleases', () => {
-  it('pede todos os releases do artista', async () => {
-    const fetchMock = mockFetch({ status: 200, body: [] });
-
-    await getArtistReleases('abc-123');
-
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases');
-  });
-
-  it('lança erro quando a API falha', async () => {
-    mockFetch({ status: 502 });
-
-    await expect(getArtistReleases('abc-123')).rejects.toThrow('Erro 502 ao carregar os releases.');
   });
 });
