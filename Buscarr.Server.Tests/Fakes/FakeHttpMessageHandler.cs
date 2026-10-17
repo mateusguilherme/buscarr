@@ -15,6 +15,8 @@ public sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponse
 {
     public List<RecordedRequest> Requests { get; } = [];
 
+    public Func<HttpRequestMessage, HttpResponseMessage> Respond { get; set; } = respond;
+
     public static HttpResponseMessage Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
@@ -33,6 +35,6 @@ public sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponse
             headers,
             body));
 
-        return Task.FromResult(respond(request));
+        return Task.FromResult(Respond(request));
     }
 }

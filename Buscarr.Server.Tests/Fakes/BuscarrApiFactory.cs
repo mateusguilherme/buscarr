@@ -6,7 +6,9 @@ using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Subsonic;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -43,11 +45,14 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     public FakeSlskd Slskd { get; } = new();
 
+    public FakeHttpMessageHandler Subsonic { get; } =
+        new(_ => FakeHttpMessageHandler.Json(SubsonicJson.Ok()));
+
     public bool FanartTvDown { get; init; }
 
     public bool SlskdDown { get; init; }
 
-    public async Task<HttpClient> CreateLoggedInClientAsync()
+    public async Task<HttpClient> CreateLoggedInClientAsync(bool admin = false)
     {
         var client = CreateClient();
         var email = $"{Guid.NewGuid()}@exemplo.com";
@@ -55,6 +60,11 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
             "/api/auth/register",
             new RegisterRequest(email, "Fulano", "segredo123"));
         response.EnsureSuccessStatusCode();
+
+        using var scope = Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<BuscarrDbContext>().Users
+            .Where(u => u.Email == email)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, admin));
 
         return client;
     }
@@ -82,6 +92,13 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                     : Slskd.Handler),
                 "http://slskd.local:5030",
                 "chave-de-teste"));
+            services.RemoveAll<SubsonicClient>();
+            services.AddSingleton(provider =>
+            {
+                var store = provider.GetRequiredService<ServerSettingsStore>();
+
+                return new SubsonicClient(new HttpClient(Subsonic), () => store.Current);
+            });
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
             foreach (var worker in services

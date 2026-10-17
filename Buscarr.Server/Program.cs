@@ -84,6 +84,7 @@ app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapArtistEndpoints();
 app.MapSettingsEndpoints();
+app.MapServerSettingsEndpoints();
 app.MapListEndpoints();
 app.MapDownloadEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
