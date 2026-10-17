@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router';
 import { getArtistReleases, type ArtistReleases, type Release } from './api';
 import { Avatar } from './Avatar';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { locale, t } from './i18n';
+import type { SearchState } from './SearchPage';
 
 const releaseTypes = [
   { value: 'album', label: t.releases.albums },
@@ -21,6 +22,8 @@ const dateFormat = new Intl.DateTimeFormat(locale, {
 });
 
 export function ReleasesPage() {
+  const location = useLocation();
+  const from = location.state as SearchState | null;
   const { id = '' } = useParams();
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') ?? 'album';
@@ -59,7 +62,7 @@ export function ReleasesPage() {
       <Header />
 
       <main className="page">
-        <Link to="/" className="back">
+        <Link to={`/${from?.search ?? ''}`} state={from} className="back">
           <ArrowLeftIcon />
           {t.releases.back}
         </Link>
@@ -78,6 +81,8 @@ export function ReleasesPage() {
             <Link
               key={option.value}
               to={`?type=${option.value}`}
+              state={from}
+              replace
               aria-current={option.value === type ? 'page' : undefined}
             >
               {option.label}

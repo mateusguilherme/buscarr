@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { SearchPage } from './SearchPage';
 import { mockFetch } from './test-utils';
 
-function renderSearchPage(onLogout = vi.fn()) {
+function renderSearchPage({ url = '/', onLogout = vi.fn() } = {}) {
   render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[url]}>
       <SearchPage user={{ email: 'fulano@exemplo.com', name: 'Fulano' }} onLogout={onLogout} />
     </MemoryRouter>,
   );
@@ -111,6 +111,28 @@ describe('SearchPage', () => {
     expect(await screen.findByText('1 artista encontrado')).toBeDefined();
   });
 
+  it('refaz a busca que está na URL', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
+    renderSearchPage({ url: '/?q=rancore&country=BR&type=group' });
+
+    expect(await screen.findByRole('link', { name: 'Rancore' })).toBeDefined();
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=rancore&country=BR&type=group');
+    expect((screen.getByPlaceholderText('Nome do artista') as HTMLInputElement).value).toBe('rancore');
+    expect((screen.getByRole('combobox', { name: 'País' }) as HTMLSelectElement).value).toBe('BR');
+    expect((screen.getByRole('combobox', { name: 'Tipo' }) as HTMLSelectElement).value).toBe('group');
+  });
+
+  it('busca de novo ao repetir a mesma busca', async () => {
+    mockFetch({ status: 500 }, { status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
+    renderSearchPage();
+
+    await search('rancore');
+    await screen.findByText('Erro na busca.');
+    await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect(await screen.findByRole('link', { name: 'Rancore' })).toBeDefined();
+  });
+
   it('avisa quando nenhum artista é encontrado', async () => {
     mockFetch({ status: 200, body: [] });
     renderSearchPage();
@@ -123,7 +145,7 @@ describe('SearchPage', () => {
   it('sai da conta pelo botão Sair', async () => {
     const fetchMock = mockFetch({ status: 200 });
     const onLogout = vi.fn();
-    renderSearchPage(onLogout);
+    renderSearchPage({ onLogout });
 
     await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
 

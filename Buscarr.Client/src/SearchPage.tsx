@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router';
+import { useEffect, useState, type FormEvent } from 'react';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router';
 import { findArtists, logout, type Artist, type User } from './api';
 import { Avatar } from './Avatar';
 import { countries } from './countries';
@@ -7,25 +7,57 @@ import { Header } from './Header';
 import { PinIcon, SearchIcon } from './icons';
 import { t } from './i18n';
 
+export type SearchState = { search: string; artists: Artist[] };
+
 export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
-  const [query, setQuery] = useState('');
-  const [country, setCountry] = useState('');
-  const [type, setType] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [message, setMessage] = useState('');
+  const linkState: SearchState = { search: location.search, artists };
 
-  async function handleSearch(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setArtists([]);
-    setMessage(t.search.searching);
+  useEffect(() => {
+    const cached = (location.state as SearchState | null)?.artists;
+    const query = searchParams.get('q') ?? '';
+    const country = searchParams.get('country') ?? '';
+    const type = searchParams.get('type') ?? '';
+    let ignore = false;
 
-    try {
-      const found = await findArtists(query, country, type);
-      setArtists(found);
-      setMessage(found.length > 0 ? '' : t.search.notFound);
-    } catch {
-      setMessage(t.search.error);
+    async function search() {
+      setArtists([]);
+      setMessage(t.search.searching);
+
+      try {
+        const found = await findArtists(query, country, type);
+
+        if (!ignore) {
+          setArtists(found);
+          setMessage(found.length > 0 ? '' : t.search.notFound);
+        }
+      } catch {
+        if (!ignore) {
+          setMessage(t.search.error);
+        }
+      }
     }
+
+    if (query && !cached) {
+      search();
+    } else {
+      setArtists(cached ?? []);
+      setMessage('');
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [location.key]);
+
+  function handleSearch(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fields = [...new FormData(e.currentTarget)].filter(([, value]) => value !== '');
+    setSearchParams(fields as [string, string][]);
   }
 
   async function handleLogout() {
@@ -47,20 +79,20 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
       </Header>
 
       <main className="page">
-        <form className="search" role="search" onSubmit={handleSearch}>
+        <form key={location.search} className="search" role="search" onSubmit={handleSearch}>
           <div className="search-bar">
             <SearchIcon />
             <input
+              name="q"
               placeholder={t.search.artistName}
               required
               autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              defaultValue={searchParams.get('q') ?? ''}
             />
             <button className="button-primary">{t.search.search}</button>
           </div>
           <div className="filters">
-            <select aria-label={t.search.country} value={country} onChange={(e) => setCountry(e.target.value)}>
+            <select name="country" aria-label={t.search.country} defaultValue={searchParams.get('country') ?? ''}>
               <option value="">{t.search.allCountries}</option>
               {countries.map(({ code, name }) => (
                 <option key={code} value={code}>
@@ -68,7 +100,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
                 </option>
               ))}
             </select>
-            <select aria-label={t.search.type} value={type} onChange={(e) => setType(e.target.value)}>
+            <select name="type" aria-label={t.search.type} defaultValue={searchParams.get('type') ?? ''}>
               <option value="">{t.search.anyType}</option>
               <option value="group">{t.search.band}</option>
               <option value="person">{t.search.solo}</option>
@@ -90,7 +122,12 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
                 <li key={artist.id} className="card artist-card">
                   <Avatar name={artist.name} />
                   <div className="artist-info">
-                    <Link className="artist-name" to={`/artist/${artist.id}`}>
+                    <Link
+                      className="artist-name"
+                      to={`/artist/${artist.id}`}
+                      state={linkState}
+                      onClick={() => navigate(location, { replace: true, state: linkState })}
+                    >
                       {artist.name}
                     </Link>
                     {(artist.disambiguation || artist.area) && (
