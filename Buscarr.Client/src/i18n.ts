@@ -10,6 +10,8 @@ const ptBR = {
     searchError: (status: number) => `Erro ${status} na busca.`,
     artistError: (status: number) => `Erro ${status} ao carregar o artista.`,
     releasesError: (status: number) => `Erro ${status} ao carregar os releases.`,
+    settingsError: (status: number) => `Erro ${status} ao carregar as configurações.`,
+    saveSettingsError: (status: number) => `Erro ${status} ao salvar as configurações.`,
   },
   login: {
     email: 'E-mail',
@@ -23,6 +25,7 @@ const ptBR = {
   search: {
     greeting: (name: string) => `Olá, ${name}`,
     logout: 'Sair',
+    settings: 'Configurações',
     artistName: 'Nome do artista',
     search: 'Buscar',
     searching: 'Buscando…',
@@ -41,7 +44,21 @@ const ptBR = {
     studio: 'Estúdio',
     live: 'Ao vivo',
     other: 'Outros',
+    tracks: (count: number) => (count === 1 ? '1 faixa' : `${count} faixas`),
     type: 'Tipo de release',
+  },
+  settings: {
+    title: 'Configurações',
+    edition: 'Quando um álbum tiver várias edições, baixar:',
+    original: 'A original',
+    originalHint: 'As faixas do lançamento original.',
+    remastered: 'A remasterizada',
+    remasteredHint: 'A remasterização mais recente.',
+    deluxe: 'A deluxe',
+    deluxeHint: 'A edição deluxe, com faixas extras.',
+    fallback: 'Se o álbum não tiver essa edição, fica a original.',
+    loading: 'Carregando…',
+    saved: 'Salvo.',
   },
 };
 
@@ -59,6 +76,8 @@ const en: Messages = {
     searchError: (status) => `Error ${status} searching.`,
     artistError: (status) => `Error ${status} loading the artist.`,
     releasesError: (status) => `Error ${status} loading the releases.`,
+    settingsError: (status) => `Error ${status} loading the settings.`,
+    saveSettingsError: (status) => `Error ${status} saving the settings.`,
   },
   login: {
     email: 'Email',
@@ -72,6 +91,7 @@ const en: Messages = {
   search: {
     greeting: (name) => `Hi, ${name}`,
     logout: 'Sign out',
+    settings: 'Settings',
     artistName: 'Artist name',
     search: 'Search',
     searching: 'Searching…',
@@ -90,7 +110,21 @@ const en: Messages = {
     studio: 'Studio',
     live: 'Live',
     other: 'Other',
+    tracks: (count) => (count === 1 ? '1 track' : `${count} tracks`),
     type: 'Release type',
+  },
+  settings: {
+    title: 'Settings',
+    edition: 'When an album has several editions, download:',
+    original: 'The original',
+    originalHint: 'The tracks of the original release.',
+    remastered: 'The remaster',
+    remasteredHint: 'The most recent remaster.',
+    deluxe: 'The deluxe',
+    deluxeHint: 'The deluxe edition, with extra tracks.',
+    fallback: 'If the album has no such edition, the original is used.',
+    loading: 'Loading…',
+    saved: 'Saved.',
   },
 };
 

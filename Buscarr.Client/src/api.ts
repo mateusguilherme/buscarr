@@ -8,7 +8,16 @@ export type Artist = {
   area: string | null;
   image: string | null;
 };
-export type Release = { title: string; date: string; live: boolean; type: string | null; cover: string | null };
+export type Release = {
+  title: string;
+  date: string;
+  live: boolean;
+  type: string | null;
+  cover: string | null;
+  tracks: number;
+};
+export type Edition = 'original' | 'remastered' | 'deluxe';
+export type Settings = { edition: Edition };
 
 export async function getCurrentUser(): Promise<User | null> {
   const res = await fetch('/api/auth/me');
@@ -65,11 +74,33 @@ export async function logout(): Promise<void> {
 }
 
 function postJson(url: string, body: unknown): Promise<Response> {
+  return sendJson('POST', url, body);
+}
+
+function sendJson(method: string, url: string, body: unknown): Promise<Response> {
   return fetch(url, {
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+}
+
+export async function getSettings(): Promise<Settings> {
+  const res = await fetch('/api/settings');
+
+  if (!res.ok) {
+    throw new Error(t.api.settingsError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function saveSettings(settings: Settings): Promise<void> {
+  const res = await sendJson('PUT', '/api/settings', settings);
+
+  if (!res.ok) {
+    throw new Error(t.api.saveSettingsError(res.status));
+  }
 }
 
 export async function findArtists(query: string): Promise<Artist[]> {

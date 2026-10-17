@@ -25,6 +25,12 @@ describe('SearchPage', () => {
     expect(screen.getByText(/Olá, Fulano/)).toBeDefined();
   });
 
+  it('leva às configurações pelo cabeçalho', () => {
+    renderSearchPage();
+
+    expect(screen.getByRole('link', { name: 'Configurações' }).getAttribute('href')).toBe('/settings');
+  });
+
   it('busca só pelo nome, sem filtros', async () => {
     const fetchMock = mockFetch({ status: 200, body: [] });
     renderSearchPage();

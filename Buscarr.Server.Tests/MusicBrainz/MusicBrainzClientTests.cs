@@ -114,7 +114,7 @@ public class MusicBrainzClientTests
 
         var releases = await client.ReleasesAsync(Contact, "artist-id");
 
-        Assert.Equal(["Bleach", "Nevermind"], releases.Select(r => r.Title));
+        Assert.Equal(["Bleach", "Nevermind"], releases.Select(r => r.First.Title));
         Assert.Contains("offset=0", handler.Requests[0].Uri.Query);
         Assert.Contains("offset=1", handler.Requests[1].Uri.Query);
     }
@@ -136,7 +136,7 @@ public class MusicBrainzClientTests
 
         Assert.Equal(
             ["Bleach", "Nevermind", "MTV Unplugged in New York"],
-            releases.Select(r => r.Title));
+            releases.Select(r => r.First.Title));
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class MusicBrainzClientTests
 
         var releases = await client.ReleasesAsync(Contact, "artist-id");
 
-        Assert.Equal(["album", "single"], releases.Select(r => r.Type));
+        Assert.Equal(["album", "single"], releases.Select(r => r.First.Type));
     }
 
     [Fact]
@@ -167,7 +167,24 @@ public class MusicBrainzClientTests
                 "https://coverartarchive.org/release/r1/front-250",
                 "https://coverartarchive.org/release-group/g2/front-250",
             ],
-            releases.Select(r => r.CoverUrl));
+            releases.Select(r => r.First.CoverUrl));
+    }
+
+    [Fact]
+    public async Task ReleasesAsync_KeepsEveryEditionOfEachAlbum()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            3,
+            WithMedia(WithCoverArt(Release("Nevermind", "2011-09-26", "1991-09-24"), "r2", "g1", front: false), ("CD", 40)),
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)),
+            WithMedia(WithCoverArt(Release("Bleach", "1989-06-15", "1989"), "r3", "g2", front: false), ("Vinyl", 11)))));
+
+        var albums = await client.ReleasesAsync(Contact, "artist-id");
+
+        Assert.Equal(
+            [("r3", ["r3"]), ("r1", ["r2", "r1"])],
+            albums.Select(album => (album.First.Id, album.Editions.Select(edition => edition.Id).ToArray())));
+        Assert.Equal([40, 12], albums[1].Editions.Select(edition => edition.TrackCount));
     }
 
     [Fact]
@@ -179,6 +196,7 @@ public class MusicBrainzClientTests
 
         var parameters = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
         Assert.Equal("official", parameters["status"]);
+        Assert.Equal("release-groups media", parameters["inc"]);
         Assert.Null(parameters["type"]);
     }
 

@@ -92,7 +92,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
     }
 
     [Fact]
-    public async Task GetArtistReleases_ReturnsReleasesOfEveryTypeWithLiveMarkAndCover()
+    public async Task GetArtistReleases_ReturnsReleasesOfEveryTypeWithLiveMarkCoverAndTracksOfTheOriginal()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
@@ -106,19 +106,22 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                     "1991-09-10",
                     false,
                     "single",
-                    "https://coverartarchive.org/release/r1/front-250"),
+                    "https://coverartarchive.org/release/r1/front-250",
+                    3),
                 new ReleaseItem(
                     "Nevermind",
                     "1991-09-24",
                     false,
                     "album",
-                    "https://coverartarchive.org/release/r2/front-250"),
+                    "https://coverartarchive.org/release/r2/front-250",
+                    12),
                 new ReleaseItem(
                     "MTV Unplugged in New York",
                     "1994-11-01",
                     true,
                     "album",
-                    "https://coverartarchive.org/release-group/g3/front-250"),
+                    "https://coverartarchive.org/release-group/g3/front-250",
+                    14),
             ],
             releases);
     }

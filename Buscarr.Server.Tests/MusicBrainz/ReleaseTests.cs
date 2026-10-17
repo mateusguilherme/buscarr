@@ -51,6 +51,49 @@ public class ReleaseTests
         Assert.Equal(expected, release.IsLive);
     }
 
+    [Theory]
+    [InlineData("Nevermind", null, EditionKind.Original)]
+    [InlineData("Nevermind", "BIEM/MCPS, Made in France by Cinram Optical Discs", EditionKind.Original)]
+    [InlineData("Nevermind", "Remastered", EditionKind.Remastered)]
+    [InlineData("Nevermind", "200 gram, remastered", EditionKind.Remastered)]
+    [InlineData("Nevermind", "2011 digital remaster", EditionKind.Remastered)]
+    [InlineData("Nevermind", "remasterizado", EditionKind.Remastered)]
+    [InlineData("Nevermind (deluxe edition)", null, EditionKind.Deluxe)]
+    [InlineData("Nevermind", "20th anniversary super deluxe edition", EditionKind.Deluxe)]
+    [InlineData("Nevermind", "deluxe edition, remastered", EditionKind.Deluxe)]
+    public void Kind_ComesFromTheTitleAndDescription(string title, string? disambiguation, EditionKind expected)
+    {
+        var release = new Release { Title = title, Disambiguation = disambiguation };
+
+        Assert.Equal(expected, release.Kind);
+    }
+
+    [Theory]
+    [InlineData(new[] { "CD" }, true)]
+    [InlineData(new[] { "CD", "Enhanced CD" }, true)]
+    [InlineData(new[] { "Digital Media" }, true)]
+    [InlineData(new[] { "CD", "DVD" }, false)]
+    [InlineData(new[] { "12\" Vinyl" }, false)]
+    [InlineData(new string[0], false)]
+    public void IsCdOrDigital_RequiresEveryMediumToBeACdOrDigital(string[] formats, bool expected)
+    {
+        var release = new Release { Title = "Nevermind", Media = [.. formats.Select(format => new Medium { Format = format })] };
+
+        Assert.Equal(expected, release.IsCdOrDigital);
+    }
+
+    [Fact]
+    public void TrackCount_AddsTheTracksOfEveryMedium()
+    {
+        var release = new Release
+        {
+            Title = "Nevermind",
+            Media = [new Medium { Format = "CD", TrackCount = 12 }, new Medium { Format = "CD", TrackCount = 28 }],
+        };
+
+        Assert.Equal(40, release.TrackCount);
+    }
+
     [Fact]
     public void CoverUrl_IsTheFrontOfTheReleaseWhenItHasOne()
     {

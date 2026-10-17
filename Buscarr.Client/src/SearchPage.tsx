@@ -69,6 +69,9 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
     <>
       <Header>
         <span className="greeting">{t.search.greeting(user.name)}</span>
+        <Link to="/settings" className="header-link">
+          {t.search.settings}
+        </Link>
         <button className="button-ghost button-small" onClick={handleLogout}>
           {t.search.logout}
         </button>

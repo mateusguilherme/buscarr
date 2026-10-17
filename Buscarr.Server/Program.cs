@@ -42,6 +42,7 @@ app.UseAuthorization();
 
 app.MapAuthEndpoints();
 app.MapArtistEndpoints();
+app.MapSettingsEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 

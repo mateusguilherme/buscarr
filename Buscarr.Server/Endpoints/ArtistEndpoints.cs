@@ -2,12 +2,13 @@ using System.Security.Claims;
 using System.Text.Json;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Users;
 
 namespace Buscarr.Server.Endpoints;
 
 public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area, string? Image);
 
-public record ReleaseItem(string Title, string Date, bool Live, string? Type, string? Cover);
+public record ReleaseItem(string Title, string Date, bool Live, string? Type, string? Cover, int Tracks);
 
 public static class ArtistEndpoints
 {
@@ -70,6 +71,7 @@ public static class ArtistEndpoints
 
     private static async Task<IResult> GetArtistReleases(
         MusicBrainzClient musicBrainz,
+        UserStore users,
         ClaimsPrincipal user,
         string id)
     {
@@ -78,24 +80,27 @@ public static class ArtistEndpoints
             return Results.NotFound();
         }
 
-        List<Release> releases;
+        List<Album> albums;
 
         try
         {
-            releases = await musicBrainz.ReleasesAsync(Contact(user), id);
+            albums = await musicBrainz.ReleasesAsync(Contact(user), id);
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
             return BadGateway(e);
         }
 
-        return Results.Json(releases
-            .Select(release => new ReleaseItem(
-                release.Title,
-                release.Date ?? "",
-                release.IsLive,
-                release.Type,
-                release.CoverUrl))
+        var preference = await users.EditionPreferenceAsync(user.UserId());
+
+        return Results.Json(albums
+            .Select(album => new ReleaseItem(
+                album.First.Title,
+                album.First.Date ?? "",
+                album.First.IsLive,
+                album.First.Type,
+                album.First.CoverUrl,
+                Editions.Choose(album.Editions, preference).TrackCount))
             .ToList());
     }
 

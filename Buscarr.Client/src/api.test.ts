@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { findArtists, getArtist, getArtistReleases, getCurrentUser, login, register } from './api';
+import {
+  findArtists,
+  getArtist,
+  getArtistReleases,
+  getCurrentUser,
+  getSettings,
+  login,
+  register,
+  saveSettings,
+} from './api';
 import { mockFetch } from './test-utils';
 
 describe('getCurrentUser', () => {
@@ -73,6 +82,41 @@ describe('findArtists', () => {
     mockFetch({ status: 502 });
 
     await expect(findArtists('rancore')).rejects.toThrow('Erro 502 na busca.');
+  });
+});
+
+describe('getSettings', () => {
+  it('pede as configurações do usuário', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { edition: 'deluxe' } });
+
+    expect(await getSettings()).toEqual({ edition: 'deluxe' });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/settings');
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 500 });
+
+    await expect(getSettings()).rejects.toThrow('Erro 500 ao carregar as configurações.');
+  });
+});
+
+describe('saveSettings', () => {
+  it('envia as configurações do usuário', async () => {
+    const fetchMock = mockFetch({ status: 204 });
+
+    await saveSettings({ edition: 'remastered' });
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/settings');
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      method: 'PUT',
+      body: JSON.stringify({ edition: 'remastered' }),
+    });
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 400 });
+
+    await expect(saveSettings({ edition: 'remastered' })).rejects.toThrow('Erro 400 ao salvar as configurações.');
   });
 });
 

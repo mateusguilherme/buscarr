@@ -29,7 +29,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     public Task<Artist> ArtistAsync(string contact, string id) =>
         GetAsync<Artist>(contact, $"artist/{id}", []);
 
-    public async Task<List<Release>> ReleasesAsync(string contact, string artistId)
+    public async Task<List<Album>> ReleasesAsync(string contact, string artistId)
     {
         var releases = new List<Release>();
 
@@ -39,7 +39,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             [
                 ("artist", artistId),
                 ("status", "official"),
-                ("inc", "release-groups"),
+                ("inc", "release-groups media"),
                 ("limit", "100"),
                 ("offset", releases.Count.ToString()),
             ];
@@ -53,12 +53,20 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             }
         }
 
-        return releases
-            .Where(release => release.IsOriginalRelease)
-            .GroupBy(release => (release.Type, Names.Normalize(release.Title)))
-            .Select(group => group.OrderBy(release => release.Date, StringComparer.Ordinal).First())
-            .OrderBy(release => release.Date, StringComparer.Ordinal)
-            .ThenBy(release => Names.Normalize(release.Title), StringComparer.Ordinal)
+        var albums = releases
+            .Where(release => release.ReleaseGroup?.Id is not null)
+            .GroupBy(release => release.ReleaseGroup!.Id)
+            .Select(group => (
+                First: group.Where(release => release.IsOriginalRelease).MinBy(release => release.Date, StringComparer.Ordinal),
+                Editions: group.ToList()))
+            .Where(album => album.First is not null)
+            .Select(album => new Album(album.First!, album.Editions));
+
+        return albums
+            .GroupBy(album => (album.First.Type, Names.Normalize(album.First.Title)))
+            .Select(group => group.MinBy(album => album.First.Date, StringComparer.Ordinal)!)
+            .OrderBy(album => album.First.Date, StringComparer.Ordinal)
+            .ThenBy(album => Names.Normalize(album.First.Title), StringComparer.Ordinal)
             .ToList();
     }
 

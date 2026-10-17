@@ -97,18 +97,33 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         if (path == "/ws/2/release")
         {
             return FakeHttpMessageHandler.Json(Releases(
-                3,
-                WithCoverArt(
-                    WithPrimaryType(Release("Smells Like Teen Spirit", "1991-09-10", "1991-09-10"), "Single"),
-                    "r1",
-                    "g1",
-                    front: true),
-                WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: true),
-                WithCoverArt(
-                    Release("MTV Unplugged in New York", "1994-11-01", "1994-11-01", "Live"),
-                    "r3",
-                    "g3",
-                    front: false)));
+                5,
+                WithMedia(
+                    WithCoverArt(
+                        WithPrimaryType(Release("Smells Like Teen Spirit", "1991-09-10", "1991-09-10"), "Single"),
+                        "r1",
+                        "g1",
+                        front: true),
+                    ("CD", 3)),
+                WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: true), ("CD", 12)),
+                WithMedia(
+                    WithDisambiguation(
+                        WithCoverArt(Release("Nevermind", "2011-09-26", "1991-09-24"), "r4", "g2", front: true),
+                        "Remastered"),
+                    ("Digital Media", 13)),
+                WithMedia(
+                    WithDisambiguation(
+                        WithCoverArt(Release("Nevermind", "2011-09-27", "1991-09-24"), "r5", "g2", front: true),
+                        "deluxe edition"),
+                    ("CD", 19),
+                    ("CD", 21)),
+                WithMedia(
+                    WithCoverArt(
+                        Release("MTV Unplugged in New York", "1994-11-01", "1994-11-01", "Live"),
+                        "r3",
+                        "g3",
+                        front: false),
+                    ("CD", 14))));
         }
 
         return FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);

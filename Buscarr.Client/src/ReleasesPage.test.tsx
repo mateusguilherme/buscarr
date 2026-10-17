@@ -48,9 +48,9 @@ const rancoreReleases: unknown[] = [];
 const nirvana = { id: 'abc-123', name: 'Nirvana', disambiguation: null, area: null };
 
 const nirvanaReleases = [
-  { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single' },
-  { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album' },
-  { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album' },
+  { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single', tracks: 3 },
+  { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album', tracks: 12 },
+  { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album', tracks: 1 },
 ];
 
 describe('ReleasesPage', () => {
@@ -125,7 +125,8 @@ describe('ReleasesPage', () => {
 
     expect(studio.className).toBe('release-grid');
     expect(nevermind.querySelector('.cover')).not.toBeNull();
-    expect(nevermind.textContent).toBe('Nevermind24 de set. de 1991');
+    expect(nevermind.textContent).toBe('Nevermind24 de set. de 1991 · 12 faixas');
+    expect(screen.getByText('MTV Unplugged in New York').closest('li')!.textContent).toContain('1 faixa');
     expect(screen.queryByRole('table')).toBeNull();
   });
 

@@ -42,6 +42,26 @@ public static class MusicBrainzJson
         return release;
     }
 
+    public static Dictionary<string, object> WithMedia(
+        Dictionary<string, object> release,
+        params (string Format, int Tracks)[] media)
+    {
+        release["media"] = media.Select(medium => new Dictionary<string, object>
+        {
+            ["format"] = medium.Format,
+            ["track-count"] = medium.Tracks,
+        });
+
+        return release;
+    }
+
+    public static Dictionary<string, object> WithDisambiguation(Dictionary<string, object> release, string disambiguation)
+    {
+        release["disambiguation"] = disambiguation;
+
+        return release;
+    }
+
     public static Dictionary<string, object> WithPrimaryType(Dictionary<string, object> release, string primaryType)
     {
         ((Dictionary<string, object>)release["release-group"])["primary-type"] = primaryType;
@@ -56,10 +76,12 @@ public static class MusicBrainzJson
         params string[] secondaryTypes) =>
         new()
         {
+            ["id"] = $"{title}/{date}",
             ["title"] = title,
             ["date"] = date,
             ["release-group"] = new Dictionary<string, object>
             {
+                ["id"] = $"group/{title}/{date}",
                 ["primary-type"] = "Album",
                 ["first-release-date"] = firstReleaseDate,
                 ["secondary-types"] = secondaryTypes,
