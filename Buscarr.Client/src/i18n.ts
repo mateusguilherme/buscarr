@@ -8,6 +8,7 @@ const ptBR = {
     registerError: (status: number) => `Erro ${status} ao criar o usuário.`,
     logoutError: (status: number) => `Erro ${status} ao sair.`,
     searchError: (status: number) => `Erro ${status} na busca.`,
+    artistError: (status: number) => `Erro ${status} ao carregar o artista.`,
     releasesError: (status: number) => `Erro ${status} ao carregar os releases.`,
   },
   login: {
@@ -56,6 +57,7 @@ const en: Messages = {
     registerError: (status) => `Error ${status} creating the user.`,
     logoutError: (status) => `Error ${status} signing out.`,
     searchError: (status) => `Error ${status} searching.`,
+    artistError: (status) => `Error ${status} loading the artist.`,
     releasesError: (status) => `Error ${status} loading the releases.`,
   },
   login: {

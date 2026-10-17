@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams, useSearchParams } from 'react-router';
-import { getArtistReleases, type ArtistReleases, type Release } from './api';
+import { getArtist, getArtistReleases, type Release } from './api';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { locale, t } from './i18n';
@@ -26,28 +26,47 @@ export function ReleasesPage() {
   const { id = '' } = useParams();
   const [searchParams] = useSearchParams();
   const type = searchParams.get('type') ?? 'album';
-  const [data, setData] = useState<ArtistReleases | null>(null);
+  const [name, setName] = useState(from?.artists.find((artist) => artist.id === id)?.name);
+  const [releases, setReleases] = useState<Release[] | null>(null);
   const [error, setError] = useState<string>();
-  const shown = data && (type === 'all' ? data.releases : data.releases.filter((release) => release.type === type));
+  const shown = releases && (type === 'all' ? releases : releases.filter((release) => release.type === type));
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadReleases() {
-      setData(null);
-      setError(undefined);
-
+    async function loadArtist() {
       try {
-        const result = await getArtistReleases(id);
+        const artist = await getArtist(id);
 
         if (!ignore) {
-          setData(result);
+          setName(artist.name);
         }
       } catch (err) {
         if (!ignore) {
           setError((err as Error).message);
         }
       }
+    }
+
+    async function loadReleases() {
+      setReleases(null);
+      setError(undefined);
+
+      try {
+        const result = await getArtistReleases(id);
+
+        if (!ignore) {
+          setReleases(result);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError((err as Error).message);
+        }
+      }
+    }
+
+    if (!name) {
+      loadArtist();
     }
 
     loadReleases();
@@ -68,7 +87,7 @@ export function ReleasesPage() {
         </Link>
 
         <div className="artist-hero">
-          {data && <h1>{data.name}</h1>}
+          {name && <h1>{name}</h1>}
         </div>
 
         <nav className="segmented" aria-label={t.releases.type}>
@@ -90,7 +109,7 @@ export function ReleasesPage() {
             {error}
           </p>
         )}
-        {!data && !error && (
+        {!releases && !error && (
           <p className="status" role="status">
             {t.releases.loading}
           </p>

@@ -41,22 +41,51 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
     }
 
     [Fact]
-    public async Task GetArtistReleases_ReturnsArtistNameAndReleasesOfEveryTypeMarkedAsLive()
+    public async Task GetArtist_ReturnsTheArtist()
     {
         var client = await factory.CreateLoggedInClientAsync();
 
-        var result = await client.GetFromJsonAsync<ArtistReleases>(
+        var artist = await client.GetFromJsonAsync<ArtistCard>($"/api/artists/{BuscarrApiFactory.NirvanaId}");
+
+        Assert.Equal(new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null), artist);
+    }
+
+    [Fact]
+    public async Task GetArtist_WithInvalidId_Returns404()
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.GetAsync("/api/artists/not-an-mbid!");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetArtistReleases_ReturnsReleasesOfEveryTypeMarkedAsLive()
+    {
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var releases = await client.GetFromJsonAsync<List<ReleaseItem>>(
             $"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
 
-        Assert.NotNull(result);
-        Assert.Equal("Nirvana", result.Name);
         Assert.Equal(
             [
                 new ReleaseItem("Smells Like Teen Spirit", "1991-09-10", false, "single"),
                 new ReleaseItem("Nevermind", "1991-09-24", false, "album"),
                 new ReleaseItem("MTV Unplugged in New York", "1994-11-01", true, "album"),
             ],
-            result.Releases);
+            releases);
+    }
+
+    [Fact]
+    public async Task GetArtistReleases_DoesNotLookUpTheArtist()
+    {
+        await using var api = new BuscarrApiFactory();
+        var client = await api.CreateLoggedInClientAsync();
+
+        await client.GetFromJsonAsync<List<ReleaseItem>>($"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
+
+        Assert.Equal(["/ws/2/release"], api.MusicBrainz.Requests.Select(request => request.Uri.AbsolutePath));
     }
 
     [Fact]

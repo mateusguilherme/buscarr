@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findArtists, getArtistReleases, getCurrentUser, login, register } from './api';
+import { findArtists, getArtist, getArtistReleases, getCurrentUser, login, register } from './api';
 import { mockFetch } from './test-utils';
 
 describe('getCurrentUser', () => {
@@ -76,9 +76,25 @@ describe('findArtists', () => {
   });
 });
 
+describe('getArtist', () => {
+  it('pede o artista pelo id', async () => {
+    const nirvana = { id: 'abc-123', name: 'Nirvana', disambiguation: null, area: null };
+    const fetchMock = mockFetch({ status: 200, body: nirvana });
+
+    expect(await getArtist('abc-123')).toEqual(nirvana);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123');
+  });
+
+  it('lança erro quando a API falha', async () => {
+    mockFetch({ status: 502 });
+
+    await expect(getArtist('abc-123')).rejects.toThrow('Erro 502 ao carregar o artista.');
+  });
+});
+
 describe('getArtistReleases', () => {
   it('pede todos os releases do artista', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { name: 'Nirvana', releases: [] } });
+    const fetchMock = mockFetch({ status: 200, body: [] });
 
     await getArtistReleases('abc-123');
 

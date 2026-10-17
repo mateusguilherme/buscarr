@@ -43,20 +43,19 @@ async function openArtistFromSearch() {
 }
 
 const rancore = [{ id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' }];
-const rancoreReleases = { name: 'Rancore', releases: [] };
+const rancoreReleases: unknown[] = [];
 
-const nirvana = {
-  name: 'Nirvana',
-  releases: [
-    { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single' },
-    { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album' },
-    { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album' },
-  ],
-};
+const nirvana = { id: 'abc-123', name: 'Nirvana', disambiguation: null, area: null };
+
+const nirvanaReleases = [
+  { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single' },
+  { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album' },
+  { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album' },
+];
 
 describe('ReleasesPage', () => {
   it('lista os releases separados entre estúdio e ao vivo', async () => {
-    mockFetch({ status: 200, body: nirvana });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
 
     expect(await screen.findByRole('heading', { name: 'Nirvana' })).toBeDefined();
@@ -68,8 +67,28 @@ describe('ReleasesPage', () => {
     expect(within(live).getByText('MTV Unplugged in New York')).toBeDefined();
   });
 
+  it('mostra o nome do artista antes de os releases carregarem', async () => {
+    const fetchMock = mockFetch({ status: 200, body: nirvana });
+    fetchMock.mockReturnValueOnce(new Promise(() => {}));
+    renderReleasesPage();
+
+    expect(await screen.findByRole('heading', { name: 'Nirvana' })).toBeDefined();
+    expect(screen.getByRole('status').textContent).toBe('Carregando…');
+  });
+
+  it('usa o nome que veio da busca, sem pedir o artista', async () => {
+    const fetchMock = mockFetch({ status: 200, body: rancore });
+    fetchMock.mockReturnValueOnce(new Promise(() => {}));
+
+    await openArtistFromSearch();
+
+    expect(screen.getByRole('status').textContent).toBe('Carregando…');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/artists/83048ffe/releases');
+  });
+
   it('mostra a data no formato do idioma, com a data completa no datetime', async () => {
-    mockFetch({ status: 200, body: nirvana });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
 
     const date = await screen.findByText('24 de set. de 1991');
@@ -79,19 +98,20 @@ describe('ReleasesPage', () => {
   });
 
   it('pede todos os releases e mostra os álbuns quando a URL não escolhe um tipo', async () => {
-    const fetchMock = mockFetch({ status: 200, body: nirvana });
+    const fetchMock = mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
 
     await screen.findByRole('heading', { name: 'Nirvana' });
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123/releases');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists/abc-123');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/artists/abc-123/releases');
     expect(screen.getByRole('link', { name: 'Álbuns', current: 'page' })).toBeDefined();
     expect(screen.getByText('Nevermind')).toBeDefined();
     expect(screen.queryByText('Smells Like Teen Spirit')).toBeNull();
   });
 
   it('troca o tipo filtrando na página, sem buscar de novo', async () => {
-    const fetchMock = mockFetch({ status: 200, body: nirvana });
+    const fetchMock = mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
     await screen.findByRole('heading', { name: 'Nirvana' });
 
@@ -106,11 +126,11 @@ describe('ReleasesPage', () => {
     expect(screen.getByText('Smells Like Teen Spirit')).toBeDefined();
     expect(screen.getByText('Nevermind')).toBeDefined();
     expect(screen.getByText('MTV Unplugged in New York')).toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('avisa quando não há releases do tipo escolhido', async () => {
-    mockFetch({ status: 200, body: nirvana });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
     await screen.findByRole('heading', { name: 'Nirvana' });
 
@@ -120,7 +140,7 @@ describe('ReleasesPage', () => {
   });
 
   it('volta para a busca pela marca', async () => {
-    mockFetch({ status: 200, body: nirvana });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
 
     await screen.findByRole('heading', { name: 'Nirvana' });
@@ -184,7 +204,7 @@ describe('ReleasesPage', () => {
   });
 
   it('volta para a busca vazia quando não veio de uma busca', async () => {
-    mockFetch({ status: 200, body: nirvana });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();
 
     await screen.findByRole('heading', { name: 'Nirvana' });
@@ -193,7 +213,7 @@ describe('ReleasesPage', () => {
   });
 
   it('avisa quando não há releases', async () => {
-    mockFetch({ status: 200, body: { name: 'Nirvana', releases: [] } });
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: [] });
     renderReleasesPage();
 
     expect(await screen.findByText('Nenhum release oficial encontrado.')).toBeDefined();

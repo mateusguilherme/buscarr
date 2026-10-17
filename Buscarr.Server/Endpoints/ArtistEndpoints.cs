@@ -8,8 +8,6 @@ public record ArtistCard(string Id, string Name, string? Disambiguation, string?
 
 public record ReleaseItem(string Title, string Date, bool Live, string? Type);
 
-public record ArtistReleases(string Name, List<ReleaseItem> Releases);
-
 public static class ArtistEndpoints
 {
     public static void MapArtistEndpoints(this IEndpointRouteBuilder app)
@@ -17,6 +15,7 @@ public static class ArtistEndpoints
         var group = app.MapGroup("/api/artists").RequireAuthorization();
 
         group.MapGet("/", SearchArtists);
+        group.MapGet("/{id}", GetArtist);
         group.MapGet("/{id}/releases", GetArtistReleases);
     }
 
@@ -41,22 +40,41 @@ public static class ArtistEndpoints
             .ToList());
     }
 
-    private static async Task<IResult> GetArtistReleases(
-        MusicBrainzClient musicBrainz,
-        ClaimsPrincipal user,
-        string id)
+    private static async Task<IResult> GetArtist(MusicBrainzClient musicBrainz, ClaimsPrincipal user, string id)
     {
-        if (!id.All(c => char.IsAsciiHexDigit(c) || c == '-'))
+        if (!IsMusicBrainzId(id))
         {
             return Results.NotFound();
         }
 
         Artist artist;
-        List<Release> releases;
 
         try
         {
             artist = await musicBrainz.ArtistAsync(Contact(user), id);
+        }
+        catch (Exception e) when (IsUpstreamError(e))
+        {
+            return BadGateway(e);
+        }
+
+        return Results.Json(new ArtistCard(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name));
+    }
+
+    private static async Task<IResult> GetArtistReleases(
+        MusicBrainzClient musicBrainz,
+        ClaimsPrincipal user,
+        string id)
+    {
+        if (!IsMusicBrainzId(id))
+        {
+            return Results.NotFound();
+        }
+
+        List<Release> releases;
+
+        try
+        {
             releases = await musicBrainz.ReleasesAsync(Contact(user), id);
         }
         catch (Exception e) when (IsUpstreamError(e))
@@ -64,12 +82,13 @@ public static class ArtistEndpoints
             return BadGateway(e);
         }
 
-        var items = releases
+        return Results.Json(releases
             .Select(release => new ReleaseItem(release.Title, release.Date ?? "", release.IsLive, release.Type))
-            .ToList();
-
-        return Results.Json(new ArtistReleases(artist.Name, items));
+            .ToList());
     }
+
+    private static bool IsMusicBrainzId(string id) =>
+        id.All(c => char.IsAsciiHexDigit(c) || c == '-');
 
     private static string Contact(ClaimsPrincipal user) =>
         user.FindFirstValue(ClaimTypes.Email) ?? "";
