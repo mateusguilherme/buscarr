@@ -188,6 +188,32 @@ describe('ReleasesPage', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('agrupa por tipo em Todos, com os ao vivo e os outros tipos à parte', async () => {
+    const releases = [
+      { title: 'Hormoaning', date: '1992-02-05', live: false, type: 'ep', cover: null },
+      { title: 'Smells Like Teen Spirit', date: '1991-09-10', live: false, type: 'single', cover: null },
+      { title: 'Nevermind', date: '1991-09-24', live: false, type: 'album', cover: null },
+      { title: 'MTV Unplugged in New York', date: '1994-11-01', live: true, type: 'album', cover: null },
+      { title: 'Live at the Paramount', date: '2011-09-26', live: false, type: 'broadcast', cover: null },
+    ];
+    mockFetch({ status: 200, body: nirvana }, { status: 200, body: releases });
+    renderReleasesPage('/artist/abc-123?type=all');
+
+    await screen.findByText('Nevermind');
+
+    const sections = screen.getAllByRole('heading', { level: 2 }).map((heading) => [
+      heading.textContent,
+      within(heading.closest('section')!).getAllByRole('listitem').map((item) => item.querySelector('.release-title')?.textContent),
+    ]);
+    expect(sections).toEqual([
+      ['Álbuns', ['Nevermind']],
+      ['EPs', ['Hormoaning']],
+      ['Singles', ['Smells Like Teen Spirit']],
+      ['Ao vivo', ['MTV Unplugged in New York']],
+      ['Outros', ['Live at the Paramount']],
+    ]);
+  });
+
   it('avisa quando não há releases do tipo escolhido', async () => {
     mockFetch({ status: 200, body: nirvana }, { status: 200, body: nirvanaReleases });
     renderReleasesPage();

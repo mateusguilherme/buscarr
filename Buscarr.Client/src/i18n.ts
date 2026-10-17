@@ -40,6 +40,7 @@ const ptBR = {
     empty: 'Nenhum release oficial encontrado.',
     studio: 'Estúdio',
     live: 'Ao vivo',
+    other: 'Outros',
     type: 'Tipo de release',
   },
 };
@@ -88,6 +89,7 @@ const en: Messages = {
     empty: 'No official releases found.',
     studio: 'Studio',
     live: 'Live',
+    other: 'Other',
     type: 'Release type',
   },
 };

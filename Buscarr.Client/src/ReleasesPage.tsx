@@ -122,15 +122,36 @@ export function ReleasesPage() {
           </p>
         )}
         {shown && shown.length === 0 && <p className="status">{t.releases.empty}</p>}
-        {shown && (
-          <>
-            <ReleaseSection title={t.releases.studio} releases={shown.filter((r) => !r.live)} />
-            <ReleaseSection title={t.releases.live} releases={shown.filter((r) => r.live)} />
-          </>
-        )}
+        {shown &&
+          sectionsOf(shown, type).map((section) => (
+            <ReleaseSection key={section.title} title={section.title} releases={section.releases} />
+          ))}
       </main>
     </>
   );
+}
+
+function sectionsOf(releases: Release[], type: string) {
+  const studio = releases.filter((release) => !release.live);
+  const live = { title: t.releases.live, releases: releases.filter((release) => release.live) };
+
+  if (type !== 'all') {
+    return [{ title: t.releases.studio, releases: studio }, live];
+  }
+
+  const typed = releaseTypes.filter((option) => option.value !== 'all');
+
+  return [
+    ...typed.map((option) => ({
+      title: option.label,
+      releases: studio.filter((release) => release.type === option.value),
+    })),
+    live,
+    {
+      title: t.releases.other,
+      releases: studio.filter((release) => !typed.some((option) => option.value === release.type)),
+    },
+  ];
 }
 
 function ReleaseSection({ title, releases }: { title: string; releases: Release[] }) {
