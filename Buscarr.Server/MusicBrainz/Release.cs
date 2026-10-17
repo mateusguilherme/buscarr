@@ -18,6 +18,9 @@ public sealed class Release
     [JsonPropertyName("release-group")]
     public ReleaseGroup? ReleaseGroup { get; init; }
 
+    [JsonPropertyName("artist-credit")]
+    public List<ArtistCredit> ArtistCredit { get; init; } = [];
+
     [JsonPropertyName("cover-art-archive")]
     public CoverArtArchive? CoverArtArchive { get; init; }
 

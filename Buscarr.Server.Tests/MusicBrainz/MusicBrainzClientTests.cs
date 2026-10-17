@@ -289,6 +289,46 @@ public class MusicBrainzClientTests
         Assert.Null(parameters["type"]);
     }
 
+    [Fact]
+    public async Task ReleaseTracksAsync_ReturnsTracksInGlobalOrderAcrossMedia()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(ReleaseWithTracks(
+            "r1",
+            "a1",
+            "g1",
+            LookupMedium(
+                2,
+                LookupTrack(1, "Territorial Pissings", 143_000, "rec3")),
+            LookupMedium(
+                1,
+                LookupTrack(2, "In Bloom", null, "rec2", 255_000),
+                LookupTrack(1, "Smells Like Teen Spirit", 301_000, "rec1")))));
+
+        var edition = await client.ReleaseTracksAsync(Contact, "r1");
+
+        Assert.Equal(("a1", "g1"), (edition.ArtistId, edition.ReleaseGroupId));
+        Assert.Equal(
+            [
+                (1, "Smells Like Teen Spirit", 301_000, "rec1"),
+                (2, "In Bloom", 255_000, "rec2"),
+                (3, "Territorial Pissings", 143_000, "rec3"),
+            ],
+            edition.Tracks.Select(track => (track.Position, track.Title, track.LengthMs, track.RecordingId)));
+    }
+
+    [Fact]
+    public async Task ReleaseTracksAsync_AsksForRecordingsArtistsAndReleaseGroups()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(ReleaseWithTracks("r1", "a1", "g1")));
+
+        await client.ReleaseTracksAsync(Contact, "r1");
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains("/release/r1", request.Uri.AbsolutePath);
+        var parameters = HttpUtility.ParseQueryString(request.Uri.Query);
+        Assert.Equal("recordings artist-credits release-groups media", parameters["inc"]);
+    }
+
     private static (MusicBrainzClient Client, FakeHttpMessageHandler Handler) CreateClient(
         Func<HttpRequestMessage, HttpResponseMessage> respond,
         TimeProvider? time = null)

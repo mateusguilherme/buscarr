@@ -87,4 +87,37 @@ public static class MusicBrainzJson
                 ["secondary-types"] = secondaryTypes,
             },
         };
+
+    public static string ReleaseWithTracks(
+        string id,
+        string artistId,
+        string releaseGroupId,
+        params object[] media) =>
+        JsonSerializer.Serialize(new Dictionary<string, object>
+        {
+            ["id"] = id,
+            ["title"] = "Nevermind",
+            ["artist-credit"] = new object[] { new { artist = new { id = artistId, name = "Nirvana" } } },
+            ["release-group"] = new Dictionary<string, object> { ["id"] = releaseGroupId },
+            ["media"] = media,
+        });
+
+    public static object LookupMedium(int position, params object[] tracks) =>
+        new { position, tracks };
+
+    public static object LookupTrack(
+        int position,
+        string title,
+        int? length = null,
+        string? recordingId = null,
+        int? recordingLength = null) =>
+        new Dictionary<string, object?>
+        {
+            ["position"] = position,
+            ["title"] = title,
+            ["length"] = length,
+            ["recording"] = recordingId is null && recordingLength is null
+                ? null
+                : new Dictionary<string, object?> { ["id"] = recordingId, ["length"] = recordingLength },
+        };
 }

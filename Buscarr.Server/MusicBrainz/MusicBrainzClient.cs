@@ -74,6 +74,25 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             .ToList();
     }
 
+    public async Task<EditionTracks> ReleaseTracksAsync(string contact, string id)
+    {
+        var release = await GetAsync<Release>(
+            contact,
+            $"release/{id}",
+            [("inc", "recordings artist-credits release-groups media")]);
+        var tracks = release.Media
+            .OrderBy(medium => medium.Position)
+            .SelectMany(medium => medium.Tracks.OrderBy(track => track.Position))
+            .Select((track, index) => new ReleaseTrack(
+                index + 1,
+                track.Title,
+                track.Length ?? track.Recording?.Length,
+                track.Recording?.Id))
+            .ToList();
+
+        return new(release.ArtistCredit.FirstOrDefault()?.Artist?.Id, release.ReleaseGroup?.Id, tracks);
+    }
+
     private async Task<T> GetAsync<T>(
         string contact,
         string path,
