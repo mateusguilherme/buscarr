@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Buscarr.Server.Slskd;
 using Buscarr.Server.Tests.Fakes;
 using static Buscarr.Server.Tests.Fakes.SlskdJson;
@@ -66,6 +67,81 @@ public class SlskdClientTests
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.Unauthorized));
 
         await Assert.ThrowsAsync<HttpRequestException>(() => client.ServerStateAsync());
+    }
+
+    [Fact]
+    public async Task StartSearchAsync_PostsTheSearchTextUnderANewId()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Search(Guid.NewGuid(), "InProgress")));
+
+        var id = await client.StartSearchAsync("Nirvana Nevermind");
+
+        var request = Assert.Single(handler.Requests);
+        using var body = JsonDocument.Parse(request.Body!);
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal($"{Url}/api/v0/searches", request.Uri.ToString());
+        Assert.Equal(ApiKey, request.Headers["X-API-Key"]);
+        Assert.Equal("Nirvana Nevermind", body.RootElement.GetProperty("searchText").GetString());
+        Assert.Equal(id, body.RootElement.GetProperty("id").GetGuid());
+    }
+
+    [Fact]
+    public async Task StartSearchAsync_ReturnsNullWhenSlskdIsBusyWithAnotherSearch()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.TooManyRequests));
+
+        Assert.Null(await client.StartSearchAsync("Nirvana Nevermind"));
+    }
+
+    [Fact]
+    public async Task StartSearchAsync_ThrowsWhenSlskdFails()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.StartSearchAsync("Nirvana Nevermind"));
+    }
+
+    [Fact]
+    public async Task StartSearchAsync_ThrowsWithoutUrlAndApiKey()
+    {
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.OK), url: null);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => client.StartSearchAsync("Nirvana Nevermind"));
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task SearchAsync_ReadsWhetherTheSearchHasEnded()
+    {
+        var id = Guid.NewGuid();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Search(id, "Completed, TimedOut", 7)));
+
+        var search = await client.SearchAsync(id);
+
+        Assert.Equal($"{Url}/api/v0/searches/{id}", Assert.Single(handler.Requests).Uri.ToString());
+        Assert.Equal(new SlskdSearch(id, "Completed, TimedOut", true, 7), search);
+    }
+
+    [Fact]
+    public async Task SearchResponsesAsync_ReadsTheFilesEachPeerHas()
+    {
+        const string smells = @"@@musica\Nirvana\Nevermind\01 - Smells Like Teen Spirit.mp3";
+        var id = Guid.NewGuid();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(Responses(Response(
+            "fulano",
+            [AudioFile(smells, 320, 12_000_000, 301)],
+            hasFreeUploadSlot: false,
+            queueLength: 4,
+            uploadSpeed: 250_000))));
+
+        var responses = await client.SearchResponsesAsync(id);
+
+        Assert.Equal($"{Url}/api/v0/searches/{id}/responses", Assert.Single(handler.Requests).Uri.ToString());
+        var response = Assert.Single(responses);
+        Assert.Equal(
+            ("fulano", false, 4, 250_000),
+            (response.Username, response.HasFreeUploadSlot, response.QueueLength, response.UploadSpeed));
+        Assert.Equal(new SlskdFile(smells, 12_000_000, 320, null, 301), Assert.Single(response.Files));
     }
 
     private static (SlskdClient Client, FakeHttpMessageHandler Handler) CreateClient(
