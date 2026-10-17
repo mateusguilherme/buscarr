@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+cd "$(git rev-parse --show-toplevel)"
+
+echo "pre-push: testes do servidor"
+dotnet test --nologo
+
+echo "pre-push: testes do cliente"
+cd Buscarr.Client
+npm test

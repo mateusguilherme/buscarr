@@ -22,9 +22,10 @@ O servidor expõe a API em `/api` e, fora do modo de desenvolvimento, também en
 git clone <url-do-repositorio> buscarr
 cd buscarr
 dotnet tool restore
+git config core.hooksPath .githooks
 ```
 
-O `dotnet tool restore` instala o `dotnet-ef`, usado para criar migrations. As dependências do React (`npm install`) são instaladas sozinhas no primeiro build do servidor.
+O `dotnet tool restore` instala o `dotnet-ef`, usado para criar migrations. O `git config` ativa o hook de `pre-push`, que roda os testes antes de cada push. As dependências do React (`npm install`) são instaladas sozinhas no primeiro build do servidor.
 
 ## Rodando
 
@@ -104,6 +105,8 @@ cd Buscarr.Client && npm test  # cliente
 - **Cliente (Vitest + Testing Library):** chamadas da `api.ts` e as telas de login, busca e lançamentos.
 
 Os testes nunca acessam o MusicBrainz de verdade: as respostas são simuladas por um `HttpMessageHandler` falso, e o intervalo de 1 segundo é controlado por um `FakeTimeProvider`.
+
+O hook `.githooks/pre-push` roda as duas suítes antes de cada `git push` e bloqueia o push se algum teste falhar. Para pular o hook numa emergência, use `git push --no-verify`.
 
 ## Convenções de código
 
