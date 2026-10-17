@@ -90,7 +90,7 @@ export function ReleasesPage() {
         <div className="artist-hero">
           {artist && (
             <>
-              {artist.image && <Avatar image={artist.image} large />}
+              <Avatar image={artist.image} large />
               <h1>{artist.name}</h1>
             </>
           )}

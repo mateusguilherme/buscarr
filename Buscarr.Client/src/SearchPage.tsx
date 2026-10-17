@@ -96,37 +96,34 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
         )}
         {!message && artists.length === 0 && <p className="status hint">{t.search.hint}</p>}
         {artists.length > 0 && (
-          <section>
-            <p className="result-count">{t.search.found(artists.length)}</p>
-            <ul className="artist-list">
-              {artists.map((artist) => (
-                <li key={artist.id} className="card artist-card">
-                  <Avatar image={artist.image} />
-                  <div className="artist-info">
-                    <Link
-                      className="artist-name"
-                      to={`/artist/${artist.id}`}
-                      state={linkState}
-                      onClick={() => navigate(location, { replace: true, state: linkState })}
-                    >
-                      {artist.name}
-                    </Link>
-                    {(artist.disambiguation || artist.area) && (
-                      <div className="artist-meta">
-                        {artist.disambiguation && <span>{artist.disambiguation}</span>}
-                        {artist.area && (
-                          <span className="chip">
-                            <PinIcon />
-                            {artist.area}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <ul className="artist-list">
+            {artists.map((artist) => (
+              <li key={artist.id} className="card artist-card">
+                <Avatar image={artist.image} />
+                <div className="artist-info">
+                  <Link
+                    className="artist-name"
+                    to={`/artist/${artist.id}`}
+                    state={linkState}
+                    onClick={() => navigate(location, { replace: true, state: linkState })}
+                  >
+                    {artist.name}
+                  </Link>
+                  {(artist.disambiguation || artist.area) && (
+                    <div className="artist-meta">
+                      {artist.disambiguation && <span>{artist.disambiguation}</span>}
+                      {artist.area && (
+                        <span className="chip">
+                          <PinIcon />
+                          {artist.area}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </main>
     </>

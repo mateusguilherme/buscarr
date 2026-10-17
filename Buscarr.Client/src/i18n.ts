@@ -29,7 +29,6 @@ const ptBR = {
     notFound: 'Nenhum artista encontrado.',
     error: 'Erro na busca.',
     hint: 'Busque pelo nome do artista.',
-    found: (count: number) => (count === 1 ? '1 artista encontrado' : `${count} artistas encontrados`),
   },
   releases: {
     back: 'Voltar',
@@ -78,7 +77,6 @@ const en: Messages = {
     notFound: 'No artist found.',
     error: 'Search failed.',
     hint: "Search by the artist's name.",
-    found: (count) => (count === 1 ? '1 artist found' : `${count} artists found`),
   },
   releases: {
     back: 'Back',

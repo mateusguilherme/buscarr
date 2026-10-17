@@ -86,6 +86,15 @@ describe('ReleasesPage', () => {
     expect(heading.parentElement?.querySelector('img')?.getAttribute('src')).toBe(photo);
   });
 
+  it('mostra a imagem padrão quando o artista não tem foto', async () => {
+    mockFetch({ status: 200, body: { ...nirvana, image: null } }, { status: 200, body: nirvanaReleases });
+    renderReleasesPage();
+
+    const heading = await screen.findByRole('heading', { name: 'Nirvana' });
+
+    expect(heading.parentElement?.querySelector('.avatar svg')).not.toBeNull();
+  });
+
   it('mostra a foto do artista que veio da busca', async () => {
     const photo = 'https://assets.fanart.tv/preview/music/83048ffe/artistthumb/rancore.jpg';
     mockFetch({ status: 200, body: [{ ...rancore[0], image: photo }] }, { status: 200, body: rancoreReleases });

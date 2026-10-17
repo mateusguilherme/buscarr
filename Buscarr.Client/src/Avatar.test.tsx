@@ -9,20 +9,22 @@ describe('Avatar', () => {
     const { container } = render(<Avatar image={photo} />);
 
     expect(container.querySelector('img')?.getAttribute('src')).toBe(photo);
+    expect(container.querySelector('svg')).toBeNull();
   });
 
-  it('fica vazio quando não há foto', () => {
+  it('mostra a imagem padrão quando não há foto', () => {
     const { container } = render(<Avatar image={null} />);
 
-    expect(container.querySelector('.avatar')).not.toBeNull();
     expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.avatar svg')).not.toBeNull();
   });
 
-  it('fica vazio quando a foto não carrega', () => {
+  it('mostra a imagem padrão quando a foto não carrega', () => {
     const { container } = render(<Avatar image={photo} />);
 
     fireEvent.error(container.querySelector('img')!);
 
     expect(container.querySelector('img')).toBeNull();
+    expect(container.querySelector('.avatar svg')).not.toBeNull();
   });
 });

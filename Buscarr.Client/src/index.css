@@ -294,12 +294,6 @@ button {
   outline: none;
 }
 
-.result-count {
-  margin: 0 0 0.75rem;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
 .artist-list {
   display: grid;
   gap: 0.625rem;
@@ -331,12 +325,21 @@ button {
 }
 
 .avatar {
+  display: grid;
   flex: none;
-  width: 3.25rem;
-  height: 3.25rem;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
   overflow: hidden;
-  border-radius: 50%;
+  border-radius: 0.625rem;
   background: var(--surface-2);
+  color: var(--muted);
+}
+
+.avatar .icon {
+  width: 45%;
+  height: 45%;
+  stroke-width: 1.5;
 }
 
 .avatar img {
@@ -350,6 +353,7 @@ button {
 .avatar-large {
   width: 5.5rem;
   height: 5.5rem;
+  border-radius: 50%;
 }
 
 .artist-name {

@@ -71,7 +71,7 @@ describe('SearchPage', () => {
     expect(screen.getByText('Italy')).toBeDefined();
     expect(screen.getByText('Brazillian Rock Band')).toBeDefined();
     expect(screen.getByText('São Paulo')).toBeDefined();
-    expect(screen.getByText('3 artistas encontrados')).toBeDefined();
+    expect(screen.queryByText('3 artistas encontrados')).toBeNull();
   });
 
   it('mostra a foto de cada candidato que tem uma', async () => {
@@ -90,15 +90,7 @@ describe('SearchPage', () => {
     const [withPhoto, withoutPhoto] = await screen.findAllByRole('listitem');
     expect(withPhoto.querySelector('img')?.getAttribute('src')).toBe(photo);
     expect(withoutPhoto.querySelector('img')).toBeNull();
-  });
-
-  it('conta um único candidato no singular', async () => {
-    mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
-    renderSearchPage();
-
-    await search('rancore');
-
-    expect(await screen.findByText('1 artista encontrado')).toBeDefined();
+    expect(withoutPhoto.querySelector('.avatar svg')).not.toBeNull();
   });
 
   it('refaz a busca que está na URL', async () => {
