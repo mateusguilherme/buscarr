@@ -6,3 +6,4 @@ wwwroot/
 *.db
 *.db-*
 .idea/
+*.DotSettings.user
