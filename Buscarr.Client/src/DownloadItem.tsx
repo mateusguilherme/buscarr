@@ -1,9 +1,40 @@
 import { useState } from 'react';
-import { cancelDownload, retryDownload, type Download } from './api';
+import { cancelDownload, getCandidates, pickCandidate, retryDownload, type Download, type SourceCandidate } from './api';
 import { DiscIcon } from './icons';
 import { locale, t } from './i18n';
 
 const cancellable = ['waiting', 'searching', 'not-found', 'downloading', 'failed'];
+const searched = ['not-found', 'failed'];
+
+export function awaitingRelease(download: Download): boolean {
+  return (
+    download.state === 'waiting' &&
+    download.firstReleaseDate !== null &&
+    new Date(download.firstReleaseDate).getTime() > Date.now()
+  );
+}
+
+function qualityLabel(quality: string): string {
+  return t.downloads.qualities[quality] ?? quality;
+}
+
+function candidateStatus(candidate: SourceCandidate): string {
+  if (candidate.rejection) {
+    return t.sources.rejections[candidate.rejection] ?? candidate.rejection;
+  }
+
+  if (candidate.hasFreeUploadSlot) {
+    return t.sources.available;
+  }
+
+  return candidate.queueLength > 0 ? t.sources.inQueue(candidate.queueLength) : t.sources.busy;
+}
+
+function candidateFiles(candidate: SourceCandidate): string {
+  const format = candidate.bitRate ? `${candidate.format} ${candidate.bitRate} kbps` : candidate.format;
+
+  return t.sources.files(candidate.fileCount, format);
+}
 
 function retryable(download: Download): boolean {
   return (
@@ -47,7 +78,7 @@ export function failureLabel(failure: string | null): string {
 function stateLabel(download: Download): string {
   switch (download.state) {
     case 'waiting':
-      return t.downloads.waiting;
+      return awaitingRelease(download) ? t.downloads.waitingRelease(download.firstReleaseDate!) : t.downloads.waiting;
     case 'searching':
       return t.downloads.searching;
     case 'not-found':
@@ -61,7 +92,9 @@ function stateLabel(download: Download): string {
     case 'importing':
       return t.downloads.importing;
     case 'imported':
-      return t.downloads.imported;
+      return download.acceptedQuality
+        ? t.downloads.importedBelowCutoff(qualityLabel(download.acceptedQuality), qualityLabel(download.quality))
+        : t.downloads.imported;
     case 'failed':
       return t.downloads.failed(failureLabel(download.failure));
     case 'cancelled':
@@ -96,6 +129,9 @@ export function DownloadItem({
   const [retrying, setRetrying] = useState(false);
   const [failedCover, setFailedCover] = useState<string>();
   const [error, setError] = useState<string>();
+  const [candidates, setCandidates] = useState<SourceCandidate[] | null>(null);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [picking, setPicking] = useState(false);
 
   async function handleCancel() {
     setError(undefined);
@@ -122,6 +158,40 @@ export function DownloadItem({
       setError((err as Error).message);
     } finally {
       setRetrying(false);
+    }
+  }
+
+  async function toggleSources() {
+    setError(undefined);
+
+    if (sourcesOpen) {
+      setSourcesOpen(false);
+
+      return;
+    }
+
+    setSourcesOpen(true);
+
+    try {
+      setCandidates(await getCandidates(download.id));
+    } catch (err) {
+      setSourcesOpen(false);
+      setError((err as Error).message);
+    }
+  }
+
+  async function handlePick(candidate: SourceCandidate) {
+    setError(undefined);
+    setPicking(true);
+
+    try {
+      await pickCandidate(download.id, candidate.id);
+      setSourcesOpen(false);
+      onRetried();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setPicking(false);
     }
   }
 
@@ -156,6 +226,11 @@ export function DownloadItem({
       <div className="download-side">
         {(retryable(download) || cancellable.includes(download.state)) && (
           <div className="download-actions">
+            {searched.includes(download.state) && (
+              <button className="button-ghost button-small" onClick={toggleSources}>
+                {t.sources.show}
+              </button>
+            )}
             {retryable(download) && (
               <button className="button-ghost button-small" disabled={retrying} onClick={handleRetry}>
                 {t.downloads.retry}
@@ -183,6 +258,38 @@ export function DownloadItem({
           </div>
         )}
       </div>
+      {sourcesOpen && (
+        <div className="sources">
+          {!candidates && <p className="status">{t.sources.loading}</p>}
+          {candidates && candidates.length === 0 && <p className="status hint">{t.sources.empty}</p>}
+          {candidates && candidates.length > 0 && (
+            <ul className="source-list">
+              {candidates.map((candidate) => (
+                <li key={candidate.id} className="source-row">
+                  <div className="artist-info">
+                    <span className="artist-name" title={candidate.folder}>
+                      {candidate.username}
+                    </span>
+                    <div className="artist-meta">
+                      <span>{candidateFiles(candidate)}</span>
+                      <span>{candidateStatus(candidate)}</span>
+                    </div>
+                  </div>
+                  {candidate.rejection !== 'track-count' && (
+                    <button
+                      className="button-ghost button-small"
+                      disabled={picking}
+                      onClick={() => handlePick(candidate)}
+                    >
+                      {t.sources.pick}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
       {error && (
         <p className="alert" role="alert">
           {error}

@@ -26,6 +26,8 @@ public class DownloadRequest
     public string? EditionReleaseId { get; set; }
     public int TrackCount { get; init; }
     public required string Quality { get; init; }
+    public string? AcceptedQuality { get; set; }
+    public bool Requested { get; set; }
     public string? CoverUrl { get; set; }
     public DownloadState State { get; set; }
     public string? Failure { get; set; }
@@ -33,6 +35,8 @@ public class DownloadRequest
     public DateTimeOffset NextAttemptAt { get; set; }
     public string? Username { get; set; }
     public string? Directory { get; set; }
+    public string? PinnedUsername { get; set; }
+    public string? PinnedDirectory { get; set; }
     public int TracksDone { get; set; }
     public long BytesTransferred { get; set; }
     public long BytesTotal { get; set; }

@@ -131,6 +131,20 @@ public sealed class DownloadRunnerTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_PutsAFailedUpgradeBackToImported()
+    {
+        var request = await AddRequestAsync("g1", acceptedQuality: Qualities.Mp3320);
+        _slskd.RefuseDownloadsFrom("fulano");
+
+        _runner.Start(request.Id, [Folder("fulano")]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var done = await RequestAsync(request.Id);
+        Assert.Equal(Qualities.Mp3320, done.AcceptedQuality);
+        Assert.Equal(_time.GetUtcNow().AddDays(30), done.NextAttemptAt, TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
     public async Task Start_PutsTheRequestBackWhenSlskdCannotBeReached()
     {
         var client = new SlskdClient(
@@ -178,12 +192,13 @@ public sealed class DownloadRunnerTests : IDisposable
         }
     }
 
-    private async Task<DownloadRequest> AddRequestAsync(string releaseGroupId)
+    private async Task<DownloadRequest> AddRequestAsync(string releaseGroupId, string? acceptedQuality = null)
     {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
         var request = DownloadRequestTests.Request(releaseGroupId, trackCount: 3);
         request.State = DownloadState.Downloading;
+        request.AcceptedQuality = acceptedQuality;
         db.DownloadRequests.Add(request);
         await db.SaveChangesAsync();
 

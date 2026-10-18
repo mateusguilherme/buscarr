@@ -192,6 +192,38 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_KeepsARequestWaitingForItsQualityUpgrade()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        var upgrade = Request("stale", state: DownloadState.Imported);
+        upgrade.AcceptedQuality = Qualities.Mp3320;
+        _db.DownloadRequests.Add(upgrade);
+        await _db.SaveChangesAsync();
+
+        await _generator.GenerateAsync();
+
+        var groups = (await _db.DownloadRequests.ToListAsync()).Select(r => r.ReleaseGroupId);
+        Assert.Equal(["g1", "stale"], groups.Order());
+    }
+
+    [Fact]
+    public async Task GenerateAsync_KeepsARequestTheUserAskedForDirectly()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        var wished = Request("stale", state: DownloadState.NotFound);
+        wished.Requested = true;
+        _db.DownloadRequests.Add(wished);
+        await _db.SaveChangesAsync();
+
+        await _generator.GenerateAsync();
+
+        var groups = (await _db.DownloadRequests.ToListAsync()).Select(r => r.ReleaseGroupId);
+        Assert.Equal(["g1", "stale"], groups.Order());
+    }
+
+    [Fact]
     public async Task GenerateAsync_KeepsEveryRequestWhenAnArtistSearchFails()
     {
         var user = await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);

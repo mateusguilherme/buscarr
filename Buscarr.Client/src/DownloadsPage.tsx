@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { getDownloads, getQuarantine, type Download, type QuarantinedAlbum } from './api';
-import { DownloadItem } from './DownloadItem';
+import { awaitingRelease, DownloadItem } from './DownloadItem';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
 import { QuarantineItem } from './QuarantineItem';
@@ -9,11 +9,25 @@ import { t } from './i18n';
 
 const retryWait = 10_000;
 
+type Filter = 'all' | 'active' | 'scheduled' | 'done';
+
+const filters: Filter[] = ['all', 'active', 'scheduled', 'done'];
+
+function filterOf(download: Download): Filter {
+  if (['imported', 'downloaded', 'cancelled'].includes(download.state)) {
+    return 'done';
+  }
+
+  return awaitingRelease(download) ? 'scheduled' : 'active';
+}
+
 export function DownloadsPage() {
   const [downloads, setDownloads] = useState<Download[] | null>(null);
   const [quarantine, setQuarantine] = useState<QuarantinedAlbum[]>([]);
+  const [filter, setFilter] = useState<Filter>('all');
   const [error, setError] = useState<string>();
   const failedCount = downloads?.filter((download) => download.state === 'failed').length ?? 0;
+  const shown = downloads?.filter((download) => filter === 'all' || filterOf(download) === filter);
 
   useEffect(() => {
     let ignore = false;
@@ -103,8 +117,22 @@ export function DownloadsPage() {
         )}
         {downloads && downloads.length === 0 && <p className="status hint">{t.downloads.empty}</p>}
         {downloads && downloads.length > 0 && (
+          <div className="filters">
+            {filters.map((value) => (
+              <button
+                key={value}
+                className={value === filter ? 'button-primary button-small' : 'button-ghost button-small'}
+                aria-pressed={value === filter}
+                onClick={() => setFilter(value)}
+              >
+                {t.downloads.filters[value]}
+              </button>
+            ))}
+          </div>
+        )}
+        {shown && shown.length > 0 && (
           <ul className="artist-list">
-            {downloads.map((download) => (
+            {shown.map((download) => (
               <DownloadItem
                 key={download.id}
                 download={download}

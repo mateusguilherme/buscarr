@@ -9,7 +9,11 @@ public enum AlbumSearchOutcome
     Unfinished,
 }
 
-public record AlbumSearchResult(AlbumSearchOutcome Outcome, string SearchText, List<SoulseekFolder> Folders);
+public record AlbumSearchResult(
+    AlbumSearchOutcome Outcome,
+    string SearchText,
+    List<SoulseekFolder> Folders,
+    List<FolderCandidate> Candidates);
 
 public sealed class AlbumSearch(SlskdClient slskd, TimeProvider time)
 {
@@ -18,10 +22,15 @@ public sealed class AlbumSearch(SlskdClient slskd, TimeProvider time)
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan MaxWait = TimeSpan.FromMinutes(2);
 
-    public async Task<AlbumSearchResult> SearchAsync(string artist, string album, int trackCount, string quality)
+    public async Task<AlbumSearchResult> SearchAsync(
+        string artist,
+        string album,
+        int trackCount,
+        string quality,
+        string? fallbackQuality = null)
     {
         var text = SearchText.For(artist, album);
-        var result = await SearchOnceAsync(text, trackCount, quality);
+        var result = await SearchOnceAsync(text, trackCount, quality, fallbackQuality);
         var wildcard = SearchText.Wildcard(text);
 
         if (result.Outcome != AlbumSearchOutcome.NothingFound || wildcard == text)
@@ -29,34 +38,42 @@ public sealed class AlbumSearch(SlskdClient slskd, TimeProvider time)
             return result;
         }
 
-        return await SearchOnceAsync(wildcard, trackCount, quality);
+        return await SearchOnceAsync(wildcard, trackCount, quality, fallbackQuality);
     }
 
-    private async Task<AlbumSearchResult> SearchOnceAsync(string text, int trackCount, string quality)
+    private async Task<AlbumSearchResult> SearchOnceAsync(
+        string text,
+        int trackCount,
+        string quality,
+        string? fallbackQuality)
     {
         var id = await StartAsync(text);
 
         if (id is null)
         {
-            return new(AlbumSearchOutcome.Busy, text, []);
+            return new(AlbumSearchOutcome.Busy, text, [], []);
         }
 
         if (!await EndedWellAsync(id.Value))
         {
-            return new(AlbumSearchOutcome.Unfinished, text, []);
+            return new(AlbumSearchOutcome.Unfinished, text, [], []);
         }
 
         var responses = await slskd.SearchResponsesAsync(id.Value);
 
         if (responses.Count == 0)
         {
-            return new(AlbumSearchOutcome.NothingFound, text, []);
+            return new(AlbumSearchOutcome.NothingFound, text, [], []);
         }
 
-        var folders = Folders.Choose(responses, trackCount, quality);
+        var candidates = Folders.Candidates(responses, trackCount, quality, fallbackQuality);
+        var folders = candidates
+            .Where(candidate => candidate.Rejection is null)
+            .Select(candidate => candidate.Folder)
+            .ToList();
         var outcome = folders.Count > 0 ? AlbumSearchOutcome.Found : AlbumSearchOutcome.NoMatchingFolder;
 
-        return new(outcome, text, folders);
+        return new(outcome, text, folders, candidates);
     }
 
     private async Task<Guid?> StartAsync(string text)

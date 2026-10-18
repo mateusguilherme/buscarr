@@ -45,6 +45,8 @@ function download(overrides: Partial<Download>): Download {
     bytesTotal: 0,
     placeInQueue: null,
     username: null,
+    firstReleaseDate: null,
+    acceptedQuality: null,
     ...overrides,
   };
 }
@@ -218,6 +220,133 @@ describe('DownloadsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
+  });
+
+  it('mostra o upgrade pendente de um álbum aceito em mp3', async () => {
+    mockFetch(
+      { status: 200, body: [download({ state: 'imported', quality: 'flac', acceptedQuality: 'mp3-320' })] },
+      { status: 200, body: [] },
+    );
+    renderPage();
+
+    expect(await screen.findByText('Importado em MP3 320, buscando FLAC')).toBeDefined();
+  });
+
+  it('mostra quando um pedido aguarda o lançamento', async () => {
+    mockFetch(
+      {
+        status: 200,
+        body: [download({ state: 'waiting', firstReleaseDate: '2999-05-01', nextAttemptAt: '2999-05-02T00:00:00Z' })],
+      },
+      { status: 200, body: [] },
+    );
+    renderPage();
+
+    expect(await screen.findByText('Aguardando o lançamento (2999-05-01)')).toBeDefined();
+  });
+
+  it('filtra os downloads por situação', async () => {
+    mockFetch(
+      {
+        status: 200,
+        body: [
+          download({ id: 1, title: 'Ativo', state: 'downloading' }),
+          download({ id: 2, title: 'Agendado', state: 'waiting', firstReleaseDate: '2999-05-01' }),
+          download({ id: 3, title: 'Feito', state: 'imported' }),
+        ],
+      },
+      { status: 200, body: [] },
+    );
+    renderPage();
+    await screen.findByText('Ativo');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ativos' }));
+
+    expect(screen.getByText('Ativo')).toBeDefined();
+    expect(screen.queryByText('Agendado')).toBeNull();
+    expect(screen.queryByText('Feito')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Lançamentos' }));
+
+    expect(screen.queryByText('Ativo')).toBeNull();
+    expect(screen.getByText('Agendado')).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Concluídos' }));
+
+    expect(screen.getByText('Feito')).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Todos' }));
+
+    expect(screen.getByText('Ativo')).toBeDefined();
+  });
+
+  it('mostra as fontes da última busca e baixa a escolhida', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: [download({ state: 'not-found', failure: 'no-matching-folder' })] },
+      { status: 200, body: [] },
+      {
+        status: 200,
+        body: [
+          {
+            id: 7,
+            username: 'fulano',
+            folder: '1991 - Nevermind',
+            fileCount: 12,
+            format: 'mp3',
+            bitRate: 320,
+            hasFreeUploadSlot: true,
+            queueLength: 0,
+            rejection: 'failed-before',
+          },
+        ],
+      },
+      { status: 204 },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fontes' }));
+
+    expect(await screen.findByText('fulano')).toBeDefined();
+    expect(screen.getByText('12 arquivos · mp3 320 kbps')).toBeDefined();
+    expect(screen.getByText('já falhou antes')).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Baixar desta' }));
+
+    expect(await screen.findByText('Aguardando busca')).toBeDefined();
+    const call = fetchMock.mock.calls.find((args) => args[0] === '/api/downloads/1/pick');
+    expect(call?.[1]).toMatchObject({ method: 'POST' });
+    expect(JSON.parse(call?.[1]?.body as string)).toEqual({ candidateId: 7 });
+  });
+
+  it('não oferece baixar uma pasta com o número errado de faixas', async () => {
+    mockFetch(
+      { status: 200, body: [download({ state: 'failed', failure: 'rejected' })] },
+      { status: 200, body: [] },
+      { status: 200, body: [] },
+      {
+        status: 200,
+        body: [
+          {
+            id: 8,
+            username: 'faixas',
+            folder: 'Nevermind (Deluxe)',
+            fileCount: 40,
+            format: 'mp3',
+            bitRate: 320,
+            hasFreeUploadSlot: true,
+            queueLength: 0,
+            rejection: 'track-count',
+          },
+        ],
+      },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fontes' }));
+
+    expect(await screen.findByText('faixas')).toBeDefined();
+    expect(screen.getByText('número de faixas diferente')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Baixar desta' })).toBeNull();
   });
 
   it('mostra a quarentena com o motivo e as ações', async () => {

@@ -102,7 +102,7 @@ public sealed class DownloadRunner(
                 if (importing)
                 {
                     var failure = await pipeline.ImportAsync(snapshot!, tracks!, result.Folder!);
-                    Persist(requestId, request => FinishImport(request, failure?.Reason));
+                    Persist(requestId, request => FinishImport(request, failure?.Reason, result.Folder!.Quality));
                 }
             }
             finally
@@ -112,14 +112,14 @@ public sealed class DownloadRunner(
         }
         catch (OperationCanceledException)
         {
-            Persist(requestId, request => request.State = DownloadState.Cancelled);
+            Persist(requestId, Cancelled);
         }
         catch (Exception e)
         {
             await Console.Error.WriteLineAsync($"erro ao baixar o pedido {requestId}: {e.Message}");
             Persist(requestId, request =>
             {
-                request.State = DownloadState.Waiting;
+                request.State = request.AcceptedQuality is null ? DownloadState.Waiting : DownloadState.Imported;
                 request.NextAttemptAt = RetrySchedule.AfterBusy(time.GetUtcNow());
             });
         }
@@ -166,7 +166,7 @@ public sealed class DownloadRunner(
         }
         catch (OperationCanceledException)
         {
-            Persist(requestId, request => request.State = DownloadState.Cancelled);
+            Persist(requestId, Cancelled);
         }
         catch (Exception e)
         {
@@ -219,7 +219,7 @@ public sealed class DownloadRunner(
         }
         catch (OperationCanceledException)
         {
-            Persist(requestId, request => request.State = DownloadState.Cancelled);
+            Persist(requestId, Cancelled);
         }
         catch (Exception e)
         {
@@ -248,6 +248,11 @@ public sealed class DownloadRunner(
             request.BytesTransferred = request.BytesTotal;
             request.PlaceInQueue = null;
         }
+        else if (request.AcceptedQuality is not null)
+        {
+            request.State = DownloadState.Imported;
+            request.NextAttemptAt = RetrySchedule.UpgradeRetry(time.GetUtcNow());
+        }
         else
         {
             request.State = DownloadState.Failed;
@@ -257,15 +262,46 @@ public sealed class DownloadRunner(
         }
     }
 
+    private static void Cancelled(DownloadRequest request)
+    {
+        if (request.AcceptedQuality is not null)
+        {
+            request.State = DownloadState.Imported;
+            request.AcceptedQuality = null;
+
+            return;
+        }
+
+        request.State = DownloadState.Cancelled;
+    }
+
     private static string FailureOf(AlbumDownloadResult result) =>
         result.Failures.Count > 0 ? Reason(result.Failures[^1]) : "transfer-failed";
 
-    private void FinishImport(DownloadRequest request, string? failure)
+    private void FinishImport(DownloadRequest request, string? failure, string? obtainedQuality = null)
     {
         if (failure is null)
         {
             request.State = DownloadState.Imported;
             request.Failure = null;
+
+            if (obtainedQuality is not null && obtainedQuality != request.Quality)
+            {
+                request.AcceptedQuality = obtainedQuality;
+                request.NextAttemptAt = RetrySchedule.UpgradeRetry(time.GetUtcNow());
+            }
+            else
+            {
+                request.AcceptedQuality = null;
+            }
+
+            return;
+        }
+
+        if (request.AcceptedQuality is not null)
+        {
+            request.State = DownloadState.Imported;
+            request.NextAttemptAt = RetrySchedule.UpgradeRetry(time.GetUtcNow());
 
             return;
         }

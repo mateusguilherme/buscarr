@@ -1,15 +1,27 @@
 using System.Security.Claims;
 using System.Text.Json;
+using Buscarr.Server.Data;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Users;
 using JetBrains.Annotations;
+using Microsoft.EntityFrameworkCore;
 
 namespace Buscarr.Server.Endpoints;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area, string? Image, bool Listed);
+
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public record ArtistRelease(
+    string ReleaseGroupId,
+    string Title,
+    string Type,
+    string? FirstReleaseDate,
+    string? CoverUrl,
+    int TrackCount,
+    bool Requested);
 
 public static class ArtistEndpoints
 {
@@ -18,6 +30,54 @@ public static class ArtistEndpoints
         var group = app.MapGroup("/api/artists").RequireAuthorization();
 
         group.MapGet("/", SearchArtists);
+        group.MapGet("/{id}/releases", GetReleases);
+    }
+
+    private static async Task<IResult> GetReleases(
+        MusicBrainzClient musicBrainz,
+        BuscarrDbContext db,
+        UserStore users,
+        ClaimsPrincipal user,
+        string id)
+    {
+        if (!IsMusicBrainzId(id))
+        {
+            return Results.NotFound();
+        }
+
+        List<Album> albums;
+
+        try
+        {
+            albums = await musicBrainz.ReleasesAsync(Contact(user), id);
+        }
+        catch (Exception e) when (IsUpstreamError(e))
+        {
+            return BadGateway(e);
+        }
+
+        var edition = await users.EditionPreferenceAsync(user.UserId());
+        var groups = albums.Select(album => album.First.ReleaseGroup?.Id).OfType<string>().ToList();
+        var requested = (await db.DownloadRequests
+                .Where(request => groups.Contains(request.ReleaseGroupId))
+                .Select(request => request.ReleaseGroupId)
+                .ToListAsync())
+            .ToHashSet();
+
+        return Results.Json(albums
+            .Where(album => album.First.ReleaseGroup?.Id is not null)
+            .Select(album => (Album: album, Chosen: Editions.Choose(album.Editions, edition)))
+            .Where(pair => pair.Chosen.TrackCount > 0)
+            .Select(pair => new ArtistRelease(
+                pair.Album.First.ReleaseGroup!.Id!,
+                pair.Album.First.Title,
+                pair.Album.First.Category ?? "album",
+                pair.Album.First.ReleaseGroup!.FirstReleaseDate ?? pair.Album.First.Date,
+                pair.Chosen.CoverUrl ?? pair.Album.First.CoverUrl,
+                pair.Chosen.TrackCount,
+                requested.Contains(pair.Album.First.ReleaseGroup!.Id!)))
+            .OrderByDescending(release => release.FirstReleaseDate ?? "", StringComparer.Ordinal)
+            .ToList());
     }
 
     private static async Task<IResult> SearchArtists(

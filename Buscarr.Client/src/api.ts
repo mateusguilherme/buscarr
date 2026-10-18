@@ -236,7 +236,67 @@ export type Download = {
   bytesTotal: number;
   placeInQueue: number | null;
   username: string | null;
+  firstReleaseDate: string | null;
+  acceptedQuality: string | null;
 };
+
+export type SourceCandidate = {
+  id: number;
+  username: string;
+  folder: string;
+  fileCount: number;
+  format: string;
+  bitRate: number | null;
+  hasFreeUploadSlot: boolean;
+  queueLength: number;
+  rejection: string | null;
+};
+
+export type ArtistRelease = {
+  releaseGroupId: string;
+  title: string;
+  type: string;
+  firstReleaseDate: string | null;
+  coverUrl: string | null;
+  trackCount: number;
+  requested: boolean;
+};
+
+export async function getCandidates(id: number): Promise<SourceCandidate[]> {
+  const res = await fetch(`/api/downloads/${id}/candidates`);
+
+  if (!res.ok) {
+    throw new Error(t.api.candidatesError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function pickCandidate(id: number, candidateId: number): Promise<void> {
+  const res = await sendJson('POST', `/api/downloads/${id}/pick`, { candidateId });
+
+  if (!res.ok) {
+    throw new Error(t.api.pickCandidateError(res.status));
+  }
+}
+
+export async function getArtistReleases(id: string): Promise<ArtistRelease[]> {
+  const res = await fetch(`/api/artists/${encodeURIComponent(id)}/releases`);
+
+  if (!res.ok) {
+    throw new Error(t.api.releasesError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function requestAlbum(artistId: string, releaseGroupId: string): Promise<void> {
+  const res = await sendJson('POST', '/api/downloads', { artistId, releaseGroupId });
+
+  if (!res.ok) {
+    throw new Error(t.api.requestAlbumError(res.status));
+  }
+}
 
 export async function getDownloads(): Promise<Download[]> {
   const res = await fetch('/api/downloads');

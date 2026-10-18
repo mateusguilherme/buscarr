@@ -55,7 +55,7 @@ public sealed class ImportPipeline(
         var reason = await _verifier.VerifyAsync(
             local.Value.Files,
             tracks.Tracks,
-            request.Quality,
+            folder.Quality ?? request.Quality,
             folder.NeedsTranscode,
             () => deezer.AlbumDurationsAsync(request.ArtistName, request.Title));
 

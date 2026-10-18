@@ -26,7 +26,10 @@ describe('ListPage', () => {
     const items = await screen.findAllByRole('listitem');
 
     expect(fetchMock.mock.calls[0][0]).toBe('/api/list');
-    expect(items.map((item) => within(item).getByRole('button').textContent)).toEqual(['Na lista', 'Na lista']);
+    expect(items.map((item) => within(item).getByRole('button', { name: 'Na lista' }).textContent)).toEqual([
+      'Na lista',
+      'Na lista',
+    ]);
     expect(within(items[0]).getByText('Rancore')).toBeDefined();
     expect(within(items[0]).getByText('Brazillian Rock Band')).toBeDefined();
     expect(within(items[0]).getByText('São Paulo')).toBeDefined();

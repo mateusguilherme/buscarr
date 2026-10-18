@@ -52,4 +52,10 @@ public class RetryScheduleTests
     {
         Assert.Equal(Now.AddHours(1), RetrySchedule.AfterUnfinished(Now));
     }
+
+    [Fact]
+    public void UpgradeRetry_ComesBackInThirtyDays()
+    {
+        Assert.Equal(Now.AddDays(30), RetrySchedule.UpgradeRetry(Now));
+    }
 }

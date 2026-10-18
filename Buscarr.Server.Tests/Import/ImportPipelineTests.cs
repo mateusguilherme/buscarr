@@ -182,6 +182,41 @@ public sealed class ImportPipelineTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_ImportsTheFallbackQualityAndSchedulesTheUpgrade()
+    {
+        var request = await AddRequestAsync(quality: Qualities.Flac);
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+        _tools.GoodMp3(Path.Combine(local, "01.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "02.mp3"), 0.1);
+        _tools.GoodMp3(Path.Combine(local, "03.mp3"), 0.1);
+
+        _runner.Start(request.Id, [Folder(false) with { Quality = Qualities.Mp3320 }]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var done = await RequestAsync(request.Id);
+        Assert.Equal(Qualities.Mp3320, done.AcceptedQuality);
+        Assert.Equal(_time.GetUtcNow().AddDays(30), done.NextAttemptAt, TimeSpan.FromHours(2));
+        Assert.NotEmpty(Directory.GetFiles(Path.Combine(_library, "Nirvana", "Nevermind")));
+    }
+
+    [Fact]
+    public async Task Start_ClearsTheAcceptedQualityWhenTheUpgradeArrives()
+    {
+        var request = await AddRequestAsync(quality: Qualities.Flac, acceptedQuality: Qualities.Mp3320);
+        var local = StageLocalFolder("silence.flac", ".flac");
+        _tools.GoodFlac(Path.Combine(local, "01.flac"), 0.1);
+        _tools.GoodFlac(Path.Combine(local, "02.flac"), 0.1);
+        _tools.GoodFlac(Path.Combine(local, "03.flac"), 0.1);
+
+        _runner.Start(request.Id, [Folder(true) with { NeedsTranscode = false, Quality = Qualities.Flac }]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var done = await RequestAsync(request.Id);
+        Assert.Null(done.AcceptedQuality);
+        Assert.NotEmpty(Directory.GetFiles(Path.Combine(_library, "Nirvana", "Nevermind")));
+    }
+
+    [Fact]
     public async Task Start_QuarantinesARejectedFolderAndFailsTheRequest()
     {
         var request = await AddRequestAsync();
@@ -406,14 +441,17 @@ public sealed class ImportPipelineTests : IDisposable
     private async Task<DownloadRequest> AddRequestAsync(
         DownloadState state = DownloadState.Downloading,
         string? directory = null,
-        string? username = null)
+        string? username = null,
+        string quality = Qualities.Mp3320,
+        string? acceptedQuality = null)
     {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
-        var request = DownloadRequestTests.Request(trackCount: 3);
+        var request = DownloadRequestTests.Request(trackCount: 3, quality: quality);
         request.State = state;
         request.Directory = directory;
         request.Username = username;
+        request.AcceptedQuality = acceptedQuality;
         request.CoverUrl = "https://coverartarchive.org/release/r1/front-250";
         db.DownloadRequests.Add(request);
         await db.SaveChangesAsync();

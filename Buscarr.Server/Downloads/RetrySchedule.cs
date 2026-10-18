@@ -20,6 +20,8 @@ public static class RetrySchedule
 
     public static DateTimeOffset AfterBusy(DateTimeOffset now) => now.AddMinutes(5);
 
+    public static DateTimeOffset UpgradeRetry(DateTimeOffset now) => now.AddDays(30);
+
     public static DateTimeOffset AfterUnfinished(DateTimeOffset now) => now.AddHours(1);
 
     private static DateTimeOffset? Parse(string? date)

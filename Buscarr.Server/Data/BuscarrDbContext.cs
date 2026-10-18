@@ -17,6 +17,8 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
 
     public DbSet<FailedSource> FailedSources => Set<FailedSource>();
 
+    public DbSet<SearchCandidate> SearchCandidates => Set<SearchCandidate>();
+
     public DbSet<QuarantinedAlbum> QuarantinedAlbums => Set<QuarantinedAlbum>();
 
     public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
@@ -56,10 +58,13 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             request.Property(r => r.FirstReleaseDate).HasMaxLength(10);
             request.Property(r => r.EditionReleaseId).HasMaxLength(36);
             request.Property(r => r.Quality).HasMaxLength(32);
+            request.Property(r => r.AcceptedQuality).HasMaxLength(32);
             request.Property(r => r.CoverUrl).HasMaxLength(2048);
             request.Property(r => r.Failure).HasMaxLength(2048);
             request.Property(r => r.Username).HasMaxLength(256);
             request.Property(r => r.Directory).HasMaxLength(1024);
+            request.Property(r => r.PinnedUsername).HasMaxLength(256);
+            request.Property(r => r.PinnedDirectory).HasMaxLength(1024);
             request.Property(r => r.NextAttemptAt).HasConversion(
                 value => value.ToUnixTimeMilliseconds(),
                 value => DateTimeOffset.FromUnixTimeMilliseconds(value));
@@ -71,6 +76,16 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             source.Property(s => s.Directory).HasMaxLength(1024);
             source.HasIndex(s => new { s.RequestId, s.Username, s.Directory }).IsUnique();
             source.HasOne<DownloadRequest>().WithMany().HasForeignKey(s => s.RequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SearchCandidate>(candidate =>
+        {
+            candidate.Property(c => c.Username).HasMaxLength(256);
+            candidate.Property(c => c.Directory).HasMaxLength(1024);
+            candidate.Property(c => c.Format).HasMaxLength(64);
+            candidate.Property(c => c.Rejection).HasMaxLength(32);
+            candidate.HasIndex(c => c.RequestId);
+            candidate.HasOne<DownloadRequest>().WithMany().HasForeignKey(c => c.RequestId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<QuarantinedAlbum>(quarantined =>

@@ -93,6 +93,54 @@ public class FoldersTests
     }
 
     [Fact]
+    public void Choose_FallsBackToMp3320WhenFlacNeverShowedUp()
+    {
+        var folders = Folders.Choose(
+            [Peer("fulano", Tracks(Nevermind, 12))],
+            12,
+            Qualities.Flac,
+            Qualities.Mp3320);
+
+        var folder = Assert.Single(folders);
+        Assert.Equal(("fulano", Qualities.Mp3320, false), (folder.Username, folder.Quality, folder.NeedsTranscode));
+    }
+
+    [Fact]
+    public void Choose_PutsTheWantedQualityBeforeTheFallback()
+    {
+        var folders = Folders.Choose(
+            [
+                Peer("mp3-rapido", Tracks(Nevermind, 12), speed: 9_000_000),
+                Peer("flac-lento", Tracks(Nevermind, 12, "flac", null), freeSlot: false),
+            ],
+            12,
+            Qualities.Flac,
+            Qualities.Mp3320);
+
+        Assert.Equal(
+            [("flac-lento", Qualities.Flac), ("mp3-rapido", Qualities.Mp3320)],
+            folders.Select(folder => (folder.Username, folder.Quality)));
+    }
+
+    [Fact]
+    public void Choose_StillLeavesOutLowerFormatsWithTheFallback()
+    {
+        Assert.Empty(Folders.Choose(
+            [Peer("fulano", Tracks(Nevermind, 12, "mp3", 192))],
+            12,
+            Qualities.Flac,
+            Qualities.Mp3320));
+    }
+
+    [Fact]
+    public void Choose_SaysTheQualityOfEachFolderItKeeps()
+    {
+        var folders = Folders.Choose([Peer("fulano", Tracks(Nevermind, 12))], 12, Qualities.Mp3320);
+
+        Assert.Equal(Qualities.Mp3320, Assert.Single(folders).Quality);
+    }
+
+    [Fact]
     public void Choose_LeavesOutFoldersMixingLosslessAndLossyFiles()
     {
         var files = Tracks(Nevermind, 11, "flac", null).Append(Track($@"{Nevermind}
@@ -155,6 +203,51 @@ public class FoldersTests
             Qualities.Mp3320);
 
         Assert.Equal(["rapido", "lento", "fila", "ocupado"], folders.Select(folder => folder.Username));
+    }
+
+    [Fact]
+    public void Candidates_SaysWhyEachFolderWasLeftOut()
+    {
+        var candidates = Folders.Candidates(
+            [
+                Peer("fulano", Tracks(Nevermind, 12)),
+                Peer("faixas", Tracks(Nevermind, 10)),
+                Peer("qualidade", Tracks(Nevermind, 12, "mp3", 128)),
+            ],
+            12,
+            Qualities.Mp3320);
+
+        Assert.Equal(
+            [("fulano", null), ("faixas", "track-count"), ("qualidade", "quality")],
+            candidates.Select(candidate => (candidate.Folder.Username, candidate.Rejection)));
+    }
+
+    [Fact]
+    public void Pin_SaysTheQualityThePinnedFolderActuallyHas()
+    {
+        var folder = new SoulseekFolder("fulano", Nevermind, [.. Tracks(Nevermind, 12)], false);
+
+        Assert.Equal(Qualities.Mp3320, Folders.Pin(folder, Qualities.Flac).Quality);
+    }
+
+    [Fact]
+    public void Pin_TranscodesALosslessPinnedFolder()
+    {
+        var folder = new SoulseekFolder("fulano", Nevermind, [.. Tracks(Nevermind, 12, "wav", null)], false);
+
+        var pinned = Folders.Pin(folder, Qualities.Mp3320);
+
+        Assert.Equal((true, Qualities.Mp3320), (pinned.NeedsTranscode, pinned.Quality));
+    }
+
+    [Fact]
+    public void Pin_LeavesTheQualityOpenForAMixedFolder()
+    {
+        var files = Tracks(Nevermind, 11).Append(Track($@"{Nevermind}\12 - Something in the Way.mp3", 128)).ToList();
+
+        var pinned = Folders.Pin(new SoulseekFolder("fulano", Nevermind, files, false), Qualities.Mp3320);
+
+        Assert.Equal((false, null), (pinned.NeedsTranscode, pinned.Quality));
     }
 
     private static SlskdResponse Peer(

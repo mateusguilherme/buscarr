@@ -108,6 +108,64 @@ public sealed class SearchQueueTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessNextAsync_HoldsOutForFlacInTheFirstAttempts()
+    {
+        var request = await AddRequestAsync(quality: Qualities.Flac, attempts: 3);
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        Assert.Empty(searched!.Folders);
+        Assert.Equal((DownloadState.NotFound, "no-matching-folder"), (request.State, request.Failure));
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_AcceptsMp3WhenTheFlacRetriesRanOut()
+    {
+        var request = await AddRequestAsync(quality: Qualities.Flac, attempts: 4);
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        var folder = Assert.Single(searched!.Folders);
+        Assert.Equal(Qualities.Mp3320, folder.Quality);
+        Assert.Equal(DownloadState.Downloading, request.State);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_SearchesForTheUpgradeOfAnAlbumAcceptedInMp3()
+    {
+        var request = await AddRequestAsync(
+            state: DownloadState.Imported,
+            quality: Qualities.Flac,
+            acceptedQuality: Qualities.Mp3320);
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12, extension: "flac", bitRate: null)));
+
+        var searched = await ProcessAsync();
+
+        var folder = Assert.Single(searched!.Folders);
+        Assert.Equal(Qualities.Flac, folder.Quality);
+        Assert.Equal(DownloadState.Downloading, request.State);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_PutsAnUpgradeBackToImportedWhenFlacStillIsNotThere()
+    {
+        var request = await AddRequestAsync(
+            state: DownloadState.Imported,
+            quality: Qualities.Flac,
+            acceptedQuality: Qualities.Mp3320);
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12)));
+        var before = _time.GetUtcNow();
+
+        var searched = await ProcessAsync();
+
+        Assert.Empty(searched!.Folders);
+        Assert.Equal((DownloadState.Imported, Qualities.Mp3320), (request.State, request.AcceptedQuality));
+        AssertScheduledIn(request, TimeSpan.FromDays(30), before);
+    }
+
+    [Fact]
     public async Task ProcessNextAsync_MarksNotFoundWhenNoFolderFits()
     {
         var request = await AddRequestAsync();
@@ -117,6 +175,90 @@ public sealed class SearchQueueTests : IDisposable
 
         Assert.Empty(searched!.Folders);
         Assert.Equal((DownloadState.NotFound, "no-matching-folder", 1), (request.State, request.Failure, request.Attempts));
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_RecordsWhatTheSearchFoundForTheRequest()
+    {
+        var request = await AddRequestAsync();
+        await AddFailedSourceAsync(request.Id, "ja-falhou", Nevermind);
+        _slskd.Answer(
+            "Nirvana Nevermind",
+            Response("fulano", AlbumFiles(Nevermind, 12)),
+            Response("ja-falhou", AlbumFiles(Nevermind, 12)),
+            Response("faixas", AlbumFiles(Nevermind, 10)),
+            Response("qualidade", AlbumFiles(Nevermind, 12, bitRate: 128)));
+
+        await ProcessAsync();
+
+        var candidates = await _db.SearchCandidates.OrderBy(c => c.Id).ToListAsync();
+        Assert.Equal(
+            [("fulano", null), ("ja-falhou", "failed-before"), ("faixas", "track-count"), ("qualidade", "quality")],
+            candidates.Select(candidate => (candidate.Username, candidate.Rejection)));
+        var kept = candidates[0];
+        Assert.Equal(
+            (Nevermind, 12, "mp3", 320, true, 0),
+            (kept.Directory, kept.FileCount, kept.Format, kept.BitRate, kept.HasFreeUploadSlot, kept.QueueLength));
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_ReplacesTheCandidatesOnEachSearch()
+    {
+        var request = await AddRequestAsync();
+        _slskd.Answer("Nirvana Nevermind", Response("velho", AlbumFiles(Nevermind, 10)));
+
+        await ProcessAsync();
+
+        _time.Advance(TimeSpan.FromDays(1));
+        _slskd.Answer("Nirvana Nevermind", Response("novo", AlbumFiles(Nevermind, 10)));
+
+        await ProcessAsync();
+
+        Assert.Equal(["novo"], (await _db.SearchCandidates.ToListAsync()).Select(c => c.Username));
+        Assert.Equal(request.Id, Assert.Single(await _db.SearchCandidates.ToListAsync()).RequestId);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_KeepsOnlyTheTwentyBestCandidates()
+    {
+        await AddRequestAsync();
+        _slskd.Answer(
+            "Nirvana Nevermind",
+            [.. Enumerable.Range(1, 25).Select(i => Response($"user{i:00}", AlbumFiles(Nevermind, 10)))]);
+
+        await ProcessAsync();
+
+        Assert.Equal(20, await _db.SearchCandidates.CountAsync());
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_DownloadsThePinnedSourceEvenWhenItWouldBeRejected()
+    {
+        var request = await AddRequestAsync(pinnedUsername: "fulano", pinnedDirectory: Nevermind);
+        _slskd.Answer(
+            "Nirvana Nevermind",
+            Response("fulano", AlbumFiles(Nevermind, 10)),
+            Response("beltrano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        var folder = Assert.Single(searched!.Folders);
+        Assert.Equal(("fulano", 10), (folder.Username, folder.Files.Count));
+        Assert.Equal(DownloadState.Downloading, request.State);
+        Assert.Null(request.PinnedUsername);
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_FallsBackToNotFoundWhenThePinnedSourceVanished()
+    {
+        var request = await AddRequestAsync(pinnedUsername: "sumiu", pinnedDirectory: Nevermind);
+        _slskd.Answer("Nirvana Nevermind", Response("beltrano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        Assert.Empty(searched!.Folders);
+        Assert.Equal((DownloadState.NotFound, "no-matching-folder"), (request.State, request.Failure));
+        Assert.Null(request.PinnedUsername);
     }
 
     [Fact]
@@ -218,14 +360,38 @@ public sealed class SearchQueueTests : IDisposable
         Assert.Equal(DownloadState.Downloaded, importing.State);
     }
 
+    [Fact]
+    public async Task RecoverAsync_PutsAnInFlightUpgradeBackToImported()
+    {
+        var upgrade = await AddRequestAsync(
+            state: DownloadState.Searching,
+            quality: Qualities.Flac,
+            acceptedQuality: Qualities.Mp3320,
+            nextAttemptIn: TimeSpan.FromDays(1));
+
+        await _queue.RecoverAsync();
+
+        Assert.Equal((DownloadState.Imported, Qualities.Mp3320), (upgrade.State, upgrade.AcceptedQuality));
+        Assert.Equal(_time.GetUtcNow(), upgrade.NextAttemptAt);
+    }
+
     private async Task<DownloadRequest> AddRequestAsync(
         string releaseGroupId = "g1",
         DownloadState state = DownloadState.Waiting,
-        TimeSpan nextAttemptIn = default)
+        TimeSpan nextAttemptIn = default,
+        string quality = Qualities.Mp3320,
+        int attempts = 0,
+        string? acceptedQuality = null,
+        string? pinnedUsername = null,
+        string? pinnedDirectory = null)
     {
-        var request = DownloadRequestTests.Request(releaseGroupId);
+        var request = DownloadRequestTests.Request(releaseGroupId, quality: quality);
         request.State = state;
         request.NextAttemptAt = _time.GetUtcNow() + nextAttemptIn;
+        request.Attempts = attempts;
+        request.AcceptedQuality = acceptedQuality;
+        request.PinnedUsername = pinnedUsername;
+        request.PinnedDirectory = pinnedDirectory;
         _db.DownloadRequests.Add(request);
         await _db.SaveChangesAsync();
 

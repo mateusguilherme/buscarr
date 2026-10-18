@@ -3,8 +3,10 @@ using System.Net.Http.Json;
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
+using Buscarr.Server.Slskd;
 using Buscarr.Server.Tests.Downloads;
 using Buscarr.Server.Tests.Fakes;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Buscarr.Server.Tests.Endpoints;
@@ -95,7 +97,9 @@ public sealed class DownloadEndpointsTests
                 70,
                 120,
                 3,
-                "fulano"),
+                "fulano",
+                "1991-09-24",
+                null),
             download);
     }
 
@@ -162,6 +166,23 @@ public sealed class DownloadEndpointsTests
     }
 
     [Fact]
+    public async Task CancelDownload_StopsAnUpgradeAndKeepsTheAlbumImported()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = Request("g1", DownloadState.Searching);
+        request.AcceptedQuality = Qualities.Mp3320;
+        await SeedAsync(factory, request);
+
+        var response = await client.PostAsync($"/api/downloads/{request.Id}/cancel", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var downloads = await client.GetFromJsonAsync<List<DownloadItem>>("/api/downloads");
+        var download = Assert.Single(downloads!);
+        Assert.Equal(("imported", null), (download.State, download.AcceptedQuality));
+    }
+
+    [Fact]
     public async Task RetryDownload_OfAMissingRequest_Returns404()
     {
         await using var factory = new BuscarrApiFactory();
@@ -223,6 +244,161 @@ public sealed class DownloadEndpointsTests
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(name, await StateAsync(client, request.Id));
+    }
+
+    [Fact]
+    public async Task GetCandidates_ListsWhatTheLastSearchFound()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.NotFound));
+        await SeedCandidateAsync(factory, Candidate(request.Id, "fulano", rejection: null));
+        await SeedCandidateAsync(factory, Candidate(request.Id, "faixas", rejection: "track-count"));
+
+        var candidates = await client.GetFromJsonAsync<List<SourceCandidate>>($"/api/downloads/{request.Id}/candidates");
+
+        Assert.Equal(["fulano", "faixas"], candidates!.Select(candidate => candidate.Username));
+        var first = candidates[0];
+        Assert.Equal(
+            ("1991 - Nevermind", 12, "mp3", 320, true, 0, null),
+            (first.Folder, first.FileCount, first.Format, first.BitRate, first.HasFreeUploadSlot, first.QueueLength, first.Rejection));
+    }
+
+    [Fact]
+    public async Task GetCandidates_OfAMissingRequest_Returns404()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.GetAsync("/api/downloads/123/candidates");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PickCandidate_PinsTheSourceAndWakesTheRequest()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.Failed, nextAttemptInDays: 7));
+        var candidate = await SeedCandidateAsync(factory, Candidate(request.Id, "fulano", rejection: "quality"));
+
+        var response = await client.PostAsJsonAsync($"/api/downloads/{request.Id}/pick", new PickRequest(candidate.Id));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("waiting", await StateAsync(client, request.Id));
+        using var scope = factory.Services.CreateScope();
+        var pinned = await scope.ServiceProvider.GetRequiredService<BuscarrDbContext>()
+            .DownloadRequests.FindAsync(request.Id);
+        Assert.Equal(("fulano", candidate.Directory), (pinned!.PinnedUsername, pinned.PinnedDirectory));
+    }
+
+    [Fact]
+    public async Task PickCandidate_RefusesAFolderWithTheWrongTrackCount()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.NotFound));
+        var candidate = await SeedCandidateAsync(factory, Candidate(request.Id, "faixas", rejection: "track-count"));
+
+        var response = await client.PostAsJsonAsync($"/api/downloads/{request.Id}/pick", new PickRequest(candidate.Id));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PickCandidate_WhileTheRequestIsBusy_Returns409()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.Downloading));
+        var candidate = await SeedCandidateAsync(factory, Candidate(request.Id, "fulano", rejection: null));
+
+        var response = await client.PostAsJsonAsync($"/api/downloads/{request.Id}/pick", new PickRequest(candidate.Id));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PickCandidate_OfAnotherRequestsCandidate_Returns404()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.NotFound));
+        var other = await SeedAsync(factory, Request("g2", DownloadState.NotFound));
+        var candidate = await SeedCandidateAsync(factory, Candidate(other.Id, "fulano", rejection: null));
+
+        var response = await client.PostAsJsonAsync($"/api/downloads/{request.Id}/pick", new PickRequest(candidate.Id));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestAlbum_CreatesAWaitingRequestWithTheUsersPreferences()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/downloads",
+            new WishRequest(BuscarrApiFactory.NirvanaId, "g1"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var downloads = await client.GetFromJsonAsync<List<DownloadItem>>("/api/downloads");
+        var download = Assert.Single(downloads!);
+        Assert.Equal(
+            ("Nevermind", 12, "mp3-320", "waiting"),
+            (download.Title, download.TrackCount, download.Quality, download.State));
+        using var scope = factory.Services.CreateScope();
+        var request = await scope.ServiceProvider.GetRequiredService<BuscarrDbContext>()
+            .DownloadRequests.SingleAsync();
+        Assert.Equal((true, "r1", "Nirvana"), (request.Requested, request.EditionReleaseId, request.ArtistName));
+    }
+
+    [Fact]
+    public async Task RequestAlbum_MarksAnExistingRequestInstead()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        await SeedAsync(factory, Request("g1", DownloadState.NotFound));
+
+        var response = await client.PostAsJsonAsync(
+            "/api/downloads",
+            new WishRequest(BuscarrApiFactory.NirvanaId, "g1"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var scope = factory.Services.CreateScope();
+        var request = await scope.ServiceProvider.GetRequiredService<BuscarrDbContext>()
+            .DownloadRequests.SingleAsync();
+        Assert.Equal((true, DownloadState.NotFound), (request.Requested, request.State));
+    }
+
+    [Fact]
+    public async Task RequestAlbum_RevivesACancelledRequest()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var cancelled = await SeedAsync(factory, Request("g1", DownloadState.Cancelled, nextAttemptInDays: 7));
+
+        var response = await client.PostAsJsonAsync(
+            "/api/downloads",
+            new WishRequest(BuscarrApiFactory.NirvanaId, "g1"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("waiting", await StateAsync(client, cancelled.Id));
+    }
+
+    [Fact]
+    public async Task RequestAlbum_OfAnAlbumTheArtistDoesNotHave_Returns404()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/downloads",
+            new WishRequest(BuscarrApiFactory.NirvanaId, "g-nao-existe"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -305,6 +481,30 @@ public sealed class DownloadEndpointsTests
         await db.SaveChangesAsync();
 
         return request;
+    }
+
+    private static SearchCandidate Candidate(int requestId, string username, string? rejection) =>
+        new()
+        {
+            RequestId = requestId,
+            Username = username,
+            Directory = @"@@musica\Nirvana\1991 - Nevermind",
+            FileCount = 12,
+            Format = "mp3",
+            BitRate = 320,
+            HasFreeUploadSlot = true,
+            QueueLength = 0,
+            Rejection = rejection,
+        };
+
+    private static async Task<SearchCandidate> SeedCandidateAsync(BuscarrApiFactory factory, SearchCandidate candidate)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+        db.SearchCandidates.Add(candidate);
+        await db.SaveChangesAsync();
+
+        return candidate;
     }
 
     private static async Task<string> StateAsync(HttpClient client, int id)

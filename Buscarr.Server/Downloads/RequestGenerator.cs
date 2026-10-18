@@ -77,6 +77,8 @@ public sealed class RequestGenerator(
         {
             db.DownloadRequests.RemoveRange(existing.Where(request =>
                 !wanted.Contains(Key(request))
+                && !request.Requested
+                && request.AcceptedQuality == null
                 && request.State != DownloadState.Searching
                 && request.State != DownloadState.Downloading));
         }

@@ -158,6 +158,29 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                 "https://open.spotify.com/artist/sp-nirvana"));
         }
 
+        if (path == "/ws/2/release")
+        {
+            var artist = HttpUtility.ParseQueryString(request.RequestUri.Query)["artist"];
+
+            return FakeHttpMessageHandler.Json(artist == NirvanaId
+                ? Releases(
+                    3,
+                    WithMedia(
+                        WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: true),
+                        ("CD", 12)),
+                    WithMedia(
+                        WithDisambiguation(
+                            WithCoverArt(Release("Nevermind", "2011-09-26", "1991-09-24"), "r2", "g1", front: true),
+                            "deluxe edition"),
+                        ("CD", 40)),
+                    WithPrimaryType(
+                        WithMedia(
+                            WithCoverArt(Release("Sliver", "1990-09-01", "1990-09-01"), "r3", "g2", front: true),
+                            ("CD", 2)),
+                        "Single"))
+                : Releases(0));
+        }
+
         if (path == "/ws/2/release/r1")
         {
             return FakeHttpMessageHandler.Json(ReleaseWithTracks(
