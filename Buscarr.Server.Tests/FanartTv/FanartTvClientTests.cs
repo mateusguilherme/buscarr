@@ -14,6 +14,8 @@ public class FanartTvClientTests
     private const string Assets = $"http://assets.fanart.tv/fanart/music/{NirvanaId}";
     private const string Previews = $"https://assets.fanart.tv/preview/music/{NirvanaId}";
 
+    private ServerSettings _settings = new();
+
     [Fact]
     public async Task ArtistImageAsync_AsksFanartTvForTheArtistWithTheApiKey()
     {
@@ -97,11 +99,10 @@ public class FanartTvClientTests
     public async Task ArtistImageAsync_ReadsTheApiKeyFromTheCurrentSettings()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
-        var settings = new ServerSettings();
-        var client = new FanartTvClient(new HttpClient(handler), () => settings);
+        var client = new FanartTvClient(new HttpClient(handler), () => _settings);
 
         await client.ArtistImageAsync(NirvanaId);
-        settings = new ServerSettings { FanartTvApiKey = "outra-chave" };
+        _settings = new ServerSettings { FanartTvApiKey = "outra-chave" };
         await client.ArtistImageAsync(NirvanaId);
 
         Assert.Equal("outra-chave", HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query)["api_key"]);

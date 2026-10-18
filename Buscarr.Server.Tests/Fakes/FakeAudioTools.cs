@@ -2,7 +2,7 @@ using Buscarr.Server.Import;
 
 namespace Buscarr.Server.Tests.Fakes;
 
-public sealed class FakeAudioTools : AudioTools
+public sealed class FakeAudioTools : IAudioTools
 {
     private readonly Dictionary<string, AudioProbe?> _probes = [];
     private readonly Dictionary<string, SpectralLevels?> _levels = [];

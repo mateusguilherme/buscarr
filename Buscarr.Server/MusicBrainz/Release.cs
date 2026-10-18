@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.MusicBrainz;
 
@@ -19,6 +20,7 @@ public sealed class Release
     public ReleaseGroup? ReleaseGroup { get; init; }
 
     [JsonPropertyName("artist-credit")]
+    [UsedImplicitly]
     public List<ArtistCredit> ArtistCredit { get; init; } = [];
 
     [JsonPropertyName("cover-art-archive")]

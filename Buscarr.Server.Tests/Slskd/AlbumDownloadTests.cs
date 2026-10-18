@@ -155,7 +155,7 @@ public class AlbumDownloadTests
 
         while (_progress.All.Count == 0)
         {
-            await Task.Delay(1);
+            await Task.Delay(1, cancellation.Token);
         }
 
         await cancellation.CancelAsync();

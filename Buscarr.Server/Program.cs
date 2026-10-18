@@ -35,14 +35,14 @@ builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddScoped<RequestGenerator>();
 builder.Services.AddSingleton<AlbumSearch>();
 builder.Services.AddSingleton<AlbumDownload>();
-builder.Services.AddSingleton<AudioTools>(new FfmpegAudioTools());
+builder.Services.AddSingleton<IAudioTools>(new FfmpegAudioTools());
 builder.Services.AddSingleton(services =>
 {
     var settings = CurrentSettings(services);
 
     return new ImportPipeline(
         services.GetRequiredService<MusicBrainzClient>(),
-        services.GetRequiredService<AudioTools>(),
+        services.GetRequiredService<IAudioTools>(),
         new CoverArt(new HttpClient { Timeout = TimeSpan.FromSeconds(30) }),
         () => settings().Import);
 });

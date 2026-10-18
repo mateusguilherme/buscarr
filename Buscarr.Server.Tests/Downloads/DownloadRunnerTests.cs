@@ -73,7 +73,7 @@ public sealed class DownloadRunnerTests : IDisposable
 
         var done = await RequestAsync(request.Id);
         Assert.Equal(("fulano", Folder("fulano").Directory, 3), (done.Username, done.Directory, done.TracksDone));
-        Assert.Equal((3_000L, 3_000L, (int?)null, null), (
+        Assert.Equal((3_000L, 3_000L, null, null), (
             done.BytesTransferred,
             done.BytesTotal,
             done.PlaceInQueue,

@@ -1,6 +1,6 @@
 namespace Buscarr.Server.Import;
 
-public sealed class Transcoder(AudioTools tools)
+public sealed class Transcoder(IAudioTools tools)
 {
     public async Task<List<string>?> ToMp3Async(IReadOnlyList<string> files)
     {

@@ -96,7 +96,7 @@ public class FoldersTests
     public void Choose_LeavesOutFoldersMixingLosslessAndLossyFiles()
     {
         var files = Tracks(Nevermind, 11, "flac", null).Append(Track($@"{Nevermind}
- - Something in the Way.mp3", 320));
+ - Something in the Way.mp3", 320)).ToList();
 
         Assert.Empty(Folders.Choose([Peer("fulano", files)], 12, Qualities.Mp3320));
         Assert.Empty(Folders.Choose([Peer("fulano", files)], 12, Qualities.Flac));

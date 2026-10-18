@@ -22,7 +22,7 @@ public sealed class GeneratorWorker(
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"erro ao gerar os pedidos: {e.Message}");
+                await Console.Error.WriteLineAsync($"erro ao gerar os pedidos: {e.Message}");
             }
 
             try

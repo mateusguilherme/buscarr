@@ -3,7 +3,7 @@ using Buscarr.Server.Slskd;
 
 namespace Buscarr.Server.Import;
 
-public sealed class AlbumVerifier(AudioTools tools)
+public sealed class AlbumVerifier(IAudioTools tools)
 {
     private const int Mp3MinBitRate = 315_000;
     private const double DurationTolerance = 5;
@@ -63,14 +63,14 @@ public sealed class AlbumVerifier(AudioTools tools)
             return false;
         }
 
-        if (IsPresent(levels, levels.Above20k))
+        if (IsPresent(levels, levels.Above20K))
         {
             return false;
         }
 
-        if (IsPresent(levels, levels.Above19k))
+        if (IsPresent(levels, levels.Above19K))
         {
-            return levels.Above16k - levels.Above19k >= SteepDropDb;
+            return levels.Above16K - levels.Above19K >= SteepDropDb;
         }
 
         return true;
@@ -88,7 +88,7 @@ public sealed class AlbumVerifier(AudioTools tools)
 
         return quality switch
         {
-            Qualities.Mp3320 => probe.Codec == "mp3" && probe.BitRate >= Mp3MinBitRate,
+            Qualities.Mp3320 => probe is { Codec: "mp3", BitRate: >= Mp3MinBitRate },
             Qualities.Flac => probe.Codec == "flac",
             _ => false,
         };

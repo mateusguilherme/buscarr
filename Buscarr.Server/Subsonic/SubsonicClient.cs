@@ -3,9 +3,11 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Buscarr.Server.Settings;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.Subsonic;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record SubsonicAlbum(string Id, string Name, string Artist, int SongCount, string? MusicBrainzId);
 
 public sealed class SubsonicClient(HttpClient http, Func<ServerSettings> settings)
@@ -98,6 +100,7 @@ public sealed class SubsonicClient(HttpClient http, Func<ServerSettings> setting
         public SubsonicBody? Response { get; init; }
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class SubsonicBody
     {
         public string Status { get; init; } = "";
@@ -107,11 +110,13 @@ public sealed class SubsonicClient(HttpClient http, Func<ServerSettings> setting
         public SubsonicAlbumList? AlbumList2 { get; init; }
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class SubsonicError
     {
         public string? Message { get; init; }
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class SubsonicAlbumList
     {
         public List<SubsonicAlbum> Album { get; init; } = [];

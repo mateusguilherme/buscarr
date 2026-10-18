@@ -21,7 +21,7 @@ public sealed class SearchWorker(
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao recuperar a fila de busca: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao recuperar a fila de busca: {e.Message}");
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -36,7 +36,7 @@ public sealed class SearchWorker(
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"erro na fila de busca: {e.Message}");
+                await Console.Error.WriteLineAsync($"erro na fila de busca: {e.Message}");
             }
 
             if (searched is { Folders.Count: > 0 })
@@ -53,7 +53,7 @@ public sealed class SearchWorker(
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"erro na fila de importação: {e.Message}");
+                await Console.Error.WriteLineAsync($"erro na fila de importação: {e.Message}");
             }
 
             if (import is { } requestId)

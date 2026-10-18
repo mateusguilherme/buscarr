@@ -24,7 +24,6 @@ public sealed class ImportPipelineTests : IDisposable
     private readonly string _library;
     private readonly string _downloads;
     private readonly string _rejected;
-    private readonly string _databasePath;
     private readonly ServiceProvider _provider;
     private readonly FakeSlskd _slskd = new();
     private readonly FakeAudioTools _tools = new();
@@ -34,17 +33,19 @@ public sealed class ImportPipelineTests : IDisposable
     private readonly FakeHttpMessageHandler _covers =
         new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(CoverBytes) });
 
+    private ImportOptions _options = new(null, null, null);
+
     public ImportPipelineTests()
     {
         _library = Path.Combine(_root, "musicas");
         _downloads = Path.Combine(_root, "downloads", "complete");
         _rejected = Path.Combine(_root, "downloads", "rejected");
-        _databasePath = Path.Combine(_root, "buscarr.db");
+        var databasePath = Path.Combine(_root, "buscarr.db");
         Directory.CreateDirectory(_library);
         Directory.CreateDirectory(_downloads);
 
         var services = new ServiceCollection();
-        services.AddDbContext<BuscarrDbContext>(options => options.UseSqlite($"Data Source={_databasePath}"));
+        services.AddDbContext<BuscarrDbContext>(options => options.UseSqlite($"Data Source={databasePath}"));
         _provider = services.BuildServiceProvider();
 
         using (var scope = _provider.CreateScope())
@@ -86,16 +87,15 @@ public sealed class ImportPipelineTests : IDisposable
     [Fact]
     public void Enabled_FollowsTheCurrentSettings()
     {
-        var options = new ImportOptions(null, null, null);
         var pipeline = new ImportPipeline(
             new MusicBrainzClient(new HttpClient(), _time),
             new FakeAudioTools(),
             new CoverArt(new HttpClient()),
-            () => options);
+            () => _options);
 
         Assert.False(pipeline.Enabled);
 
-        options = new ImportOptions(_library, _downloads, null);
+        _options = new ImportOptions(_library, _downloads, null);
 
         Assert.True(pipeline.Enabled);
     }
@@ -116,7 +116,7 @@ public sealed class ImportPipelineTests : IDisposable
         Assert.Equal(
             ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3", "cover.jpg"],
             Directory.GetFiles(album).Select(Path.GetFileName).Order());
-        Assert.Equal(CoverBytes, File.ReadAllBytes(Path.Combine(album, "cover.jpg")));
+        Assert.Equal(CoverBytes, await File.ReadAllBytesAsync(Path.Combine(album, "cover.jpg")));
         Assert.False(Directory.Exists(local));
         Assert.Null((await RequestAsync(request.Id)).Failure);
 
@@ -167,7 +167,7 @@ public sealed class ImportPipelineTests : IDisposable
         var moved = Assert.Single(Directory.GetDirectories(_rejected));
         Assert.Equal(3, Directory.GetFiles(moved).Length);
         var reason = Assert.Single(Directory.GetFiles(_rejected));
-        Assert.Contains("fake-audio", File.ReadAllText(reason));
+        Assert.Contains("fake-audio", await File.ReadAllTextAsync(reason));
         Assert.Empty(Directory.GetDirectories(_library));
     }
 
@@ -268,7 +268,7 @@ public sealed class ImportPipelineTests : IDisposable
     {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
-        var request = DownloadRequestTests.Request("g1", trackCount: 3);
+        var request = DownloadRequestTests.Request(trackCount: 3);
         request.State = state;
         request.Directory = directory;
         request.CoverUrl = "https://coverartarchive.org/release/r1/front-250";

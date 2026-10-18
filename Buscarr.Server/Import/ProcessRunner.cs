@@ -24,7 +24,7 @@ public static class ProcessRunner
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao rodar o {tool}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao rodar o {tool}: {e.Message}");
 
             return new(-1, "", "", false);
         }
@@ -40,9 +40,9 @@ public static class ProcessRunner
             }
             catch (OperationCanceledException)
             {
-                Console.Error.WriteLine($"o {tool} excedeu o tempo limite de {limit} e foi encerrado");
+                await Console.Error.WriteLineAsync($"o {tool} excedeu o tempo limite de {limit} e foi encerrado");
                 Kill(process);
-                await process.WaitForExitAsync();
+                await process.WaitForExitAsync(CancellationToken.None);
 
                 return new(-1, await output, await error, true);
             }

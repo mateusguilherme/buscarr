@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Buscarr.Server.Settings;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.FanartTv;
 
@@ -89,6 +90,7 @@ public sealed partial class FanartTvClient(HttpClient http, Func<ServerSettings>
         public List<FanartTvImage> ArtistBackground { get; init; } = [];
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class FanartTvImage
     {
         public required string Url { get; init; }

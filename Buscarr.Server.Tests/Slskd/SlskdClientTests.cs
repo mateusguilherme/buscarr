@@ -12,6 +12,8 @@ public class SlskdClientTests
     private const string Url = "http://slskd.local:5030";
     private const string ApiKey = "chave-de-teste";
 
+    private ServerSettings _settings = new() { SlskdUrl = Url, SlskdApiKey = ApiKey };
+
     [Fact]
     public async Task ServerStateAsync_AsksSlskdForItsStateWithTheApiKey()
     {
@@ -227,11 +229,10 @@ public class SlskdClientTests
     public async Task ReadsTheSettingsOnEveryCall()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Application(true, true)));
-        var settings = new ServerSettings { SlskdUrl = Url, SlskdApiKey = ApiKey };
-        var client = new SlskdClient(new HttpClient(handler), () => settings);
+        var client = new SlskdClient(new HttpClient(handler), () => _settings);
 
         await client.ServerStateAsync();
-        settings = new ServerSettings { SlskdUrl = "http://outro:5030", SlskdApiKey = "outra-chave" };
+        _settings = new ServerSettings { SlskdUrl = "http://outro:5030", SlskdApiKey = "outra-chave" };
         await client.ServerStateAsync();
 
         Assert.Equal("http://outro:5030/api/v0/application", handler.Requests[1].Uri.ToString());

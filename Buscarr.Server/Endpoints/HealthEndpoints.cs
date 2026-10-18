@@ -1,12 +1,15 @@
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Slskd;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Buscarr.Server.Endpoints;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record WorkerHealth(double? AgeSeconds, bool Stalled);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record HealthReport(
     string Status,
     List<string> Problems,
@@ -45,7 +48,7 @@ public static class HealthEndpoints
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro no slskd: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro no slskd: {e.Message}");
         }
 
         var workers = new Dictionary<string, WorkerHealth>

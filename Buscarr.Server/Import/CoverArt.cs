@@ -20,7 +20,7 @@ public sealed class CoverArt(HttpClient http)
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao baixar a capa {url}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao baixar a capa {url}: {e.Message}");
 
             return null;
         }

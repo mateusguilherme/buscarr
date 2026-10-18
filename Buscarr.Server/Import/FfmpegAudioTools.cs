@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Buscarr.Server.Import;
 
-public sealed partial class FfmpegAudioTools : AudioTools
+public sealed partial class FfmpegAudioTools : IAudioTools
 {
     private static readonly TimeSpan ProbeLimit = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan AnalysisLimit = TimeSpan.FromMinutes(2);
@@ -51,16 +51,16 @@ public sealed partial class FfmpegAudioTools : AudioTools
     public async Task<SpectralLevels?> LevelsAsync(string path)
     {
         var overall = await RmsAsync(path, null);
-        var above16k = await RmsAsync(path, 16_000);
-        var above19k = await RmsAsync(path, 19_000);
-        var above20k = await RmsAsync(path, 20_000);
+        var above16K = await RmsAsync(path, 16_000);
+        var above19K = await RmsAsync(path, 19_000);
+        var above20K = await RmsAsync(path, 20_000);
 
-        if (overall is null || above16k is null || above19k is null || above20k is null)
+        if (overall is null || above16K is null || above19K is null || above20K is null)
         {
             return null;
         }
 
-        return new SpectralLevels(overall.Value, above16k.Value, above19k.Value, above20k.Value);
+        return new SpectralLevels(overall.Value, above16K.Value, above19K.Value, above20K.Value);
     }
 
     public async Task<bool> TranscodeToMp3Async(string source, string target)

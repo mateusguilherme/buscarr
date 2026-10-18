@@ -4,9 +4,11 @@ using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Users;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.Endpoints;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record ArtistCard(string Id, string Name, string? Disambiguation, string? Area, string? Image, bool Listed);
 
 public static class ArtistEndpoints
@@ -55,7 +57,7 @@ public static class ArtistEndpoints
         }
         catch (Exception e) when (IsUpstreamError(e))
         {
-            Console.Error.WriteLine($"erro no fanart.tv: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro no fanart.tv: {e.Message}");
 
             return null;
         }

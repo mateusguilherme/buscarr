@@ -6,7 +6,7 @@ namespace Buscarr.Server.Import;
 
 public sealed class ImportPipeline(
     MusicBrainzClient musicBrainz,
-    AudioTools tools,
+    IAudioTools tools,
     CoverArt covers,
     Func<ImportOptions> currentOptions)
 {
@@ -15,7 +15,7 @@ public sealed class ImportPipeline(
     private readonly Tagger _tagger = new();
     private readonly LibraryImporter _importer = new();
 
-    public ImportPipeline(MusicBrainzClient musicBrainz, AudioTools tools, CoverArt covers, ImportOptions options)
+    public ImportPipeline(MusicBrainzClient musicBrainz, IAudioTools tools, CoverArt covers, ImportOptions options)
         : this(musicBrainz, tools, covers, () => options)
     {
     }
@@ -141,7 +141,7 @@ public sealed class ImportPipeline(
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao importar {request.ArtistName} {request.Title}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao importar {request.ArtistName} {request.Title}: {e.Message}");
 
             return "import-failed";
         }

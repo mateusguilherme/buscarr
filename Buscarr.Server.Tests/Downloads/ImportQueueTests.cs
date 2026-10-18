@@ -64,7 +64,7 @@ public sealed class ImportQueueTests : IDisposable
     {
         var noEdition = await AddRequestAsync("g1");
         noEdition.EditionReleaseId = null;
-        var noFolder = await AddRequestAsync("g2", directory: null);
+        await AddRequestAsync("g2", directory: null);
         await _db.SaveChangesAsync();
 
         Assert.Null(await _queue.ClaimNextAsync());

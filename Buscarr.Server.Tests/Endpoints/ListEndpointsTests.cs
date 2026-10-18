@@ -165,7 +165,7 @@ public class ListEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
         Assert.Equal(["single"], settings!.ReleaseTypes);
     }
 
-    public static TheoryData<string[]> InvalidReleaseTypes => new() { Array.Empty<string>(), new[] { "album", "bootleg" } };
+    public static TheoryData<string[]> InvalidReleaseTypes => new([], ["album", "bootleg"]);
 
     [Theory]
     [MemberData(nameof(InvalidReleaseTypes))]

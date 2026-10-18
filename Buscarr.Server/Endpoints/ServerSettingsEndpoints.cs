@@ -119,7 +119,7 @@ public static class ServerSettingsEndpoints
                 return new("not-configured", null);
             }
 
-            return state.IsConnected && state.IsLoggedIn ? new("ok", null) : new("offline", null);
+            return state is { IsConnected: true, IsLoggedIn: true } ? new("ok", null) : new("offline", null);
         }
         catch (Exception e)
         {

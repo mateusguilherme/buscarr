@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Buscarr.Server.Endpoints;
 
-public record RegisterRequest(string Email, string Name, string Password);
+public record RegisterRequest(string? Email, string? Name, string? Password);
 
-public record LoginRequest(string Email, string Password);
+public record LoginRequest(string? Email, string? Password);
 
 public record UserInfo(string Email, string Name, bool IsAdmin);
 

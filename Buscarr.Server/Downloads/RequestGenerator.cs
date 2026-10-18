@@ -30,7 +30,7 @@ public sealed class RequestGenerator(
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"erro ao listar a biblioteca: {e.Message}");
+                await Console.Error.WriteLineAsync($"erro ao listar a biblioteca: {e.Message}");
                 complete = false;
             }
         }
@@ -50,7 +50,7 @@ public sealed class RequestGenerator(
                 }
                 catch (Exception e)
                 {
-                    Console.Error.WriteLine($"erro ao buscar os lançamentos de {artist.Name}: {e.Message}");
+                    await Console.Error.WriteLineAsync($"erro ao buscar os lançamentos de {artist.Name}: {e.Message}");
                     complete = false;
 
                     continue;

@@ -59,7 +59,7 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao buscar {request.ArtistName} {request.Title}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao buscar {request.ArtistName} {request.Title}: {e.Message}");
         }
 
         await db.Entry(request).ReloadAsync();

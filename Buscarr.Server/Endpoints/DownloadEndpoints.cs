@@ -1,10 +1,12 @@
 using System.Text.Json;
 using Buscarr.Server.Data;
 using Buscarr.Server.Downloads;
+using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace Buscarr.Server.Endpoints;
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record DownloadItem(
     int Id,
     string ArtistName,
@@ -103,7 +105,7 @@ public static class DownloadEndpoints
         }
     }
 
-    internal static async Task<List<DownloadItem>> ItemsAsync(BuscarrDbContext db)
+    private static async Task<List<DownloadItem>> ItemsAsync(BuscarrDbContext db)
     {
         var requests = await db.DownloadRequests.AsNoTracking().ToListAsync();
 

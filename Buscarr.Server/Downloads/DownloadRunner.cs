@@ -16,7 +16,7 @@ public sealed class DownloadRunner(
 
     private readonly SemaphoreSlim _slots = new(MaxConcurrent, MaxConcurrent);
     private readonly ConcurrentDictionary<int, CancellationTokenSource> _running = new();
-    private readonly object _writing = new();
+    private readonly Lock _writing = new();
 
     public void Start(int requestId, List<SoulseekFolder> folders)
     {
@@ -92,7 +92,7 @@ public sealed class DownloadRunner(
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao baixar o pedido {requestId}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao baixar o pedido {requestId}: {e.Message}");
             Persist(requestId, request =>
             {
                 request.State = DownloadState.Waiting;
@@ -138,7 +138,7 @@ public sealed class DownloadRunner(
         }
         catch (Exception e)
         {
-            Console.Error.WriteLine($"erro ao importar o pedido {requestId}: {e.Message}");
+            await Console.Error.WriteLineAsync($"erro ao importar o pedido {requestId}: {e.Message}");
             Persist(requestId, request => request.State = DownloadState.Downloaded);
         }
         finally

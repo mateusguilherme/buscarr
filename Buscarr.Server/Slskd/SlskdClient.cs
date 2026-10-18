@@ -1,11 +1,13 @@
 using System.Net;
 using System.Text.Json;
 using Buscarr.Server.Settings;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.Slskd;
 
 public record SlskdServerState(bool IsConnected, bool IsLoggedIn);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record SlskdSearch(Guid Id, string State, bool IsComplete, int ResponseCount);
 
 public record SlskdResponse(
@@ -15,8 +17,10 @@ public record SlskdResponse(
     int UploadSpeed,
     List<SlskdFile> Files);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record SlskdFile(string Filename, long Size, int? BitRate, int? BitDepth, int? Length);
 
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public record SlskdTransfer(Guid Id, string Filename, long Size, string State, long BytesTransferred, int? PlaceInQueue);
 
 public sealed class SlskdClient(HttpClient http, Func<ServerSettings> settings)
@@ -131,6 +135,7 @@ public sealed class SlskdClient(HttpClient http, Func<ServerSettings> settings)
         return request;
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class ApplicationState
     {
         public required SlskdServerState Server { get; init; }
@@ -141,6 +146,7 @@ public sealed class SlskdClient(HttpClient http, Func<ServerSettings> settings)
         public List<TransferDirectory> Directories { get; init; } = [];
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class TransferDirectory
     {
         public List<SlskdTransfer> Files { get; init; } = [];

@@ -15,6 +15,8 @@ public class SubsonicClientTests
     private const string User = "fulano";
     private const string Password = "segredo123";
 
+    private ServerSettings _settings = new();
+
     [Fact]
     public async Task AlbumsAsync_AsksForTheAlbumsWithTokenAuthentication()
     {
@@ -140,12 +142,11 @@ public class SubsonicClientTests
     public async Task ReadsTheSettingsOnEveryCall()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Ok()));
-        var settings = new ServerSettings();
-        var client = new SubsonicClient(new HttpClient(handler), () => settings);
+        var client = new SubsonicClient(new HttpClient(handler), () => _settings);
 
         Assert.False(client.IsConfigured);
 
-        settings = new ServerSettings { SubsonicUrl = Url, SubsonicUser = User, SubsonicPassword = Password };
+        _settings = new ServerSettings { SubsonicUrl = Url, SubsonicUser = User, SubsonicPassword = Password };
         await client.PingAsync();
 
         Assert.True(client.IsConfigured);

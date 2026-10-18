@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using JetBrains.Annotations;
 
 namespace Buscarr.Server.MusicBrainz;
 
@@ -129,7 +130,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             }
 
             response.Dispose();
-            Console.Error.WriteLine($"MusicBrainz ocupado (503), tentativa {attempts} de {MaxAttempts}");
+            await Console.Error.WriteLineAsync($"MusicBrainz ocupado (503), tentativa {attempts} de {MaxAttempts}");
         }
 
         using (response)
@@ -167,11 +168,13 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
         }
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class ArtistSearch
     {
         public List<Artist> Artists { get; init; } = [];
     }
 
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class ReleaseBrowse
     {
         [JsonPropertyName("release-count")]
