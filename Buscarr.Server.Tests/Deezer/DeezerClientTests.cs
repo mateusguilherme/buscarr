@@ -87,6 +87,32 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task ArtistImageAsync_ReturnsThePictureOfTheArtistPage()
+    {
+        var picture = "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg";
+        var handler = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        var image = await client.ArtistImageAsync("52654632");
+
+        Assert.Equal(picture, image);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("https://api.deezer.com/artist/52654632", request.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_ReturnsNullWithoutAPictureOrOnFailure()
+    {
+        var empty = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", null)));
+        var failing = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+
+        Assert.Null(await new DeezerClient(new HttpClient(empty)).ArtistImageAsync("52654632"));
+        Assert.Null(await new DeezerClient(new HttpClient(failing)).ArtistImageAsync("52654632"));
+    }
+
+    [Fact]
     public async Task AlbumCoverAsync_StripsQuotesFromTheSearch()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(

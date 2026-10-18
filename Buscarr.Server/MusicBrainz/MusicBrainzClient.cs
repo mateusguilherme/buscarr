@@ -31,7 +31,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     }
 
     public Task<Artist> ArtistAsync(string contact, string id) =>
-        GetAsync<Artist>(contact, $"artist/{id}", []);
+        GetAsync<Artist>(contact, $"artist/{id}", [("inc", "url-rels")]);
 
     public async Task<List<Album>> ReleasesAsync(string contact, string artistId)
     {

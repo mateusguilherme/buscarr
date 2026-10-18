@@ -7,6 +7,6 @@ public class ListedArtist
     public required string Name { get; init; }
     public string? Disambiguation { get; init; }
     public string? Area { get; init; }
-    public string? Image { get; init; }
+    public string? Image { get; set; }
     public List<string> ReleaseTypes { get; init; } = [];
 }

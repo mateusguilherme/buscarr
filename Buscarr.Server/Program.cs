@@ -37,6 +37,7 @@ builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
+builder.Services.AddSingleton<ArtistImages>();
 builder.Services.AddSingleton<GeneratorTrigger>();
 builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddScoped<RequestGenerator>();

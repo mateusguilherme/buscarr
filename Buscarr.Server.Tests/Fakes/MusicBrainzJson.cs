@@ -19,8 +19,17 @@ public static class MusicBrainzJson
             disambiguation,
         };
 
-    public static string Artist(string id, string name) =>
-        JsonSerializer.Serialize(new { id, name });
+    public static string Artist(string id, string name, params string[] streamingUrls) =>
+        JsonSerializer.Serialize(new
+        {
+            id,
+            name,
+            relations = streamingUrls.Select(url => new
+            {
+                type = "free streaming",
+                url = new { resource = url },
+            }),
+        });
 
     public static string Releases(int releaseCount, params Dictionary<string, object>[] releases) =>
         JsonSerializer.Serialize(new Dictionary<string, object>

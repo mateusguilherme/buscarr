@@ -3,6 +3,7 @@ using System.Web;
 using Buscarr.Server.Data;
 using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
+using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
@@ -30,8 +31,11 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly List<(string Artist, string Title, string Cover)> _spotifyAlbums = [];
     private readonly Dictionary<string, (string Artist, string Title, string Cover)> _deezerByBarcode = [];
     private readonly Dictionary<string, (string Artist, string Title, string Cover)> _spotifyByBarcode = [];
+    private readonly Dictionary<string, string> _artists = [];
+    private readonly Dictionary<string, string> _deezerArtists = [];
     private bool _libraryFailing;
     private readonly MusicBrainzClient _musicBrainz;
+    private readonly ArtistImages _images;
     private readonly FakeHttpMessageHandler _deezerHandler;
     private readonly DeezerClient _deezer;
     private readonly FakeHttpMessageHandler _spotifyHandler;
@@ -57,6 +61,13 @@ public sealed class RequestGeneratorTests : IDisposable
                     : FakeHttpMessageHandler.Json(DeezerJson.NotFound());
             }
 
+            if (path.StartsWith("/artist/", StringComparison.Ordinal))
+            {
+                return _deezerArtists.TryGetValue(path["/artist/".Length..], out var picture)
+                    ? FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture))
+                    : FakeHttpMessageHandler.Json(DeezerJson.NotFound());
+            }
+
             return FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums]));
         });
         _deezer = new DeezerClient(new HttpClient(_deezerHandler));
@@ -79,8 +90,12 @@ public sealed class RequestGeneratorTests : IDisposable
             return FakeHttpMessageHandler.Json(SpotifyJson.Albums([.. _spotifyAlbums]));
         });
         _spotify = new SpotifyClient(new HttpClient(_spotifyHandler), "id-1", "segredo-1", new FakeTimeProvider(Now));
+        var fanartTv = new FanartTvClient(
+            new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound))),
+            "chave-de-teste");
+        _images = new ArtistImages(fanartTv, _deezer, _spotify);
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
-        _generator = new RequestGenerator(_db, _musicBrainz, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
+        _generator = new RequestGenerator(_db, _musicBrainz, _images, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -449,6 +464,30 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_FillsTheMissingPhotoOfAListedArtist()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "ajulliacosta", types: ["album"]);
+        _artists["ajulliacosta"] = Artist("ajulliacosta", "AJULLIACOSTA", "https://www.deezer.com/artist/52654632");
+        _deezerArtists["52654632"] = "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg";
+
+        await _generator.GenerateAsync();
+
+        var listed = Assert.Single(await _db.ListedArtists.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg", listed.Image);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_LeavesTheArtistPhotoAloneWhenNothingIsFound()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "project46", types: ["album"]);
+
+        await _generator.GenerateAsync();
+
+        var listed = Assert.Single(await _db.ListedArtists.ToListAsync());
+        Assert.Null(listed.Image);
+    }
+
+    [Fact]
     public async Task GenerateAsync_StoresTheFullCreditOfTheRelease()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
@@ -531,7 +570,7 @@ public sealed class RequestGeneratorTests : IDisposable
             "fulano",
             "segredo123");
 
-        return new RequestGenerator(_db, _musicBrainz, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
+        return new RequestGenerator(_db, _musicBrainz, _images, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
     }
 
     private HttpResponseMessage RespondLikeSubsonic(HttpRequestMessage request) =>
@@ -595,6 +634,15 @@ public sealed class RequestGeneratorTests : IDisposable
 
     private HttpResponseMessage Respond(HttpRequestMessage request)
     {
+        var path = request.RequestUri!.AbsolutePath;
+
+        if (path.StartsWith("/ws/2/artist/", StringComparison.Ordinal))
+        {
+            var id = path["/ws/2/artist/".Length..];
+
+            return FakeHttpMessageHandler.Json(_artists.GetValueOrDefault(id, Artist(id, "Nirvana")));
+        }
+
         var artist = HttpUtility.ParseQueryString(request.RequestUri!.Query)["artist"]!;
 
         if (_failing.Contains(artist))

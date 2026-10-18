@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Buscarr.Server.Downloads;
-using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Users;
@@ -38,7 +37,7 @@ public static class ListEndpoints
 
     private static async Task<IResult> AddArtist(
         MusicBrainzClient musicBrainz,
-        FanartTvClient fanartTv,
+        ArtistImages images,
         ArtistListStore list,
         GeneratorTrigger generator,
         ClaimsPrincipal user,
@@ -55,7 +54,6 @@ public static class ListEndpoints
             return Results.BadRequest();
         }
 
-        var image = ArtistEndpoints.ArtistImageAsync(fanartTv, id);
         Artist artist;
 
         try
@@ -74,7 +72,7 @@ public static class ListEndpoints
             Name = artist.Name,
             Disambiguation = artist.Disambiguation,
             Area = artist.Area?.Name,
-            Image = await image,
+            Image = await images.FindAsync(artist),
             ReleaseTypes = [.. ListReleaseTypes.All.Where(settings.ReleaseTypes.Contains)],
         });
         generator.Fire();

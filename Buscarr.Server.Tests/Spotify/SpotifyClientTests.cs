@@ -127,6 +127,32 @@ public sealed class SpotifyClientTests
     }
 
     [Fact]
+    public async Task ArtistImageAsync_ReturnsThe300PixelImageOfTheArtistPage()
+    {
+        var image = "https://i.scdn.co/image/artista";
+        var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
+            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
+            : FakeHttpMessageHandler.Json(SpotifyJson.Artist("AJULLIACOSTA", image)));
+
+        var result = await Client(handler).ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd");
+
+        Assert.Equal(image, result);
+        Assert.Equal(
+            "https://api.spotify.com/v1/artists/0eHkGhhUyp3LZdtZjaA8gd",
+            handler.Requests[1].Uri.ToString());
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_ReturnsNullWithoutCredentialsWithoutCallingSpotify()
+    {
+        var handler = Handler(SpotifyJson.Albums());
+        var client = new SpotifyClient(new HttpClient(handler), null, null, _time);
+
+        Assert.Null(await client.ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd"));
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task PingAsync_PassesWithGoodCredentialsAndThrowsOnBadOnes()
     {
         var good = Handler(SpotifyJson.Albums());

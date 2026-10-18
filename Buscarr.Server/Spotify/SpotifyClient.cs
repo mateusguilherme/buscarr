@@ -12,6 +12,7 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
 {
     private const string TokenUrl = "https://accounts.spotify.com/api/token";
     private const string SearchUrl = "https://api.spotify.com/v1/search";
+    private const string ArtistsUrl = "https://api.spotify.com/v1/artists";
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromMinutes(1);
 
     private (string Value, long Timestamp, TimeSpan Life)? _token;
@@ -94,11 +95,39 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
         }
     }
 
-    private static string? Cover(AlbumItem match)
+    public async Task<string?> ArtistImageAsync(string id)
     {
-        var images = match.Images.OrderByDescending(image => image.Width).ToList();
+        if (!IsConfigured)
+        {
+            return null;
+        }
 
-        return (images.FirstOrDefault(image => image.Width <= 300) ?? images.LastOrDefault())?.Url;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{ArtistsUrl}/{Uri.EscapeDataString(id)}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync());
+
+            using var response = await http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var artist = await response.Content.ReadFromJsonAsync<ArtistProfile>();
+
+            return artist is null ? null : Smallest(artist.Images);
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar a foto do artista {id} no Spotify: {e.Message}");
+
+            return null;
+        }
+    }
+
+    private static string? Cover(AlbumItem match) => Smallest(match.Images);
+
+    private static string? Smallest(List<AlbumImage> images)
+    {
+        var sorted = images.OrderByDescending(image => image.Width).ToList();
+
+        return (sorted.FirstOrDefault(image => image.Width <= 300) ?? sorted.LastOrDefault())?.Url;
     }
 
     private async Task<string> TokenAsync()
@@ -141,6 +170,12 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
 
         [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; init; }
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class ArtistProfile
+    {
+        public List<AlbumImage> Images { get; init; } = [];
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

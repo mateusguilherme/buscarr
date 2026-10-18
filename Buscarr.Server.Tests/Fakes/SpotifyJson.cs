@@ -12,6 +12,18 @@ public static class SpotifyJson
             expires_in = expiresIn,
         });
 
+    public static string Artist(string name, string image) =>
+        JsonSerializer.Serialize(new
+        {
+            name,
+            images = new object[]
+            {
+                new { url = $"{image}?size=640", width = 640, height = 640 },
+                new { url = image, width = 300, height = 300 },
+                new { url = $"{image}?size=64", width = 64, height = 64 },
+            },
+        });
+
     public static string Albums(params (string Artist, string Title, string Cover)[] albums) =>
         JsonSerializer.Serialize(new
         {

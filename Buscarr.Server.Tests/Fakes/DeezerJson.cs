@@ -4,6 +4,13 @@ namespace Buscarr.Server.Tests.Fakes;
 
 public static class DeezerJson
 {
+    public static string ArtistProfile(string name, string? picture) =>
+        JsonSerializer.Serialize(new
+        {
+            name,
+            picture_medium = picture,
+        });
+
     public static string Album(string artist, string title, string cover) =>
         JsonSerializer.Serialize(new
         {

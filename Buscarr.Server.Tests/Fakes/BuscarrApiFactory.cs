@@ -47,6 +47,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     public FakeSlskd Slskd { get; } = new();
 
+    public FakeHttpMessageHandler Deezer { get; } = new(_ => FakeHttpMessageHandler.Json(DeezerJson.NotFound()));
+
     public FakeHttpMessageHandler Spotify { get; } = new(request =>
         request.RequestUri!.Host == "accounts.spotify.com"
             ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
@@ -91,8 +93,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                 new HttpClient(MusicBrainz),
                 new FakeTimeProvider { AutoAdvanceAmount = TimeSpan.FromSeconds(1) }));
             services.RemoveAll<DeezerClient>();
-            services.AddSingleton(new DeezerClient(
-                new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums())))));
+            services.AddSingleton(new DeezerClient(new HttpClient(Deezer)));
             services.RemoveAll<FanartTvClient>();
             services.AddSingleton(new FanartTvClient(new HttpClient(FanartTv), "chave-de-teste"));
             services.RemoveAll<SlskdClient>();
@@ -150,7 +151,11 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
         if (path == $"/ws/2/artist/{NirvanaId}")
         {
-            return FakeHttpMessageHandler.Json(Artist(NirvanaId, "Nirvana"));
+            return FakeHttpMessageHandler.Json(Artist(
+                NirvanaId,
+                "Nirvana",
+                "https://www.deezer.com/artist/412",
+                "https://open.spotify.com/artist/sp-nirvana"));
         }
 
         return FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);

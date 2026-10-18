@@ -12,6 +12,7 @@ namespace Buscarr.Server.Downloads;
 public sealed class RequestGenerator(
     BuscarrDbContext db,
     MusicBrainzClient musicBrainz,
+    ArtistImages images,
     DeezerClient deezer,
     SpotifyClient spotify,
     SubsonicClient subsonic,
@@ -58,6 +59,11 @@ public sealed class RequestGenerator(
                     complete = false;
 
                     continue;
+                }
+
+                if (string.IsNullOrEmpty(artist.Image))
+                {
+                    artist.Image = await ImageAsync(user.Email, artist) ?? artist.Image;
                 }
 
                 foreach (var album in albums)
@@ -192,6 +198,20 @@ public sealed class RequestGenerator(
         }
 
         return null;
+    }
+
+    private async Task<string?> ImageAsync(string contact, ListedArtist artist)
+    {
+        try
+        {
+            return await images.FindAsync(await musicBrainz.ArtistAsync(contact, artist.ArtistId));
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar a foto de {artist.Name}: {e.Message}");
+
+            return null;
+        }
     }
 
     private static List<string> Barcodes(Release chosen, Album album) =>

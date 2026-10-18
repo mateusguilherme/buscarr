@@ -8,6 +8,23 @@ public sealed class DeezerClient(HttpClient http)
 {
     private const string SearchUrl = "https://api.deezer.com/search/album";
     private const string AlbumUrl = "https://api.deezer.com/album";
+    private const string ArtistUrl = "https://api.deezer.com/artist";
+
+    public async Task<string?> ArtistImageAsync(string id)
+    {
+        try
+        {
+            var artist = await http.GetFromJsonAsync<DeezerArtist>($"{ArtistUrl}/{Uri.EscapeDataString(id)}");
+
+            return string.IsNullOrEmpty(artist?.PictureMedium) ? null : artist.PictureMedium;
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar a foto do artista {id} no Deezer: {e.Message}");
+
+            return null;
+        }
+    }
 
     public async Task<string?> AlbumCoverByBarcodeAsync(string barcode)
     {
@@ -48,6 +65,13 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     private static string Term(string value) => value.Replace("\"", "");
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class DeezerArtist
+    {
+        [JsonPropertyName("picture_medium")]
+        public string? PictureMedium { get; init; }
+    }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class UpcAlbum

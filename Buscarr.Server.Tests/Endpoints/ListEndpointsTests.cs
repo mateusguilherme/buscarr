@@ -46,6 +46,26 @@ public class ListEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     }
 
     [Fact]
+    public async Task PutList_FallsBackToTheStreamingPhotoWhenFanartTvHasNone()
+    {
+        await using var ownFactory = new BuscarrApiFactory { FanartTvDown = true };
+        ownFactory.Deezer.Respond = request => request.RequestUri!.AbsolutePath == "/artist/412"
+            ? FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile(
+                "Nirvana",
+                "https://cdn-images.dzcdn.net/images/artist/n1/250x250-000000-80-0-0.jpg"))
+            : FakeHttpMessageHandler.Json(DeezerJson.NotFound());
+        var client = await ownFactory.CreateLoggedInClientAsync();
+
+        var response = await client.PutAsJsonAsync(Nirvana, Settings);
+        var artists = await client.GetFromJsonAsync<List<ArtistCard>>("/api/list");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(
+            "https://cdn-images.dzcdn.net/images/artist/n1/250x250-000000-80-0-0.jpg",
+            Assert.Single(artists!).Image);
+    }
+
+    [Fact]
     public async Task PutAndDeleteList_FireTheRequestGenerator()
     {
         var client = await factory.CreateLoggedInClientAsync();
