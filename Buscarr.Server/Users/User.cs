@@ -2,11 +2,11 @@ namespace Buscarr.Server.Users;
 
 public class User
 {
-    public int Id { get; set; }
-    public required string Email { get; set; }
-    public required string Name { get; set; }
+    public int Id { get; init; }
+    public required string Email { get; init; }
+    public required string Name { get; init; }
     public string PasswordHash { get; set; } = "";
-    public string? EditionPreference { get; set; }
-    public string? QualityPreference { get; set; }
-    public bool IsAdmin { get; set; }
+    public string? EditionPreference { get; init; }
+    public string? QualityPreference { get; init; }
+    public bool IsAdmin { get; init; }
 }
