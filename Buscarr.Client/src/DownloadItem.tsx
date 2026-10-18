@@ -17,7 +17,7 @@ function when(date: string): string {
   return new Date(date).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
 }
 
-function failureLabel(failure: string | null): string {
+export function failureLabel(failure: string | null): string {
   switch (failure) {
     case 'refused':
       return t.downloads.refused;

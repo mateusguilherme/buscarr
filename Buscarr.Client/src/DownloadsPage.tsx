@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { getDownloads, type Download } from './api';
+import { getDownloads, getQuarantine, type Download, type QuarantinedAlbum } from './api';
 import { DownloadItem } from './DownloadItem';
 import { Header } from './Header';
 import { ArrowLeftIcon } from './icons';
+import { QuarantineItem } from './QuarantineItem';
 import { t } from './i18n';
 
 const retryWait = 10_000;
 
 export function DownloadsPage() {
   const [downloads, setDownloads] = useState<Download[] | null>(null);
+  const [quarantine, setQuarantine] = useState<QuarantinedAlbum[]>([]);
   const [error, setError] = useState<string>();
+  const failedCount = downloads?.filter((download) => download.state === 'failed').length ?? 0;
 
   useEffect(() => {
     let ignore = false;
@@ -60,6 +63,22 @@ export function DownloadsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let ignore = false;
+
+    getQuarantine()
+      .then((result) => {
+        if (!ignore) {
+          setQuarantine(result);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      ignore = true;
+    };
+  }, [failedCount]);
+
   return (
     <>
       <Header />
@@ -102,6 +121,22 @@ export function DownloadsPage() {
               />
             ))}
           </ul>
+        )}
+        {quarantine.length > 0 && (
+          <>
+            <h2 className="section-title">{t.quarantine.title}</h2>
+            <p className="status hint">{t.quarantine.hint}</p>
+            <ul className="artist-list">
+              {quarantine.map((album) => (
+                <QuarantineItem
+                  key={album.id}
+                  album={album}
+                  onGone={() =>
+                    setQuarantine((current) => current.filter((other) => other.id !== album.id))}
+                />
+              ))}
+            </ul>
+          </>
         )}
       </main>
     </>

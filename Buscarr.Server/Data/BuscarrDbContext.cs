@@ -1,4 +1,5 @@
 using Buscarr.Server.Downloads;
+using Buscarr.Server.Import;
 using Buscarr.Server.Lists;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Users;
@@ -13,6 +14,10 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
     public DbSet<ListedArtist> ListedArtists => Set<ListedArtist>();
 
     public DbSet<DownloadRequest> DownloadRequests => Set<DownloadRequest>();
+
+    public DbSet<FailedSource> FailedSources => Set<FailedSource>();
+
+    public DbSet<QuarantinedAlbum> QuarantinedAlbums => Set<QuarantinedAlbum>();
 
     public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
 
@@ -58,6 +63,27 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             request.Property(r => r.NextAttemptAt).HasConversion(
                 value => value.ToUnixTimeMilliseconds(),
                 value => DateTimeOffset.FromUnixTimeMilliseconds(value));
+        });
+
+        modelBuilder.Entity<FailedSource>(source =>
+        {
+            source.Property(s => s.Username).HasMaxLength(256);
+            source.Property(s => s.Directory).HasMaxLength(1024);
+            source.HasIndex(s => new { s.RequestId, s.Username, s.Directory }).IsUnique();
+            source.HasOne<DownloadRequest>().WithMany().HasForeignKey(s => s.RequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<QuarantinedAlbum>(quarantined =>
+        {
+            quarantined.Property(q => q.ArtistName).HasMaxLength(256);
+            quarantined.Property(q => q.Title).HasMaxLength(512);
+            quarantined.Property(q => q.Reason).HasMaxLength(2048);
+            quarantined.Property(q => q.Path).HasMaxLength(1024);
+            quarantined.Property(q => q.Username).HasMaxLength(256);
+            quarantined.Property(q => q.At).HasConversion(
+                value => value.ToUnixTimeMilliseconds(),
+                value => DateTimeOffset.FromUnixTimeMilliseconds(value));
+            quarantined.HasOne<DownloadRequest>().WithMany().HasForeignKey(q => q.RequestId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<ServerSettings>(settings =>

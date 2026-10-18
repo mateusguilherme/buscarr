@@ -79,6 +79,35 @@ public sealed class SearchQueueTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessNextAsync_SkipsTheFoldersOfSourcesThatFailedBefore()
+    {
+        var request = await AddRequestAsync();
+        await AddFailedSourceAsync(request.Id, "fulano", Nevermind);
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        Assert.Empty(searched!.Folders);
+        Assert.Equal((DownloadState.NotFound, "no-matching-folder", 1), (request.State, request.Failure, request.Attempts));
+    }
+
+    [Fact]
+    public async Task ProcessNextAsync_StillUsesTheOtherSourcesWhenOneFailedBefore()
+    {
+        var request = await AddRequestAsync();
+        await AddFailedSourceAsync(request.Id, "fulano", Nevermind);
+        _slskd.Answer(
+            "Nirvana Nevermind",
+            Response("fulano", AlbumFiles(Nevermind, 12)),
+            Response("beltrano", AlbumFiles(Nevermind, 12)));
+
+        var searched = await ProcessAsync();
+
+        Assert.Equal("beltrano", Assert.Single(searched!.Folders).Username);
+        Assert.Equal(DownloadState.Downloading, request.State);
+    }
+
+    [Fact]
     public async Task ProcessNextAsync_MarksNotFoundWhenNoFolderFits()
     {
         var request = await AddRequestAsync();
@@ -201,6 +230,12 @@ public sealed class SearchQueueTests : IDisposable
         await _db.SaveChangesAsync();
 
         return request;
+    }
+
+    private async Task AddFailedSourceAsync(int requestId, string username, string directory)
+    {
+        _db.FailedSources.Add(new FailedSource { RequestId = requestId, Username = username, Directory = directory });
+        await _db.SaveChangesAsync();
     }
 
     private async Task<DownloadState> StateAsync(int id)

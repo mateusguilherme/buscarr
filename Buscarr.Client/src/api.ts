@@ -264,6 +264,42 @@ export async function retryDownload(id: number): Promise<void> {
   }
 }
 
+export type QuarantinedAlbum = {
+  id: number;
+  artistName: string;
+  title: string;
+  reason: string;
+  username: string | null;
+  at: string;
+  canImport: boolean;
+};
+
+export async function getQuarantine(): Promise<QuarantinedAlbum[]> {
+  const res = await fetch('/api/quarantine');
+
+  if (!res.ok) {
+    throw new Error(t.api.quarantineError(res.status));
+  }
+
+  return res.json();
+}
+
+export async function importQuarantined(id: number): Promise<void> {
+  const res = await fetch(`/api/quarantine/${id}/import`, { method: 'POST' });
+
+  if (!res.ok) {
+    throw new Error(t.api.importQuarantinedError(res.status));
+  }
+}
+
+export async function discardQuarantined(id: number): Promise<void> {
+  const res = await fetch(`/api/quarantine/${id}`, { method: 'DELETE' });
+
+  if (!res.ok) {
+    throw new Error(t.api.discardQuarantinedError(res.status));
+  }
+}
+
 export async function findArtists(query: string): Promise<Artist[]> {
   const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}`);
 

@@ -43,13 +43,13 @@ public sealed class ImportPipeline(
         return tracks.Tracks.Count > 0 ? tracks : null;
     }
 
-    public async Task<string?> VerifyAsync(DownloadRequest request, EditionTracks tracks, SoulseekFolder folder)
+    public async Task<ImportFailure?> VerifyAsync(DownloadRequest request, EditionTracks tracks, SoulseekFolder folder)
     {
         var local = Resolve(folder);
 
         if (local is null)
         {
-            return "missing-files";
+            return new ImportFailure("missing-files");
         }
 
         var reason = await _verifier.VerifyAsync(
@@ -61,37 +61,35 @@ public sealed class ImportPipeline(
 
         if (reason is not null)
         {
-            Quarantine(local.Value.Directory, request, reason);
+            return new ImportFailure(reason, true, Quarantine(local.Value.Directory, request, reason));
         }
 
-        return reason;
+        return null;
     }
 
-    public async Task<string?> ImportAsync(DownloadRequest request, EditionTracks tracks, SoulseekFolder folder)
+    public async Task<ImportFailure?> ImportAsync(DownloadRequest request, EditionTracks tracks, SoulseekFolder folder)
     {
         var local = Resolve(folder);
 
         if (local is null)
         {
-            return "missing-files";
+            return new ImportFailure("missing-files");
         }
 
         return await ImportFilesAsync(request, tracks, local.Value.Directory, local.Value.Files, folder.NeedsTranscode);
     }
 
-    public async Task<string?> ReimportAsync(DownloadRequest request, EditionTracks tracks)
+    public async Task<ImportFailure?> ReimportAsync(DownloadRequest request, EditionTracks tracks)
     {
         var directory = Path.Combine(Options.DownloadsPath!, Name(request.Directory ?? ""));
 
         if (request.Directory is null || !Directory.Exists(directory))
         {
-            return "missing-files";
+            return new ImportFailure("missing-files");
         }
 
         var files = Directory.EnumerateFiles(directory).Where(Folders.IsAudioFile).ToList();
-        var needsTranscode =
-            !files.All(file => Folders.MatchesQuality(file, request.Quality))
-            && files.All(Folders.IsLosslessFile);
+        var needsTranscode = NeedsTranscode(files, request.Quality);
         var reason = await _verifier.VerifyAsync(
             files,
             tracks.Tracks,
@@ -101,15 +99,30 @@ public sealed class ImportPipeline(
 
         if (reason is not null)
         {
-            Quarantine(directory, request, reason);
-
-            return reason;
+            return new ImportFailure(reason, true, Quarantine(directory, request, reason));
         }
 
         return await ImportFilesAsync(request, tracks, directory, files, needsTranscode);
     }
 
-    private async Task<string?> ImportFilesAsync(
+    public async Task<ImportFailure?> ImportQuarantinedAsync(DownloadRequest request, EditionTracks tracks, string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return new ImportFailure("missing-files");
+        }
+
+        var files = Directory.EnumerateFiles(directory).Where(Folders.IsAudioFile).ToList();
+
+        if (files.Count != tracks.Tracks.Count)
+        {
+            return new ImportFailure("wrong-tracks");
+        }
+
+        return await ImportFilesAsync(request, tracks, directory, files, NeedsTranscode(files, request.Quality));
+    }
+
+    private async Task<ImportFailure?> ImportFilesAsync(
         DownloadRequest request,
         EditionTracks tracks,
         string directory,
@@ -124,7 +137,7 @@ public sealed class ImportPipeline(
 
             if (files.Count == 0)
             {
-                return "transcode-failed";
+                return new ImportFailure("transcode-failed");
             }
         }
 
@@ -160,9 +173,12 @@ public sealed class ImportPipeline(
         {
             await Console.Error.WriteLineAsync($"erro ao importar {request.ArtistName} {request.Title}: {e.Message}");
 
-            return "import-failed";
+            return new ImportFailure("import-failed");
         }
     }
+
+    private static bool NeedsTranscode(List<string> files, string quality) =>
+        !files.All(file => Folders.MatchesQuality(file, quality)) && files.All(Folders.IsLosslessFile);
 
     private (string Directory, List<string> Files)? Resolve(SoulseekFolder folder)
     {
@@ -198,7 +214,7 @@ public sealed class ImportPipeline(
         }
     }
 
-    private void Quarantine(string directory, DownloadRequest request, string reason)
+    private string? Quarantine(string directory, DownloadRequest request, string reason)
     {
         try
         {
@@ -208,10 +224,14 @@ public sealed class ImportPipeline(
             File.WriteAllText(
                 $"{target}.reason.txt",
                 $"{request.ArtistName} - {request.Title}: {reason}{Environment.NewLine}");
+
+            return target;
         }
         catch (Exception e)
         {
             Console.Error.WriteLine($"erro ao mover para a quarentena {directory}: {e.Message}");
+
+            return null;
         }
     }
 

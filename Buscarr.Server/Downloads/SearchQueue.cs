@@ -77,7 +77,12 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
             return new SearchedRequest(request.Id, []);
         }
 
-        switch (result.Outcome)
+        var folders = await WithoutFailedSourcesAsync(request.Id, result.Folders);
+        var outcome = result.Outcome == AlbumSearchOutcome.Found && folders.Count == 0
+            ? AlbumSearchOutcome.NoMatchingFolder
+            : result.Outcome;
+
+        switch (outcome)
         {
             case AlbumSearchOutcome.Found:
                 request.State = DownloadState.Downloading;
@@ -99,7 +104,20 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
 
         await db.SaveChangesAsync();
 
-        return new SearchedRequest(request.Id, result.Folders);
+        return new SearchedRequest(request.Id, folders);
+    }
+
+    private async Task<List<SoulseekFolder>> WithoutFailedSourcesAsync(int requestId, List<SoulseekFolder> folders)
+    {
+        if (folders.Count == 0)
+        {
+            return folders;
+        }
+
+        var failed = await db.FailedSources.Where(source => source.RequestId == requestId).ToListAsync();
+
+        return [.. folders.Where(folder =>
+            !failed.Any(source => source.Username == folder.Username && source.Directory == folder.Directory))];
     }
 
     private void NotFound(DownloadRequest request, string failure)

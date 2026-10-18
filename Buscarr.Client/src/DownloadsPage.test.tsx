@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Download } from './api';
+import type { Download, QuarantinedAlbum } from './api';
 import { DownloadsPage } from './DownloadsPage';
 import { mockFetch } from './test-utils';
 
@@ -45,6 +45,19 @@ function download(overrides: Partial<Download>): Download {
     bytesTotal: 0,
     placeInQueue: null,
     username: null,
+    ...overrides,
+  };
+}
+
+function quarantined(overrides: Partial<QuarantinedAlbum> = {}): QuarantinedAlbum {
+  return {
+    id: 9,
+    artistName: 'Nirvana',
+    title: 'Nevermind',
+    reason: 'fake-audio',
+    username: 'fulano',
+    at: '2026-10-18T12:00:00Z',
+    canImport: true,
     ...overrides,
   };
 }
@@ -117,6 +130,7 @@ describe('DownloadsPage', () => {
   it('cancela um download e não o deixa voltar', async () => {
     const fetchMock = mockFetch(
       { status: 200, body: [download({ state: 'waiting' })] },
+      { status: 200, body: [] },
       { status: 204 },
     );
     renderPage();
@@ -124,8 +138,8 @@ describe('DownloadsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
 
     expect(await screen.findByText('Cancelado')).toBeDefined();
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/downloads/1/cancel');
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+    const call = fetchMock.mock.calls.find((args) => args[0] === '/api/downloads/1/cancel');
+    expect(call?.[1]).toMatchObject({ method: 'POST' });
   });
 
   it('mostra todos os artistas creditados na faixa, completos ao passar o mouse', async () => {
@@ -161,6 +175,8 @@ describe('DownloadsPage', () => {
   it('tenta de novo um download que falhou', async () => {
     const fetchMock = mockFetch(
       { status: 200, body: [download({ state: 'failed', failure: 'stalled', nextAttemptAt: '2999-01-01T12:00:00Z' })] },
+      { status: 200, body: [] },
+      { status: 200, body: [] },
       { status: 204 },
     );
     renderPage();
@@ -168,8 +184,8 @@ describe('DownloadsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tentar agora' }));
 
     expect(await screen.findByText('Aguardando busca')).toBeDefined();
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/downloads/1/retry');
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+    const call = fetchMock.mock.calls.find((args) => args[0] === '/api/downloads/1/retry');
+    expect(call?.[1]).toMatchObject({ method: 'POST' });
   });
 
   it('não oferece tentar de novo durante o download', async () => {
@@ -183,6 +199,7 @@ describe('DownloadsPage', () => {
 
   it('refaz a busca quando o SSE cai', async () => {
     mockFetch(
+      { status: 200, body: [] },
       { status: 200, body: [] },
       { status: 200, body: [download({ state: 'downloaded' })] },
     );
@@ -201,5 +218,71 @@ describe('DownloadsPage', () => {
     renderPage();
 
     expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
+  });
+
+  it('mostra a quarentena com o motivo e as ações', async () => {
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [quarantined()] },
+    );
+    renderPage();
+
+    expect(await screen.findByText('Quarentena')).toBeDefined();
+    expect(screen.getByText('Nevermind')).toBeDefined();
+    expect(screen.getByText('a qualidade anunciada é falsa')).toBeDefined();
+    expect(screen.getByText('de fulano')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Importar mesmo assim' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Descartar' })).toBeDefined();
+  });
+
+  it('esconde a quarentena quando está vazia', async () => {
+    mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
+    renderPage();
+    await screen.findByText('Nenhum download ainda. Adicione artistas à lista.');
+
+    expect(screen.queryByText('Quarentena')).toBeNull();
+  });
+
+  it('importa mesmo assim e tira o álbum da quarentena', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [quarantined()] },
+      { status: 204 },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Importar mesmo assim' }));
+
+    await waitFor(() => expect(screen.queryByText('Quarentena')).toBeNull());
+    const call = fetchMock.mock.calls.find((args) => args[0] === '/api/quarantine/9/import');
+    expect(call?.[1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('descarta os arquivos da quarentena', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [quarantined()] },
+      { status: 204 },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
+
+    await waitFor(() => expect(screen.queryByText('Quarentena')).toBeNull());
+    const call = fetchMock.mock.calls.find((args) => args[0] === '/api/quarantine/9');
+    expect(call?.[1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('não oferece importar quando o pedido já não existe', async () => {
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [quarantined({ canImport: false })] },
+    );
+    renderPage();
+
+    await screen.findByText('Quarentena');
+
+    expect(screen.queryByRole('button', { name: 'Importar mesmo assim' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Descartar' })).toBeDefined();
   });
 });

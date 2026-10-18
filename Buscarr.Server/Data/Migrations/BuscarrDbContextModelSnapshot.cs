@@ -112,6 +112,76 @@ namespace Buscarr.Server.Data.Migrations
                     b.ToTable("DownloadRequests");
                 });
 
+            modelBuilder.Entity("Buscarr.Server.Downloads.FailedSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Directory")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId", "Username", "Directory")
+                        .IsUnique();
+
+                    b.ToTable("FailedSources");
+                });
+
+            modelBuilder.Entity("Buscarr.Server.Import.QuarantinedAlbum", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ArtistName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("At")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId");
+
+                    b.ToTable("QuarantinedAlbums");
+                });
+
             modelBuilder.Entity("Buscarr.Server.Lists.ListedArtist", b =>
                 {
                     b.Property<int>("UserId")
@@ -240,6 +310,23 @@ namespace Buscarr.Server.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Buscarr.Server.Downloads.FailedSource", b =>
+                {
+                    b.HasOne("Buscarr.Server.Downloads.DownloadRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Buscarr.Server.Import.QuarantinedAlbum", b =>
+                {
+                    b.HasOne("Buscarr.Server.Downloads.DownloadRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Buscarr.Server.Lists.ListedArtist", b =>

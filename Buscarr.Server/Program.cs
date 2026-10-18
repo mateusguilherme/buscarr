@@ -95,6 +95,7 @@ app.MapSettingsEndpoints();
 app.MapServerSettingsEndpoints();
 app.MapListEndpoints();
 app.MapDownloadEndpoints();
+app.MapQuarantineEndpoints();
 app.Map("/api/{**path}", () => Results.NotFound());
 app.MapFallbackToFile("index.html");
 

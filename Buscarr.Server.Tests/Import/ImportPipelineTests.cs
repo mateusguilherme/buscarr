@@ -207,6 +207,32 @@ public sealed class ImportPipelineTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_RecordsTheRejectedFolderForTheRetriesAndTheQuarantine()
+    {
+        var request = await AddRequestAsync();
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+
+        foreach (var file in Directory.GetFiles(local))
+        {
+            _tools.Probe(file, new AudioProbe("mp3", 320_000, 44_100, null, 0.1));
+            _tools.Levels(file, new SpectralLevels(-10, -100, -112, -118));
+        }
+
+        _runner.Start(request.Id, [Folder(false)]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        var source = Assert.Single(await FailedSourcesAsync());
+        Assert.Equal(
+            (request.Id, "fulano", @"@@fulano\Nirvana\Nevermind"),
+            (source.RequestId, source.Username, source.Directory));
+        var quarantined = Assert.Single(await QuarantinedRowsAsync());
+        Assert.Equal(
+            (request.Id, "Nirvana", "Nevermind", "fake-audio", "fulano"),
+            (quarantined.RequestId, quarantined.ArtistName, quarantined.Title, quarantined.Reason, quarantined.Username));
+        Assert.True(Directory.Exists(quarantined.Path));
+    }
+
+    [Fact]
     public async Task Start_FailsWhenTheTranscodeFails()
     {
         var request = await AddRequestAsync();
@@ -297,20 +323,155 @@ public sealed class ImportPipelineTests : IDisposable
         Assert.Equal("missing-files", (await RequestAsync(request.Id)).Failure);
     }
 
+    [Fact]
+    public async Task StartImport_RecordsTheRejectedSourceOfAReimport()
+    {
+        var request = await AddRequestAsync(DownloadState.Downloaded, @"@@fulano\Nirvana\Nevermind", "fulano");
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+
+        foreach (var file in Directory.GetFiles(local))
+        {
+            _tools.Probe(file, new AudioProbe("mp3", 320_000, 44_100, null, 0.1));
+            _tools.Levels(file, new SpectralLevels(-10, -100, -112, -118));
+        }
+
+        _runner.StartImport(request.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        var source = Assert.Single(await FailedSourcesAsync());
+        Assert.Equal(("fulano", @"@@fulano\Nirvana\Nevermind"), (source.Username, source.Directory));
+        Assert.Single(await QuarantinedRowsAsync());
+    }
+
+    [Fact]
+    public async Task StartQuarantineImport_ImportsTheFolderWithoutVerifyingAgain()
+    {
+        var request = await AddRequestAsync(DownloadState.Failed);
+        var quarantined = await AddQuarantinedAsync(request.Id, StageQuarantinedFolder("silence.mp3", ".mp3"));
+
+        _runner.StartQuarantineImport(request.Id, quarantined.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        var album = Path.Combine(_library, "Nirvana", "Nevermind");
+        Assert.Equal(
+            ["01 Smells Like Teen Spirit.mp3", "02 In Bloom.mp3", "03 Territorial Pissings.mp3", "cover.jpg"],
+            Directory.GetFiles(album).Select(Path.GetFileName).Order());
+        Assert.False(Directory.Exists(quarantined.Path));
+        Assert.False(File.Exists($"{quarantined.Path}.reason.txt"));
+        Assert.Empty(await QuarantinedRowsAsync());
+    }
+
+    [Fact]
+    public async Task StartQuarantineImport_FailsWhenTheFolderIsGone()
+    {
+        var request = await AddRequestAsync(DownloadState.Failed);
+        var quarantined = await AddQuarantinedAsync(request.Id, Path.Combine(_rejected, "sumiu"));
+
+        _runner.StartQuarantineImport(request.Id, quarantined.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("missing-files", (await RequestAsync(request.Id)).Failure);
+        Assert.Single(await QuarantinedRowsAsync());
+    }
+
+    [Fact]
+    public async Task StartQuarantineImport_RefusesAFolderWithTheWrongTrackCount()
+    {
+        var request = await AddRequestAsync(DownloadState.Failed);
+        var quarantined = await AddQuarantinedAsync(request.Id, StageQuarantinedFolder("silence.mp3", ".mp3", 2));
+
+        _runner.StartQuarantineImport(request.Id, quarantined.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("wrong-tracks", (await RequestAsync(request.Id)).Failure);
+        Assert.True(Directory.Exists(quarantined.Path));
+        Assert.Single(await QuarantinedRowsAsync());
+    }
+
+    [Fact]
+    public async Task StartQuarantineImport_SeesThatALosslessFolderNeedsTranscoding()
+    {
+        var request = await AddRequestAsync(DownloadState.Failed);
+        var quarantined = await AddQuarantinedAsync(request.Id, StageQuarantinedFolder("silence.flac", ".flac"));
+        _tools.TranscodeFails = true;
+
+        _runner.StartQuarantineImport(request.Id, quarantined.Id);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Failed);
+
+        Assert.Equal("transcode-failed", (await RequestAsync(request.Id)).Failure);
+        Assert.NotEmpty(_tools.Transcoded);
+        Assert.Single(await QuarantinedRowsAsync());
+    }
+
     private async Task<DownloadRequest> AddRequestAsync(
         DownloadState state = DownloadState.Downloading,
-        string? directory = null)
+        string? directory = null,
+        string? username = null)
     {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
         var request = DownloadRequestTests.Request(trackCount: 3);
         request.State = state;
         request.Directory = directory;
+        request.Username = username;
         request.CoverUrl = "https://coverartarchive.org/release/r1/front-250";
         db.DownloadRequests.Add(request);
         await db.SaveChangesAsync();
 
         return request;
+    }
+
+    private async Task<QuarantinedAlbum> AddQuarantinedAsync(int requestId, string path)
+    {
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+        var quarantined = new QuarantinedAlbum
+        {
+            RequestId = requestId,
+            ArtistName = "Nirvana",
+            Title = "Nevermind",
+            Reason = "fake-audio",
+            Path = path,
+            Username = "fulano",
+            At = _time.GetUtcNow(),
+        };
+        db.QuarantinedAlbums.Add(quarantined);
+        await db.SaveChangesAsync();
+
+        return quarantined;
+    }
+
+    private async Task<List<FailedSource>> FailedSourcesAsync()
+    {
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+
+        return await db.FailedSources.AsNoTracking().ToListAsync();
+    }
+
+    private async Task<List<QuarantinedAlbum>> QuarantinedRowsAsync()
+    {
+        using var scope = _provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+
+        return await db.QuarantinedAlbums.AsNoTracking().ToListAsync();
+    }
+
+    private string StageQuarantinedFolder(string fixture, string extension, int count = 3)
+    {
+        var target = Path.Combine(_rejected, $"Nevermind-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(target);
+
+        for (var track = 1; track <= count; track++)
+        {
+            File.Copy(
+                Path.Combine(AppContext.BaseDirectory, "Import", "fixtures", fixture),
+                Path.Combine(target, $"{track:00}{extension}"));
+        }
+
+        File.WriteAllText($"{target}.reason.txt", "Nirvana - Nevermind: fake-audio\n");
+
+        return target;
     }
 
     private string StageLocalFolder(string fixture, string extension)

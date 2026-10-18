@@ -46,6 +46,20 @@ public sealed class DownloadRunner(
         _ = ReimportAsync(requestId, cancellation.Token);
     }
 
+    public void StartQuarantineImport(int requestId, int quarantineId)
+    {
+        var cancellation = new CancellationTokenSource();
+
+        if (!_running.TryAdd(requestId, cancellation))
+        {
+            cancellation.Dispose();
+
+            return;
+        }
+
+        _ = QuarantineImportAsync(requestId, quarantineId, cancellation.Token);
+    }
+
     public void Cancel(int requestId)
     {
         if (_running.TryGetValue(requestId, out var cancellation))
@@ -66,7 +80,17 @@ public sealed class DownloadRunner(
                 var tracks = snapshot is null ? null : await pipeline.TracksAsync(snapshot);
                 var verify = tracks is null
                     ? null
-                    : (Func<SoulseekFolder, Task<string?>>)(folder => pipeline.VerifyAsync(snapshot!, tracks, folder));
+                    : (Func<SoulseekFolder, Task<string?>>)(async folder =>
+                    {
+                        var rejection = await pipeline.VerifyAsync(snapshot!, tracks, folder);
+
+                        if (rejection is { Rejected: true })
+                        {
+                            RecordRejection(requestId, snapshot!, folder.Username, folder.Directory, rejection);
+                        }
+
+                        return rejection?.Reason;
+                    });
                 var result = await download.DownloadAsync(
                     folders,
                     new RowProgress(this, requestId),
@@ -78,7 +102,7 @@ public sealed class DownloadRunner(
                 if (importing)
                 {
                     var failure = await pipeline.ImportAsync(snapshot!, tracks!, result.Folder!);
-                    Persist(requestId, request => FinishImport(request, failure));
+                    Persist(requestId, request => FinishImport(request, failure?.Reason));
                 }
             }
             finally
@@ -124,8 +148,16 @@ public sealed class DownloadRunner(
                 }
 
                 var tracks = await pipeline.TracksAsync(snapshot);
-                var failure = tracks is null ? "import-failed" : await pipeline.ReimportAsync(snapshot, tracks);
-                Persist(requestId, request => FinishImport(request, failure));
+                var failure = tracks is null
+                    ? new ImportFailure("import-failed")
+                    : await pipeline.ReimportAsync(snapshot, tracks);
+
+                if (failure is { Rejected: true })
+                {
+                    RecordRejection(requestId, snapshot, snapshot.Username, snapshot.Directory, failure);
+                }
+
+                Persist(requestId, request => FinishImport(request, failure?.Reason));
             }
             finally
             {
@@ -140,6 +172,59 @@ public sealed class DownloadRunner(
         {
             await Console.Error.WriteLineAsync($"erro ao importar o pedido {requestId}: {e.Message}");
             Persist(requestId, request => request.State = DownloadState.Downloaded);
+        }
+        finally
+        {
+            if (_running.TryRemove(requestId, out var finished))
+            {
+                finished.Dispose();
+            }
+        }
+    }
+
+    private async Task QuarantineImportAsync(int requestId, int quarantineId, CancellationToken cancellation)
+    {
+        try
+        {
+            await _slots.WaitAsync(cancellation);
+
+            try
+            {
+                var snapshot = await SnapshotAsync(requestId);
+
+                if (snapshot is null)
+                {
+                    return;
+                }
+
+                var quarantined = await QuarantinedAsync(quarantineId);
+                var tracks = quarantined is null ? null : await pipeline.TracksAsync(snapshot);
+                var failure = quarantined is null
+                    ? new ImportFailure("missing-files")
+                    : tracks is null
+                        ? new ImportFailure("import-failed")
+                        : await pipeline.ImportQuarantinedAsync(snapshot, tracks, quarantined.Path);
+
+                if (failure is null)
+                {
+                    RemoveQuarantined(quarantineId);
+                }
+
+                Persist(requestId, request => FinishImport(request, failure?.Reason));
+            }
+            finally
+            {
+                _slots.Release();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Persist(requestId, request => request.State = DownloadState.Cancelled);
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao importar a quarentena {quarantineId}: {e.Message}");
+            Persist(requestId, request => FinishImport(request, "import-failed"));
         }
         finally
         {
@@ -197,6 +282,83 @@ public sealed class DownloadRunner(
         var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
 
         return await db.DownloadRequests.AsNoTracking().SingleOrDefaultAsync(r => r.Id == requestId);
+    }
+
+    private async Task<QuarantinedAlbum?> QuarantinedAsync(int quarantineId)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+
+        return await db.QuarantinedAlbums.AsNoTracking().SingleOrDefaultAsync(q => q.Id == quarantineId);
+    }
+
+    private void RecordRejection(
+        int requestId,
+        DownloadRequest snapshot,
+        string? username,
+        string? directory,
+        ImportFailure rejection)
+    {
+        lock (_writing)
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+
+            if (!db.DownloadRequests.Any(r => r.Id == requestId))
+            {
+                return;
+            }
+
+            if (username is not null
+                && directory is not null
+                && !db.FailedSources.Any(s => s.RequestId == requestId && s.Username == username && s.Directory == directory))
+            {
+                db.FailedSources.Add(new FailedSource { RequestId = requestId, Username = username, Directory = directory });
+            }
+
+            if (rejection.QuarantinePath is not null)
+            {
+                db.QuarantinedAlbums.Add(new QuarantinedAlbum
+                {
+                    RequestId = requestId,
+                    ArtistName = snapshot.ArtistName,
+                    Title = snapshot.Title,
+                    Reason = rejection.Reason,
+                    Path = rejection.QuarantinePath,
+                    Username = username,
+                    At = time.GetUtcNow(),
+                });
+            }
+
+            db.SaveChanges();
+        }
+    }
+
+    private void RemoveQuarantined(int quarantineId)
+    {
+        lock (_writing)
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+            var quarantined = db.QuarantinedAlbums.SingleOrDefault(q => q.Id == quarantineId);
+
+            if (quarantined is null)
+            {
+                return;
+            }
+
+            db.QuarantinedAlbums.Remove(quarantined);
+            db.SaveChanges();
+
+            try
+            {
+                File.Delete($"{quarantined.Path}.reason.txt");
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"erro ao apagar o motivo da quarentena {quarantined.Path}: {e.Message}");
+            }
+        }
     }
 
     private void Report(int requestId, DownloadProgress value) =>

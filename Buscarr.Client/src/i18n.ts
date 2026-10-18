@@ -16,6 +16,9 @@ const ptBR = {
     downloadsError: (status: number) => `Erro ${status} ao carregar os downloads.`,
     cancelDownloadError: (status: number) => `Erro ${status} ao cancelar o download.`,
     retryDownloadError: (status: number) => `Erro ${status} ao tentar de novo.`,
+    quarantineError: (status: number) => `Erro ${status} ao carregar a quarentena.`,
+    importQuarantinedError: (status: number) => `Erro ${status} ao importar o álbum.`,
+    discardQuarantinedError: (status: number) => `Erro ${status} ao descartar o álbum.`,
     serverSettingsError: (status: number) => `Erro ${status} ao carregar as configurações do servidor.`,
     saveServerSettingsError: (status: number) => `Erro ${status} ao salvar as configurações do servidor.`,
     serverStatusError: (status: number) => `Erro ${status} ao testar as conexões.`,
@@ -197,6 +200,13 @@ const ptBR = {
       demo: 'Demo',
     } as Record<string, string>,
   },
+  quarantine: {
+    title: 'Quarentena',
+    hint: 'Álbuns recusados na verificação. Importe mesmo assim ou descarte os arquivos.',
+    importAnyway: 'Importar mesmo assim',
+    discard: 'Descartar',
+    from: (username: string) => `de ${username}`,
+  },
 };
 
 type Messages = typeof ptBR;
@@ -219,6 +229,9 @@ const en: Messages = {
     downloadsError: (status) => `Error ${status} loading the downloads.`,
     cancelDownloadError: (status) => `Error ${status} cancelling the download.`,
     retryDownloadError: (status) => `Error ${status} retrying the download.`,
+    quarantineError: (status) => `Error ${status} loading the quarantine.`,
+    importQuarantinedError: (status) => `Error ${status} importing the album.`,
+    discardQuarantinedError: (status) => `Error ${status} discarding the album.`,
     serverSettingsError: (status) => `Error ${status} loading the server settings.`,
     saveServerSettingsError: (status) => `Error ${status} saving the server settings.`,
     serverStatusError: (status) => `Error ${status} testing the connections.`,
@@ -399,6 +412,13 @@ const en: Messages = {
       remix: 'Remix',
       demo: 'Demo',
     } as Record<string, string>,
+  },
+  quarantine: {
+    title: 'Quarantine',
+    hint: 'Albums that failed verification. Import them anyway or discard the files.',
+    importAnyway: 'Import anyway',
+    discard: 'Discard',
+    from: (username) => `from ${username}`,
   },
 };
 

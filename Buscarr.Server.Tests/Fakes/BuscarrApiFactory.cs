@@ -158,6 +158,19 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                 "https://open.spotify.com/artist/sp-nirvana"));
         }
 
+        if (path == "/ws/2/release/r1")
+        {
+            return FakeHttpMessageHandler.Json(ReleaseWithTracks(
+                "r1",
+                "a1",
+                "g1",
+                LookupMedium(
+                    1,
+                    LookupTrack(1, "Smells Like Teen Spirit", null, "rec1"),
+                    LookupTrack(2, "In Bloom", null, "rec2"),
+                    LookupTrack(3, "Territorial Pissings", null, "rec3"))));
+        }
+
         return FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);
     }
 
