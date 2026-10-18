@@ -226,6 +226,27 @@ public class SlskdClientTests
     }
 
     [Fact]
+    public async Task RemoveDownloadAsync_RemovesTheTransferFromTheList()
+    {
+        var id = Guid.NewGuid();
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NoContent));
+
+        await client.RemoveDownloadAsync("fulano", id);
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Delete, request.Method);
+        Assert.Equal($"{Url}/api/v0/transfers/downloads/fulano/{id}?remove=true", request.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task RemoveDownloadAsync_IgnoresATransferThatIsAlreadyGone()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound));
+
+        await client.RemoveDownloadAsync("fulano", Guid.NewGuid());
+    }
+
+    [Fact]
     public async Task ReadsTheSettingsOnEveryCall()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Application(true, true)));

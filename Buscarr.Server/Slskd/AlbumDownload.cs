@@ -89,6 +89,8 @@ public sealed class AlbumDownload(SlskdClient slskd, TimeProvider time)
 
             if (states.All(state => state?.Transfer.State == Succeeded))
             {
+                await RemoveAsync(folder, states);
+
                 return null;
             }
 
@@ -135,9 +137,24 @@ public sealed class AlbumDownload(SlskdClient slskd, TimeProvider time)
 
     private async Task CancelAsync(SoulseekFolder folder, IEnumerable<FileState?> states)
     {
-        foreach (var state in states.OfType<FileState>().Where(state => !state.IsCompleted))
+        foreach (var state in states.OfType<FileState>())
         {
-            await slskd.CancelDownloadAsync(folder.Username, state.Transfer.Id);
+            if (state.IsFailed)
+            {
+                await slskd.RemoveDownloadAsync(folder.Username, state.Transfer.Id);
+            }
+            else if (!state.IsCompleted)
+            {
+                await slskd.CancelDownloadAsync(folder.Username, state.Transfer.Id);
+            }
+        }
+    }
+
+    private async Task RemoveAsync(SoulseekFolder folder, IEnumerable<FileState?> states)
+    {
+        foreach (var state in states.OfType<FileState>())
+        {
+            await slskd.RemoveDownloadAsync(folder.Username, state.Transfer.Id);
         }
     }
 

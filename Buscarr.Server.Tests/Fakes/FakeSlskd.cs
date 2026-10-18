@@ -31,6 +31,8 @@ public sealed class FakeSlskd
 
     public List<(string Username, string Filename)> Cancelled { get; } = [];
 
+    public List<(string Username, string Filename)> Removed { get; } = [];
+
     public void BusyFor(int starts) => _busyStarts = starts;
 
     public void Answer(string searchText, params object[] responses) =>
@@ -105,7 +107,8 @@ public sealed class FakeSlskd
 
         if (request.Method == HttpMethod.Delete)
         {
-            Cancelled.Add((username, _known[username].Single(file => file.Id == id).Filename));
+            var list = request.RequestUri!.Query.Contains("remove=true") ? Removed : Cancelled;
+            list.Add((username, _known[username].Single(file => file.Id == id).Filename));
 
             return FakeHttpMessageHandler.Status(HttpStatusCode.NoContent);
         }

@@ -37,6 +37,35 @@ public class AlbumDownloadTests
     }
 
     [Fact]
+    public async Task DownloadAsync_RemovesTheTransfersFromSlskdAfterTheFolderArrives()
+    {
+        var folder = Folder("fulano");
+
+        var result = await DownloadAsync(folder);
+
+        Assert.Equal(AlbumDownloadOutcome.Downloaded, result.Outcome);
+        Assert.Equal(folder.Files.Select(file => ("fulano", file.Filename)), _slskd.Removed);
+        Assert.Empty(_slskd.Cancelled);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_RemovesTheFailedTransfersWhenGivingUpOnAFolder()
+    {
+        var rejected = Folder("fulano");
+        var next = Folder("beltrano");
+        _slskd.Peer("fulano", (_, file) => file.EndsWith("02.mp3") ? new("Completed, Rejected") : new("InProgress", 100));
+
+        await DownloadAsync(rejected, next);
+
+        Assert.Equal(
+            [("fulano", rejected.Files[1].Filename), .. next.Files.Select(file => ("beltrano", file.Filename))],
+            _slskd.Removed);
+        Assert.Equal(
+            [("fulano", rejected.Files[0].Filename), ("fulano", rejected.Files[2].Filename)],
+            _slskd.Cancelled);
+    }
+
+    [Fact]
     public async Task DownloadAsync_ReportsTheTracksDoneTheBytesAndThePlaceInThePeersQueue()
     {
         var folder = Folder("fulano");

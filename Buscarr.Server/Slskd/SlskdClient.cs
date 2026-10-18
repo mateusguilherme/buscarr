@@ -95,9 +95,15 @@ public sealed class SlskdClient(HttpClient http, Func<ServerSettings> settings)
         return [.. user.Directories.SelectMany(directory => directory.Files)];
     }
 
-    public async Task CancelDownloadAsync(string username, Guid id)
+    public Task CancelDownloadAsync(string username, Guid id) =>
+        DeleteDownloadAsync($"{Downloads(username)}/{id}");
+
+    public Task RemoveDownloadAsync(string username, Guid id) =>
+        DeleteDownloadAsync($"{Downloads(username)}/{id}?remove=true");
+
+    private async Task DeleteDownloadAsync(string path)
     {
-        using var request = Request(HttpMethod.Delete, $"{Downloads(username)}/{id}");
+        using var request = Request(HttpMethod.Delete, path);
         using var response = await http.SendAsync(request);
 
         if (response.StatusCode != HttpStatusCode.NotFound)
