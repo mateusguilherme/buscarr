@@ -44,6 +44,7 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             request.HasIndex(r => new { r.ReleaseGroupId, r.TrackCount, r.Quality }).IsUnique();
             request.Property(r => r.ArtistId).HasMaxLength(36);
             request.Property(r => r.ArtistName).HasMaxLength(256);
+            request.Property(r => r.Credit).HasMaxLength(1024);
             request.Property(r => r.ReleaseGroupId).HasMaxLength(36);
             request.Property(r => r.Title).HasMaxLength(512);
             request.Property(r => r.Type).HasMaxLength(32);

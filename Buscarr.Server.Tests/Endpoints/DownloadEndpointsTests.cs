@@ -64,6 +64,7 @@ public sealed class DownloadEndpointsTests
         await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = Request("g1", DownloadState.Downloading);
+        request.Credit = "Maru2D & Nirvana";
         request.Failure = null;
         request.TracksDone = 7;
         request.BytesTransferred = 70;
@@ -80,6 +81,7 @@ public sealed class DownloadEndpointsTests
             new DownloadItem(
                 request.Id,
                 "Nirvana",
+                "Maru2D & Nirvana",
                 "Nevermind",
                 "album",
                 "https://coverartarchive.org/release/r1/front-250",
@@ -95,6 +97,18 @@ public sealed class DownloadEndpointsTests
                 3,
                 "fulano"),
             download);
+    }
+
+    [Fact]
+    public async Task GetDownloads_FallsBackToTheArtistNameWithoutACredit()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        await SeedAsync(factory, Request("g1", DownloadState.Waiting));
+
+        var downloads = await client.GetFromJsonAsync<List<DownloadItem>>("/api/downloads");
+
+        Assert.Equal("Nirvana", Assert.Single(downloads!).Credit);
     }
 
     [Fact]

@@ -10,6 +10,7 @@ namespace Buscarr.Server.Endpoints;
 public record DownloadItem(
     int Id,
     string ArtistName,
+    string Credit,
     string Title,
     string Type,
     string? CoverUrl,
@@ -152,6 +153,7 @@ public static class DownloadEndpoints
         new(
             request.Id,
             request.ArtistName,
+            request.Credit ?? request.ArtistName,
             request.Title,
             request.Type,
             request.CoverUrl,

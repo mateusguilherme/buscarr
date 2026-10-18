@@ -18,6 +18,7 @@ public class DownloadRequest
     public int Id { get; init; }
     public required string ArtistId { get; init; }
     public required string ArtistName { get; init; }
+    public string? Credit { get; set; }
     public required string ReleaseGroupId { get; init; }
     public required string Title { get; init; }
     public required string Type { get; init; }

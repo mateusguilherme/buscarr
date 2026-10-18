@@ -381,6 +381,43 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_StoresTheFullCreditOfTheRelease()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            2,
+            WithArtistCredit(
+                WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: true), ("CD", 1)),
+                "Maru2D",
+                "Nirvana"),
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: true), ("CD", 12)));
+
+        await _generator.GenerateAsync();
+
+        var requests = await _db.DownloadRequests.OrderBy(r => r.ReleaseGroupId).ToListAsync();
+        Assert.Equal(["Maru2D & Nirvana", "Nirvana"], requests.Select(r => r.Credit));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FillsTheCreditOfAnExistingRequest()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithArtistCredit(
+                WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: true), ("CD", 12)),
+                "Maru2D",
+                "Nirvana"));
+        _db.DownloadRequests.Add(Request("g1", trackCount: 12, state: DownloadState.NotFound));
+        await _db.SaveChangesAsync();
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("Maru2D & Nirvana", request.Credit);
+    }
+
+    [Fact]
     public async Task GenerateAsync_FillsTheCoverOfAnExistingRequest()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);

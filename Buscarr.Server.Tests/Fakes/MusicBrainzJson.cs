@@ -57,7 +57,12 @@ public static class MusicBrainzJson
 
     public static Dictionary<string, object> WithArtistCredit(Dictionary<string, object> release, params string[] names)
     {
-        release["artist-credit"] = names.Select(name => new { name, artist = new { id = name, name } });
+        release["artist-credit"] = names.Select((name, index) => new
+        {
+            name,
+            joinphrase = index == names.Length - 1 ? "" : index == names.Length - 2 ? " & " : ", ",
+            artist = new { id = name, name },
+        });
 
         return release;
     }

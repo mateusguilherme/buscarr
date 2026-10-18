@@ -30,6 +30,7 @@ function download(overrides: Partial<Download>): Download {
   return {
     id: 1,
     artistName: 'Nirvana',
+    credit: 'Nirvana',
     title: 'Nevermind',
     type: 'album',
     coverUrl: null,
@@ -70,7 +71,13 @@ describe('DownloadsPage', () => {
     FakeEventSource.instances[0].emit([
       download({ id: 1, state: 'downloading', tracksDone: 7, bytesTransferred: 70, bytesTotal: 120 }),
       download({ id: 2, title: 'In Utero', state: 'downloading', placeInQueue: 3 }),
-      download({ id: 3, title: 'Bleach', state: 'not-found', failure: 'no-matching-folder' }),
+      download({
+        id: 3,
+        title: 'Bleach',
+        state: 'not-found',
+        failure: 'no-matching-folder',
+        nextAttemptAt: '2999-01-01T12:00:00Z',
+      }),
       download({ id: 4, title: 'Incesticide', state: 'downloaded' }),
       download({ id: 5, title: 'Unplugged', state: 'failed', failure: 'refused' }),
       download({ id: 6, title: 'Hormoaning', state: 'cancelled' }),
@@ -80,12 +87,13 @@ describe('DownloadsPage', () => {
 
     expect(await screen.findByText('Baixando 7/12')).toBeDefined();
     expect(screen.getByText('Na fila do peer (posição 3)')).toBeDefined();
-    expect(screen.getByText(/Nenhuma pasta serve · Próxima tentativa em/)).toBeDefined();
+    expect(screen.getByText('Nenhuma pasta serve')).toBeDefined();
     expect(screen.getByText('Baixado')).toBeDefined();
     expect(screen.getByText('Falhou: o peer recusou')).toBeDefined();
     expect(screen.getByText('Cancelado')).toBeDefined();
     expect(screen.getByText('verifying')).toBeDefined();
-    expect(screen.getByText(/^Próxima tentativa em/)).toBeDefined();
+    expect(screen.getByText('Aguardando busca')).toBeDefined();
+    expect(screen.getAllByText(/^Próxima tentativa em/)).toHaveLength(3);
   });
 
   it('mostra os estados e as razões do import', async () => {
@@ -118,6 +126,19 @@ describe('DownloadsPage', () => {
     expect(await screen.findByText('Cancelado')).toBeDefined();
     expect(fetchMock.mock.calls[1][0]).toBe('/api/downloads/1/cancel');
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('mostra todos os artistas creditados na faixa, completos ao passar o mouse', async () => {
+    mockFetch({
+      status: 200,
+      body: [download({ title: 'Do Corre', credit: 'Maru2D, AJULLIACOSTA, NADAMAL & DJ LN' })],
+    });
+    renderPage();
+
+    const credit = await screen.findByText('Maru2D, AJULLIACOSTA, NADAMAL & DJ LN');
+    expect(credit.getAttribute('title')).toBe('Maru2D, AJULLIACOSTA, NADAMAL & DJ LN');
+    expect(screen.getByText('Do Corre').getAttribute('title')).toBe('Do Corre');
+    expect(screen.queryByText('Nirvana')).toBeNull();
   });
 
   it('tenta de novo um download que falhou', async () => {

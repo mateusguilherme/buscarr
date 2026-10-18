@@ -378,6 +378,23 @@ button {
   overflow-wrap: anywhere;
 }
 
+.artist-meta .credit {
+  min-width: 0;
+  max-width: 18rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 0.875rem;
+}
+
+.release-title {
+  display: block;
+  max-width: 18rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .chip {
   display: inline-flex;
   align-items: center;
@@ -570,6 +587,30 @@ button {
   margin: 0.25rem 0 0;
   font-size: 0.875rem;
   color: var(--muted);
+}
+
+.download-side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  margin-left: auto;
+  text-align: right;
+}
+
+.download-side .download-state {
+  margin: 0;
+}
+
+.download-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.artist-card > .alert {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .progress {

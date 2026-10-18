@@ -125,6 +125,7 @@ public sealed class RequestGenerator(
             foreach (var request in existing[key])
             {
                 request.CoverUrl = coverUrl ?? request.CoverUrl;
+                request.Credit = album.First.CreditedAs ?? artist.Name;
             }
 
             return;
@@ -134,6 +135,7 @@ public sealed class RequestGenerator(
         {
             ArtistId = artist.ArtistId,
             ArtistName = artist.Name,
+            Credit = album.First.CreditedAs ?? artist.Name,
             ReleaseGroupId = album.First.ReleaseGroup!.Id!,
             Title = album.First.Title,
             Type = category,

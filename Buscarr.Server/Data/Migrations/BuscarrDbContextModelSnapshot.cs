@@ -45,6 +45,10 @@ namespace Buscarr.Server.Data.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Credit")
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Directory")
                         .HasMaxLength(1024)
                         .HasColumnType("TEXT");

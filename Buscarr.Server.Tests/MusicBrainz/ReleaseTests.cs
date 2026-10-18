@@ -177,6 +177,29 @@ public class ReleaseTests
     }
 
     [Fact]
+    public void CreditedAs_JoinsTheCreditsWithTheirPhrases()
+    {
+        var release = new Release
+        {
+            Title = "Do Corre",
+            ArtistCredit =
+            [
+                new ArtistCredit { Name = "Maru2D", JoinPhrase = ", " },
+                new ArtistCredit { Name = "AJULLIACOSTA", JoinPhrase = " & " },
+                new ArtistCredit { Name = "DJ LN" },
+            ],
+        };
+
+        Assert.Equal("Maru2D, AJULLIACOSTA & DJ LN", release.CreditedAs);
+    }
+
+    [Fact]
+    public void CreditedAs_IsNullWithoutCredits()
+    {
+        Assert.Null(new Release { Title = "Do Corre" }.CreditedAs);
+    }
+
+    [Fact]
     public void CreditedArtists_ListsEveryCreditedNameInOrder()
     {
         var release = new Release

@@ -221,6 +221,7 @@ export async function getServerStatus(): Promise<ServerStatus> {
 export type Download = {
   id: number;
   artistName: string;
+  credit: string;
   title: string;
   type: string;
   coverUrl: string | null;

@@ -47,16 +47,11 @@ function failureLabel(failure: string | null): string {
 function stateLabel(download: Download): string {
   switch (download.state) {
     case 'waiting':
-      return new Date(download.nextAttemptAt).getTime() > Date.now()
-        ? t.downloads.nextAttempt(when(download.nextAttemptAt))
-        : t.downloads.waiting;
+      return t.downloads.waiting;
     case 'searching':
       return t.downloads.searching;
-    case 'not-found': {
-      const what = download.failure === 'no-matching-folder' ? t.downloads.noMatchingFolder : t.downloads.notFound;
-
-      return `${what} · ${t.downloads.nextAttempt(when(download.nextAttemptAt))}`;
-    }
+    case 'not-found':
+      return download.failure === 'no-matching-folder' ? t.downloads.noMatchingFolder : t.downloads.notFound;
     case 'downloading':
       return download.placeInQueue != null
         ? t.downloads.inQueue(download.placeInQueue)
@@ -74,6 +69,18 @@ function stateLabel(download: Download): string {
     default:
       return download.state;
   }
+}
+
+function nextAttemptLabel(download: Download): string | undefined {
+  if (download.state === 'not-found' || download.state === 'failed') {
+    return t.downloads.nextAttempt(when(download.nextAttemptAt));
+  }
+
+  if (download.state === 'waiting' && new Date(download.nextAttemptAt).getTime() > Date.now()) {
+    return t.downloads.nextAttempt(when(download.nextAttemptAt));
+  }
+
+  return undefined;
 }
 
 export function DownloadItem({
@@ -128,36 +135,53 @@ export function DownloadItem({
         )}
       </span>
       <div className="artist-info">
-        <span className="artist-name">{download.title}</span>
+        <span className="artist-name release-title" title={download.title}>
+          {download.title}
+        </span>
         <div className="artist-meta">
-          <span>{download.artistName}</span>
+          <span className="credit" title={download.credit}>
+            {download.credit}
+          </span>
+        </div>
+        <div className="artist-meta">
           <span className="chip">{t.downloads.types[download.type] ?? download.type}</span>
           <span>{t.downloads.tracks(download.trackCount)}</span>
         </div>
-        <p className="download-state">{stateLabel(download)}</p>
-        {download.state === 'downloading' && download.bytesTotal > 0 && (
-          <div className="progress">
-            <div
-              className="progress-fill"
-              style={{ width: `${Math.round((download.bytesTransferred / download.bytesTotal) * 100)}%` }}
-            />
+      </div>
+      <div className="download-side">
+        {(retryable(download) || cancellable.includes(download.state)) && (
+          <div className="download-actions">
+            {retryable(download) && (
+              <button className="button-ghost button-small" disabled={retrying} onClick={handleRetry}>
+                {t.downloads.retry}
+              </button>
+            )}
+            {cancellable.includes(download.state) && (
+              <button
+                className="button-ghost button-danger button-small"
+                disabled={cancelling}
+                onClick={handleCancel}
+              >
+                {t.downloads.cancel}
+              </button>
+            )}
           </div>
         )}
-        {error && (
-          <p className="alert" role="alert">
-            {error}
-          </p>
-        )}
+        <p className="download-state">{stateLabel(download)}</p>
+        {nextAttemptLabel(download) && <p className="download-state">{nextAttemptLabel(download)}</p>}
       </div>
-      {retryable(download) && (
-        <button className="button-ghost button-small" disabled={retrying} onClick={handleRetry}>
-          {t.downloads.retry}
-        </button>
+      {download.state === 'downloading' && download.bytesTotal > 0 && (
+        <div className="progress">
+          <div
+            className="progress-fill"
+            style={{ width: `${Math.round((download.bytesTransferred / download.bytesTotal) * 100)}%` }}
+          />
+        </div>
       )}
-      {cancellable.includes(download.state) && (
-        <button className="button-ghost button-danger button-small" disabled={cancelling} onClick={handleCancel}>
-          {t.downloads.cancel}
-        </button>
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
       )}
     </li>
   );

@@ -31,6 +31,11 @@ public sealed class Release
     public List<string> CreditedArtists =>
         [.. ArtistCredit.Select(credit => credit.Name ?? credit.Artist?.Name).OfType<string>()];
 
+    public string? CreditedAs =>
+        ArtistCredit.Count == 0
+            ? null
+            : string.Concat(ArtistCredit.Select(credit => $"{credit.Name ?? credit.Artist?.Name}{credit.JoinPhrase}"));
+
     public string? CoverUrl =>
         HasFrontCover
             ? $"{CoverArtArchiveUrl}/release/{Id}/front-250"
