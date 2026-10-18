@@ -617,6 +617,11 @@ button {
   background: var(--danger-soft);
 }
 
+.download-side .progress {
+  width: 12rem;
+  margin-top: 0.25rem;
+}
+
 .download-side .download-state {
   margin: 0;
 }

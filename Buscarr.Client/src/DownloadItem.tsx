@@ -174,15 +174,15 @@ export function DownloadItem({
         )}
         <p className="download-state">{stateLabel(download)}</p>
         {nextAttemptLabel(download) && <p className="download-state">{nextAttemptLabel(download)}</p>}
+        {download.state === 'downloading' && download.bytesTotal > 0 && (
+          <div className="progress">
+            <div
+              className="progress-fill"
+              style={{ width: `${Math.round((download.bytesTransferred / download.bytesTotal) * 100)}%` }}
+            />
+          </div>
+        )}
       </div>
-      {download.state === 'downloading' && download.bytesTotal > 0 && (
-        <div className="progress">
-          <div
-            className="progress-fill"
-            style={{ width: `${Math.round((download.bytesTransferred / download.bytesTotal) * 100)}%` }}
-          />
-        </div>
-      )}
       {error && (
         <p className="alert" role="alert">
           {error}
