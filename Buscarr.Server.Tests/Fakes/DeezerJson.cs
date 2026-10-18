@@ -28,12 +28,20 @@ public static class DeezerJson
     public static string Albums(params (string Artist, string Title, string Cover)[] albums) =>
         JsonSerializer.Serialize(new
         {
-            data = albums.Select(album => new
+            data = albums.Select((album, index) => new
             {
+                id = index + 1,
                 title = album.Title,
                 cover_medium = album.Cover,
                 artist = new { name = album.Artist },
             }),
             total = albums.Length,
+        });
+
+    public static string AlbumTracks(params int[] durations) =>
+        JsonSerializer.Serialize(new
+        {
+            data = durations.Select(duration => new { duration }),
+            total = durations.Length,
         });
 }

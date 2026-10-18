@@ -64,6 +64,35 @@ public sealed class DeezerClient(HttpClient http)
         }
     }
 
+    public async Task<IReadOnlyList<int>?> AlbumDurationsAsync(string artist, string album)
+    {
+        var query = Uri.EscapeDataString($"artist:\"{Term(artist)}\" album:\"{Term(album)}\"");
+
+        try
+        {
+            var search = await http.GetFromJsonAsync<AlbumSearch>($"{SearchUrl}?q={query}");
+            var match = search?.Albums
+                .FirstOrDefault(result =>
+                    Names.Normalize(result.Artist?.Name ?? "") == Names.Normalize(artist)
+                    && Names.Normalize(result.Title) == Names.Normalize(album));
+
+            if (match is null)
+            {
+                return null;
+            }
+
+            var tracks = await http.GetFromJsonAsync<AlbumTrackList>($"{AlbumUrl}/{match.Id}/tracks?limit=100");
+
+            return tracks is { Tracks.Count: > 0 } ? [.. tracks.Tracks.Select(track => track.Duration)] : null;
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar as durações de {artist} - {album} no Deezer: {e.Message}");
+
+            return null;
+        }
+    }
+
     private static string Term(string value) => value.Replace("\"", "");
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
@@ -90,12 +119,27 @@ public sealed class DeezerClient(HttpClient http)
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class AlbumResult
     {
+        public long Id { get; init; }
+
         public required string Title { get; init; }
 
         [JsonPropertyName("cover_medium")]
         public string? CoverMedium { get; init; }
 
         public AlbumArtist? Artist { get; init; }
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class AlbumTrackList
+    {
+        [JsonPropertyName("data")]
+        public List<AlbumTrack> Tracks { get; init; } = [];
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class AlbumTrack
+    {
+        public int Duration { get; init; }
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

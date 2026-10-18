@@ -1,4 +1,5 @@
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Import;
 using Buscarr.Server.MusicBrainz;
@@ -94,6 +95,8 @@ public sealed class ImportQueueTests : IDisposable
             musicBrainz,
             new FakeAudioTools(),
             new CoverArt(new HttpClient()),
+            new DeezerClient(new HttpClient(new FakeHttpMessageHandler(
+                _ => throw new HttpRequestException("não deveria ser chamado")))),
             new ImportOptions("/music", "/downloads", null));
     }
 }

@@ -52,6 +52,7 @@ builder.Services.AddSingleton(services =>
         services.GetRequiredService<MusicBrainzClient>(),
         services.GetRequiredService<IAudioTools>(),
         new CoverArt(new HttpClient { Timeout = TimeSpan.FromSeconds(30) }),
+        services.GetRequiredService<DeezerClient>(),
         () => settings().Import);
 });
 builder.Services.AddSingleton<DownloadRunner>();

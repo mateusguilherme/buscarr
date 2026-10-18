@@ -16,7 +16,8 @@ public sealed class AlbumVerifier(IAudioTools tools)
         IReadOnlyList<string> files,
         IReadOnlyList<ReleaseTrack> tracks,
         string quality,
-        bool needsTranscode)
+        bool needsTranscode,
+        Func<Task<IReadOnlyList<int>?>>? fallbackDurations = null)
     {
         if (files.Count != tracks.Count)
         {
@@ -24,6 +25,8 @@ public sealed class AlbumVerifier(IAudioTools tools)
         }
 
         var sorted = files.OrderBy(Path.GetFileName, NaturalOrder.Instance).ToList();
+        IReadOnlyList<int>? fallback = null;
+        var fetched = false;
 
         for (var i = 0; i < sorted.Count; i++)
         {
@@ -37,7 +40,18 @@ public sealed class AlbumVerifier(IAudioTools tools)
             if (tracks[i].LengthMs is { } length
                 && Math.Abs(probe.Duration - length / 1000.0) > DurationTolerance)
             {
-                return "wrong-tracks";
+                if (!fetched)
+                {
+                    fallback = fallbackDurations is null ? null : await fallbackDurations();
+                    fetched = true;
+                }
+
+                if (fallback is null
+                    || fallback.Count != tracks.Count
+                    || Math.Abs(probe.Duration - fallback[i]) > DurationTolerance)
+                {
+                    return "wrong-tracks";
+                }
             }
 
             if (!FitsFormat(probe, quality, needsTranscode))

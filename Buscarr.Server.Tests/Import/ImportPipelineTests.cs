@@ -1,5 +1,6 @@
 using System.Net;
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Import;
 using Buscarr.Server.MusicBrainz;
@@ -33,6 +34,9 @@ public sealed class ImportPipelineTests : IDisposable
     private readonly FakeHttpMessageHandler _covers =
         new(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(CoverBytes) });
 
+    private readonly FakeHttpMessageHandler _musicBrainz;
+    private readonly FakeHttpMessageHandler _deezer;
+
     private ImportOptions _options = new(null, null, null);
 
     public ImportPipelineTests()
@@ -54,21 +58,22 @@ public sealed class ImportPipelineTests : IDisposable
         }
 
         var slskd = new SlskdClient(new HttpClient(_slskd.Handler), "http://slskd.local:5030", "chave-de-teste");
-        var musicBrainz = new MusicBrainzClient(
-            new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(ReleaseWithTracks(
-                "r1",
-                "a1",
-                "g1",
-                LookupMedium(
-                    1,
-                    LookupTrack(1, "Smells Like Teen Spirit", null, "rec1"),
-                    LookupTrack(2, "In Bloom", null, "rec2"),
-                    LookupTrack(3, "Territorial Pissings", null, "rec3")))))),
-            _time);
+        _musicBrainz = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(ReleaseWithTracks(
+            "r1",
+            "a1",
+            "g1",
+            LookupMedium(
+                1,
+                LookupTrack(1, "Smells Like Teen Spirit", null, "rec1"),
+                LookupTrack(2, "In Bloom", null, "rec2"),
+                LookupTrack(3, "Territorial Pissings", null, "rec3")))));
+        _deezer = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums()));
+        var musicBrainz = new MusicBrainzClient(new HttpClient(_musicBrainz), _time);
         var pipeline = new ImportPipeline(
             musicBrainz,
             _tools,
             new CoverArt(new HttpClient(_covers)),
+            new DeezerClient(new HttpClient(_deezer)),
             new ImportOptions(_library, _downloads, null));
         _runner = new DownloadRunner(
             _provider.GetRequiredService<IServiceScopeFactory>(),
@@ -91,6 +96,7 @@ public sealed class ImportPipelineTests : IDisposable
             new MusicBrainzClient(new HttpClient(), _time),
             new FakeAudioTools(),
             new CoverArt(new HttpClient()),
+            new DeezerClient(new HttpClient()),
             () => _options);
 
         Assert.False(pipeline.Enabled);
@@ -144,6 +150,35 @@ public sealed class ImportPipelineTests : IDisposable
         var album = Path.Combine(_library, "Nirvana", "Nevermind");
         Assert.DoesNotContain("cover.jpg", Directory.GetFiles(album).Select(Path.GetFileName));
         Assert.Null((await RequestAsync(request.Id)).Failure);
+    }
+
+    [Fact]
+    public async Task Start_AcceptsDurationsThatOnlyDeezerConfirms()
+    {
+        _musicBrainz.Respond = _ => FakeHttpMessageHandler.Json(ReleaseWithTracks(
+            "r1",
+            "a1",
+            "g1",
+            LookupMedium(
+                1,
+                LookupTrack(1, "Smells Like Teen Spirit", 301_000, "rec1"),
+                LookupTrack(2, "In Bloom", 255_000, "rec2"),
+                LookupTrack(3, "Territorial Pissings", 143_000, "rec3"))));
+        _deezer.Respond = request => request.RequestUri!.AbsolutePath.StartsWith("/search", StringComparison.Ordinal)
+            ? FakeHttpMessageHandler.Json(DeezerJson.Albums(
+                ("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/abc/250x250.jpg")))
+            : FakeHttpMessageHandler.Json(DeezerJson.AlbumTracks(301, 255, 100));
+        var request = await AddRequestAsync();
+        var local = StageLocalFolder("silence.mp3", ".mp3");
+        _tools.GoodMp3(Path.Combine(local, "01.mp3"), 301);
+        _tools.GoodMp3(Path.Combine(local, "02.mp3"), 255);
+        _tools.GoodMp3(Path.Combine(local, "03.mp3"), 100);
+
+        _runner.Start(request.Id, [Folder(false)]);
+        await WaitUntilAsync(async () => (await RequestAsync(request.Id)).State == DownloadState.Imported);
+
+        Assert.Null((await RequestAsync(request.Id)).Failure);
+        Assert.NotEmpty(Directory.GetFiles(Path.Combine(_library, "Nirvana", "Nevermind")));
     }
 
     [Fact]

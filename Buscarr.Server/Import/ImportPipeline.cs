@@ -1,3 +1,4 @@
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
@@ -8,6 +9,7 @@ public sealed class ImportPipeline(
     MusicBrainzClient musicBrainz,
     IAudioTools tools,
     CoverArt covers,
+    DeezerClient deezer,
     Func<ImportOptions> currentOptions)
 {
     private readonly AlbumVerifier _verifier = new(tools);
@@ -15,8 +17,13 @@ public sealed class ImportPipeline(
     private readonly Tagger _tagger = new();
     private readonly LibraryImporter _importer = new();
 
-    public ImportPipeline(MusicBrainzClient musicBrainz, IAudioTools tools, CoverArt covers, ImportOptions options)
-        : this(musicBrainz, tools, covers, () => options)
+    public ImportPipeline(
+        MusicBrainzClient musicBrainz,
+        IAudioTools tools,
+        CoverArt covers,
+        DeezerClient deezer,
+        ImportOptions options)
+        : this(musicBrainz, tools, covers, deezer, () => options)
     {
     }
 
@@ -45,7 +52,12 @@ public sealed class ImportPipeline(
             return "missing-files";
         }
 
-        var reason = await _verifier.VerifyAsync(local.Value.Files, tracks.Tracks, request.Quality, folder.NeedsTranscode);
+        var reason = await _verifier.VerifyAsync(
+            local.Value.Files,
+            tracks.Tracks,
+            request.Quality,
+            folder.NeedsTranscode,
+            () => deezer.AlbumDurationsAsync(request.ArtistName, request.Title));
 
         if (reason is not null)
         {
@@ -80,7 +92,12 @@ public sealed class ImportPipeline(
         var needsTranscode =
             !files.All(file => Folders.MatchesQuality(file, request.Quality))
             && files.All(Folders.IsLosslessFile);
-        var reason = await _verifier.VerifyAsync(files, tracks.Tracks, request.Quality, needsTranscode);
+        var reason = await _verifier.VerifyAsync(
+            files,
+            tracks.Tracks,
+            request.Quality,
+            needsTranscode,
+            () => deezer.AlbumDurationsAsync(request.ArtistName, request.Title));
 
         if (reason is not null)
         {

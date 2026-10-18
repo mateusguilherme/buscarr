@@ -60,6 +60,93 @@ public class AlbumVerifierTests
     }
 
     [Fact]
+    public async Task Verify_AcceptsADurationTheFallbackConfirms()
+    {
+        _tools.GoodMp3("01.mp3", 301);
+        _tools.GoodMp3("02.mp3", 280);
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3", "02.mp3"],
+            [Track(1, 301_000), Track(2, 319_000)],
+            Qualities.Mp3320,
+            false,
+            () => Task.FromResult<IReadOnlyList<int>?>([301, 280]));
+
+        Assert.Null(reason);
+    }
+
+    [Fact]
+    public async Task Verify_RejectsADurationTheFallbackDoesNotConfirm()
+    {
+        _tools.GoodMp3("01.mp3", 301);
+        _tools.GoodMp3("02.mp3", 280);
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3", "02.mp3"],
+            [Track(1, 301_000), Track(2, 319_000)],
+            Qualities.Mp3320,
+            false,
+            () => Task.FromResult<IReadOnlyList<int>?>([301, 200]));
+
+        Assert.Equal("wrong-tracks", reason);
+    }
+
+    [Fact]
+    public async Task Verify_RejectsADurationMismatchWhenThereIsNoFallback()
+    {
+        _tools.GoodMp3("01.mp3", 301);
+        _tools.GoodMp3("02.mp3", 280);
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3", "02.mp3"],
+            [Track(1, 301_000), Track(2, 319_000)],
+            Qualities.Mp3320,
+            false,
+            () => Task.FromResult<IReadOnlyList<int>?>(null));
+
+        Assert.Equal("wrong-tracks", reason);
+    }
+
+    [Fact]
+    public async Task Verify_RejectsADurationMismatchWhenTheFallbackHasAnotherTrackCount()
+    {
+        _tools.GoodMp3("01.mp3", 301);
+        _tools.GoodMp3("02.mp3", 280);
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3", "02.mp3"],
+            [Track(1, 301_000), Track(2, 319_000)],
+            Qualities.Mp3320,
+            false,
+            () => Task.FromResult<IReadOnlyList<int>?>([280]));
+
+        Assert.Equal("wrong-tracks", reason);
+    }
+
+    [Fact]
+    public async Task Verify_FetchesTheFallbackOnce()
+    {
+        _tools.GoodMp3("01.mp3", 295);
+        _tools.GoodMp3("02.mp3", 280);
+        var fetches = 0;
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3", "02.mp3"],
+            [Track(1, 301_000), Track(2, 319_000)],
+            Qualities.Mp3320,
+            false,
+            () =>
+            {
+                fetches++;
+
+                return Task.FromResult<IReadOnlyList<int>?>([295, 280]);
+            });
+
+        Assert.Null(reason);
+        Assert.Equal(1, fetches);
+    }
+
+    [Fact]
     public async Task Verify_MatchesFilesToTracksInNaturalNameOrder()
     {
         _tools.GoodMp3("10 Something in the Way.mp3", 222);

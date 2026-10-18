@@ -113,6 +113,56 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task AlbumDurationsAsync_ReturnsTheTrackDurationsOfTheAlbumThatMatches()
+    {
+        var handler = new FakeHttpMessageHandler(request =>
+            request.RequestUri!.AbsolutePath.StartsWith("/search", StringComparison.Ordinal)
+                ? FakeHttpMessageHandler.Json(DeezerJson.Albums(
+                    ("Project46", "Tr3S (English Edition)", Cover),
+                    ("Project46", "Tr3S", Cover)))
+                : FakeHttpMessageHandler.Json(DeezerJson.AlbumTracks(264, 150, 280)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        var durations = await client.AlbumDurationsAsync("Project46", "Tr3s");
+
+        Assert.Equal([264, 150, 280], durations);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal("https://api.deezer.com/album/2/tracks?limit=100", handler.Requests[1].Uri.ToString());
+    }
+
+    [Fact]
+    public async Task AlbumDurationsAsync_ReturnsNullWithoutAnExactMatch()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
+            ("Project46", "Tr3S (English Edition)", Cover))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumDurationsAsync("Project46", "Tr3s"));
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task AlbumDurationsAsync_ReturnsNullWhenTheAlbumHasNoTracks()
+    {
+        var handler = new FakeHttpMessageHandler(request =>
+            request.RequestUri!.AbsolutePath.StartsWith("/search", StringComparison.Ordinal)
+                ? FakeHttpMessageHandler.Json(DeezerJson.Albums(("Project46", "Tr3s", Cover)))
+                : FakeHttpMessageHandler.Json(DeezerJson.AlbumTracks()));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumDurationsAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
+    public async Task AlbumDurationsAsync_ReturnsNullWhenDeezerFails()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumDurationsAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
     public async Task AlbumCoverAsync_StripsQuotesFromTheSearch()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
