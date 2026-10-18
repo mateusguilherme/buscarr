@@ -254,7 +254,7 @@ public class AlbumVerifierTests
     public async Task Verify_RejectsAudioCutBelow19kHz()
     {
         _tools.Probe("01.mp3", new AudioProbe("mp3", 320_000, 44_100, null, 301));
-        _tools.Levels("01.mp3", new SpectralLevels(-20, -80, -95, -100));
+        _tools.Levels("01.mp3", new SpectralLevels(-10, -100, -112, -118));
 
         var reason = await _verifier.VerifyAsync(
             ["01.mp3"],
@@ -269,7 +269,7 @@ public class AlbumVerifierTests
     public async Task Verify_RejectsASteepCutBetween19And20kHz()
     {
         _tools.Probe("01.flac", new AudioProbe("flac", 900_000, 44_100, 16, 301));
-        _tools.Levels("01.flac", new SpectralLevels(-20, -30, -55, -95));
+        _tools.Levels("01.flac", new SpectralLevels(-10, -40, -62, -108));
 
         var reason = await _verifier.VerifyAsync(
             ["01.flac"],
@@ -284,12 +284,27 @@ public class AlbumVerifierTests
     public async Task Verify_AcceptsAGentleRolloffBetween19And20kHz()
     {
         _tools.Probe("01.flac", new AudioProbe("flac", 900_000, 44_100, 16, 301));
-        _tools.Levels("01.flac", new SpectralLevels(-20, -45, -55, -95));
+        _tools.Levels("01.flac", new SpectralLevels(-10, -55, -70, -108));
 
         var reason = await _verifier.VerifyAsync(
             ["01.flac"],
             [Track(1, 301_000)],
             Qualities.Flac,
+            false);
+
+        Assert.Null(reason);
+    }
+
+    [Fact]
+    public async Task Verify_AcceptsAFaint19kHzBand()
+    {
+        _tools.Probe("01.mp3", new AudioProbe("mp3", 320_000, 44_100, null, 301));
+        _tools.Levels("01.mp3", new SpectralLevels(-10, -60, -78, -100));
+
+        var reason = await _verifier.VerifyAsync(
+            ["01.mp3"],
+            [Track(1, 301_000)],
+            Qualities.Mp3320,
             false);
 
         Assert.Null(reason);

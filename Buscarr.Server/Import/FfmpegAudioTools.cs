@@ -73,11 +73,17 @@ public sealed partial class FfmpegAudioTools : IAudioTools
         return exitCode == 0;
     }
 
-    private static async Task<double?> RmsAsync(string path, int? highpass)
+    public static string BandFilter(int cutoff)
     {
-        var filter = highpass is { } cutoff
-            ? $"highpass=f={cutoff},astats=measure_perchannel=none:measure_overall=RMS_level"
-            : "astats=measure_perchannel=none:measure_overall=RMS_level";
+        var keep = $"gte(b/nb*sr/2,{cutoff})";
+
+        return $"afftfilt=real='re*{keep}':imag='im*{keep}'";
+    }
+
+    private static async Task<double?> RmsAsync(string path, int? cutoff)
+    {
+        const string rms = "astats=measure_perchannel=none:measure_overall=RMS_level";
+        var filter = cutoff is { } frequency ? $"{BandFilter(frequency)},{rms}" : rms;
         var (exitCode, _, log, _) = await ProcessRunner.RunAsync(
             "ffmpeg",
             ["-nostats", "-i", path, "-af", filter, "-f", "null", "-"],

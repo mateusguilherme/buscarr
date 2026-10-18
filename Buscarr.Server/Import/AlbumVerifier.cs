@@ -7,7 +7,7 @@ public sealed class AlbumVerifier(IAudioTools tools)
 {
     private const int Mp3MinBitRate = 315_000;
     private const double DurationTolerance = 5;
-    private const double PresenceDb = -65;
+    private const double PresenceDb = -85;
     private const double SteepDropDb = 20;
 
     private static readonly string[] LosslessCodecs = ["flac", "alac", "ape", "wavpack"];

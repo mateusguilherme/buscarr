@@ -18,13 +18,13 @@ public sealed class FakeAudioTools : IAudioTools
     public void GoodMp3(string path, double duration)
     {
         Probe(path, new AudioProbe("mp3", 320_000, 44_100, null, duration));
-        Levels(path, new SpectralLevels(-20, -45, -60, -70));
+        Levels(path, new SpectralLevels(-10, -50, -65, -78));
     }
 
     public void GoodFlac(string path, double duration)
     {
         Probe(path, new AudioProbe("flac", 900_000, 44_100, 16, duration));
-        Levels(path, new SpectralLevels(-20, -45, -60, -70));
+        Levels(path, new SpectralLevels(-10, -50, -65, -78));
     }
 
     public Task<AudioProbe?> ProbeAsync(string path) =>

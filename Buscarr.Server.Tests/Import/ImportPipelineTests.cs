@@ -190,7 +190,7 @@ public sealed class ImportPipelineTests : IDisposable
         foreach (var file in Directory.GetFiles(local))
         {
             _tools.Probe(file, new AudioProbe("mp3", 320_000, 44_100, null, 0.1));
-            _tools.Levels(file, new SpectralLevels(-20, -80, -95, -100));
+            _tools.Levels(file, new SpectralLevels(-10, -100, -112, -118));
         }
 
         _runner.Start(request.Id, [Folder(false)]);
@@ -254,7 +254,7 @@ public sealed class ImportPipelineTests : IDisposable
         foreach (var file in Directory.GetFiles(local))
         {
             _tools.Probe(file, new AudioProbe("mp3", 320_000, 44_100, null, 0.1));
-            _tools.Levels(file, new SpectralLevels(-20, -80, -95, -100));
+            _tools.Levels(file, new SpectralLevels(-10, -100, -112, -118));
         }
 
         _runner.StartImport(request.Id);
