@@ -43,7 +43,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             [
                 ("artist", artistId),
                 ("status", "official"),
-                ("inc", "release-groups media"),
+                ("inc", "release-groups media artist-credits"),
                 ("limit", "100"),
                 ("offset", releases.Count.ToString()),
             ];

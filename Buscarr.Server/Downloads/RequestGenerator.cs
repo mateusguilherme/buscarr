@@ -118,7 +118,7 @@ public sealed class RequestGenerator(
             return;
         }
 
-        var coverUrl = await CoverUrlAsync(artist.Name, album, chosen);
+        var coverUrl = await CoverUrlAsync(artist, album, chosen);
 
         if (existing.Contains(key))
         {
@@ -147,7 +147,7 @@ public sealed class RequestGenerator(
         });
     }
 
-    private async Task<string?> CoverUrlAsync(string artist, Album album, Release chosen)
+    private async Task<string?> CoverUrlAsync(ListedArtist artist, Album album, Release chosen)
     {
         var coverUrl = chosen.CoverUrl ?? album.First.CoverUrl;
 
@@ -156,9 +156,25 @@ public sealed class RequestGenerator(
             return coverUrl;
         }
 
-        return await deezer.AlbumCoverAsync(artist, album.First.Title)
-            ?? await spotify.AlbumCoverAsync(artist, album.First.Title)
-            ?? coverUrl;
+        var credited = album.First.CreditedArtists.Append(artist.Name).Distinct().ToList();
+
+        foreach (var name in credited)
+        {
+            if (await deezer.AlbumCoverAsync(name, album.First.Title) is { } cover)
+            {
+                return cover;
+            }
+        }
+
+        foreach (var name in credited)
+        {
+            if (await spotify.AlbumCoverAsync(name, album.First.Title) is { } cover)
+            {
+                return cover;
+            }
+        }
+
+        return coverUrl;
     }
 
     private static (string, int, string) Key(DownloadRequest request) =>

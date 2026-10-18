@@ -176,6 +176,23 @@ public class ReleaseTests
         Assert.Equal(expected, release.Type);
     }
 
+    [Fact]
+    public void CreditedArtists_ListsEveryCreditedNameInOrder()
+    {
+        var release = new Release
+        {
+            Title = "Do Corre",
+            ArtistCredit =
+            [
+                new ArtistCredit { Name = "Maru2D" },
+                new ArtistCredit { Artist = new Artist("a1", "AJULLIACOSTA") },
+                new ArtistCredit(),
+            ],
+        };
+
+        Assert.Equal(["Maru2D", "AJULLIACOSTA"], release.CreditedArtists);
+    }
+
     private static Release CreateRelease(string date, string firstReleaseDate, string[]? secondaryTypes = null) =>
         new()
         {

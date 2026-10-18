@@ -28,6 +28,9 @@ public sealed class Release
 
     public bool HasFrontCover => CoverArtArchive is { Front: true } && Id is not null;
 
+    public List<string> CreditedArtists =>
+        [.. ArtistCredit.Select(credit => credit.Name ?? credit.Artist?.Name).OfType<string>()];
+
     public string? CoverUrl =>
         HasFrontCover
             ? $"{CoverArtArchiveUrl}/release/{Id}/front-250"

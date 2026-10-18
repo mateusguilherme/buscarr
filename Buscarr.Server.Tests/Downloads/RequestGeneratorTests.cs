@@ -345,6 +345,42 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_FindsTheCoverOfACollabByTheMainCreditOnDeezer()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithArtistCredit(
+                WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: false), ("CD", 1)),
+                "Maru2D",
+                "Nirvana"));
+        _deezerAlbums.Add(("Maru2D", "Do Corre", "https://cdn-images.dzcdn.net/images/cover/m1/250x250-000000-80-0-0.jpg"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/m1/250x250-000000-80-0-0.jpg", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FindsTheCoverOfACollabByTheMainCreditOnSpotify()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithArtistCredit(
+                WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: false), ("CD", 1)),
+                "Maru2D",
+                "Nirvana"));
+        _spotifyAlbums.Add(("Maru2D", "Do Corre", "https://i.scdn.co/image/m1"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://i.scdn.co/image/m1", request.CoverUrl);
+    }
+
+    [Fact]
     public async Task GenerateAsync_FillsTheCoverOfAnExistingRequest()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);

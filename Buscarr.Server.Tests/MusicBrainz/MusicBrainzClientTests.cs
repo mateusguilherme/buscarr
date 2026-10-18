@@ -285,7 +285,7 @@ public class MusicBrainzClientTests
 
         var parameters = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
         Assert.Equal("official", parameters["status"]);
-        Assert.Equal("release-groups media", parameters["inc"]);
+        Assert.Equal("release-groups media artist-credits", parameters["inc"]);
         Assert.Null(parameters["type"]);
     }
 
