@@ -205,7 +205,7 @@ public sealed class SearchQueueTests : IDisposable
 
     private async Task<DownloadState> StateAsync(int id)
     {
-        using var db = NewContext();
+        await using var db = NewContext();
 
         return await db.DownloadRequests
             .AsNoTracking()
@@ -216,7 +216,7 @@ public sealed class SearchQueueTests : IDisposable
 
     private async Task SetStateAsync(int id, DownloadState state)
     {
-        using var db = NewContext();
+        await using var db = NewContext();
         await db.DownloadRequests
             .Where(r => r.Id == id)
             .ExecuteUpdateAsync(set => set.SetProperty(r => r.State, state));

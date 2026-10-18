@@ -32,7 +32,7 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     [Fact]
     public async Task Register_MakesOnlyTheFirstUserAnAdmin()
     {
-        using var fresh = new BuscarrApiFactory();
+        await using var fresh = new BuscarrApiFactory();
         var first = fresh.CreateClient();
         var second = fresh.CreateClient();
         var firstEmail = NewEmail();

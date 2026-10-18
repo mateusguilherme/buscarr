@@ -219,7 +219,7 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
     [Fact]
     public async Task Status_TellsWhenTheFanartTvKeyIsInvalid()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         factory.FanartTv.Respond = _ => FakeHttpMessageHandler.Status(HttpStatusCode.Unauthorized);
         var admin = await factory.CreateLoggedInClientAsync(admin: true);
 
@@ -231,7 +231,7 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
     [Fact]
     public async Task Status_TellsWhenSlskdIsOfflineFromSoulseek()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         factory.Slskd.Connected = false;
         var admin = await factory.CreateLoggedInClientAsync(admin: true);
 
@@ -243,7 +243,7 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
     [Fact]
     public async Task Status_CarriesTheErrorOfAConnectionThatFails()
     {
-        using var factory = new BuscarrApiFactory { SlskdDown = true };
+        await using var factory = new BuscarrApiFactory { SlskdDown = true };
         factory.Subsonic.Respond = _ => FakeHttpMessageHandler.Json(SubsonicJson.Failed("Wrong username or password"));
         var admin = await factory.CreateLoggedInClientAsync(admin: true);
         await admin.PutAsJsonAsync("/api/server-settings", Update());

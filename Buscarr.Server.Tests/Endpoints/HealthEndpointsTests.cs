@@ -11,7 +11,7 @@ public sealed class HealthEndpointsTests
     [Fact]
     public async Task GetHealth_AnswersWithoutLogin()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = factory.CreateClient();
         Beat(factory);
 
@@ -27,7 +27,7 @@ public sealed class HealthEndpointsTests
     [Fact]
     public async Task GetHealth_StaysOkWhenSlskdIsDown()
     {
-        using var factory = new BuscarrApiFactory { SlskdDown = true };
+        await using var factory = new BuscarrApiFactory { SlskdDown = true };
         var client = factory.CreateClient();
         Beat(factory);
 
@@ -41,7 +41,7 @@ public sealed class HealthEndpointsTests
     [Fact]
     public async Task GetHealth_DoesNotDegradeBeforeTheFirstBeat()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/health");
@@ -56,7 +56,7 @@ public sealed class HealthEndpointsTests
     [Fact]
     public async Task GetHealth_DegradesWhenTheSearchWorkerStalls()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = factory.CreateClient();
         Beat(factory);
         factory.Time.Advance(TimeSpan.FromMinutes(11));
@@ -73,7 +73,7 @@ public sealed class HealthEndpointsTests
     [Fact]
     public async Task GetHealth_GivesTheGeneratorRoomForItsTwelveHourCycle()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = factory.CreateClient();
         Beat(factory);
         factory.Time.Advance(TimeSpan.FromHours(14));

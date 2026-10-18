@@ -14,7 +14,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task GetDownloads_WithoutLogin_Returns401()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
 
         var response = await factory.CreateClient().GetAsync("/api/downloads");
 
@@ -24,7 +24,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task GetDownloads_ListsTheActiveRequestsFirstWithKebabCaseStates()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         await SeedAsync(factory, Request("g-waiting", DownloadState.Waiting, nextAttemptInDays: 2));
         await SeedAsync(factory, Request("g-notfound", DownloadState.NotFound, nextAttemptInDays: 1));
@@ -44,7 +44,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task CancelDownload_RefusesImportingAndImported()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var importing = await SeedAsync(factory, Request("g-importing", DownloadState.Importing));
         var imported = await SeedAsync(factory, Request("g-imported", DownloadState.Imported));
@@ -61,7 +61,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task GetDownloads_DescribesTheRequest()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = Request("g1", DownloadState.Downloading);
         request.Failure = null;
@@ -100,7 +100,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task CancelDownload_OfAMissingRequest_Returns404()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
 
         var response = await client.PostAsync("/api/downloads/123/cancel", null);
@@ -111,7 +111,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task CancelDownload_StopsAWaitingRequestForGood()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = await SeedAsync(factory, Request("g1", DownloadState.Waiting));
 
@@ -124,7 +124,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task CancelDownload_OfADownloadingRequest_MarksItCancelled()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = await SeedAsync(factory, Request("g1", DownloadState.Downloading));
 
@@ -137,7 +137,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task CancelDownload_OfADownloadedRequest_Returns409()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = await SeedAsync(factory, Request("g1", DownloadState.Downloaded));
 
@@ -150,7 +150,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task Events_WithoutLogin_Returns401()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
 
         var response = await factory.CreateClient().GetAsync("/api/downloads/events");
 
@@ -160,7 +160,7 @@ public sealed class DownloadEndpointsTests
     [Fact]
     public async Task Events_StreamTheSnapshotAndThenEachChange()
     {
-        using var factory = new BuscarrApiFactory();
+        await using var factory = new BuscarrApiFactory();
         var client = await factory.CreateLoggedInClientAsync();
         var request = await SeedAsync(factory, Request("g1", DownloadState.Searching));
 
