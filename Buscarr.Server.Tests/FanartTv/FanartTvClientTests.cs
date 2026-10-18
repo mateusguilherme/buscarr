@@ -96,7 +96,45 @@ public class FanartTvClientTests
     }
 
     [Fact]
-    public async Task ArtistImageAsync_ReadsTheApiKeyFromTheCurrentSettings()
+    public async Task ArtistImageAsync_SendsTheProjectKeyWithThePersonalKeyAsClientKey()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
+        var client = new FanartTvClient(
+            new HttpClient(handler),
+            () => new ServerSettings { FanartTvApiKey = "chave-pessoal" },
+            "chave-de-projeto");
+
+        await client.ArtistImageAsync(NirvanaId);
+
+        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        Assert.Equal("chave-de-projeto", query["api_key"]);
+        Assert.Equal("chave-pessoal", query["client_key"]);
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_SendsNoClientKeyWithoutAPersonalKey()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
+        var client = new FanartTvClient(new HttpClient(handler), () => new ServerSettings(), "chave-de-projeto");
+
+        await client.ArtistImageAsync(NirvanaId);
+
+        var query = HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query);
+        Assert.Equal("chave-de-projeto", query["api_key"]);
+        Assert.Null(query["client_key"]);
+    }
+
+    [Fact]
+    public void IsConfigured_IsTrueWithAProjectKeyAlone()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
+        var client = new FanartTvClient(new HttpClient(handler), () => new ServerSettings(), "chave-de-projeto");
+
+        Assert.True(client.IsConfigured);
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_SendsTheProjectKeyByDefaultAndReadsTheClientKeyFromTheCurrentSettings()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(Artist()));
         var client = new FanartTvClient(new HttpClient(handler), () => _settings);
@@ -105,7 +143,13 @@ public class FanartTvClientTests
         _settings = new ServerSettings { FanartTvApiKey = "outra-chave" };
         await client.ArtistImageAsync(NirvanaId);
 
-        Assert.Equal("outra-chave", HttpUtility.ParseQueryString(Assert.Single(handler.Requests).Uri.Query)["api_key"]);
+        Assert.Equal(2, handler.Requests.Count);
+        var first = HttpUtility.ParseQueryString(handler.Requests[0].Uri.Query);
+        var second = HttpUtility.ParseQueryString(handler.Requests[1].Uri.Query);
+        Assert.Equal(FanartTvClient.ProjectKey, first["api_key"]);
+        Assert.Null(first["client_key"]);
+        Assert.Equal(FanartTvClient.ProjectKey, second["api_key"]);
+        Assert.Equal("outra-chave", second["client_key"]);
     }
 
     [Fact]

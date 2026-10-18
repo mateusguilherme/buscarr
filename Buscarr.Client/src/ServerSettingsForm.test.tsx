@@ -82,12 +82,12 @@ describe('ServerSettingsForm', () => {
     const fetchMock = mockFetch({ status: 204 }, { status: 200, body: statusOk });
     render(<ServerSettingsForm initial={saved} />);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Apagar a chave do fanart.tv' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Apagar a chave pessoal do fanart.tv' }));
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Salvo.')).toBeDefined();
     expect(sentBody(fetchMock, 0).fanartTvApiKey).toBe('');
-    expect(screen.queryByRole('button', { name: 'Apagar a chave do fanart.tv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Apagar a chave pessoal do fanart.tv' })).toBeNull();
   });
 
   it('mostra o erro de cada campo recusado', async () => {
