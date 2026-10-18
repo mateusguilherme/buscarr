@@ -155,7 +155,7 @@ export function DownloadItem({
         </button>
       )}
       {cancellable.includes(download.state) && (
-        <button className="button-ghost button-small" disabled={cancelling} onClick={handleCancel}>
+        <button className="button-ghost button-danger button-small" disabled={cancelling} onClick={handleCancel}>
           {t.downloads.cancel}
         </button>
       )}
