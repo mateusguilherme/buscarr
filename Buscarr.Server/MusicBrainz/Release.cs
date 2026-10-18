@@ -26,8 +26,10 @@ public sealed class Release
     [JsonPropertyName("cover-art-archive")]
     public CoverArtArchive? CoverArtArchive { get; init; }
 
+    public bool HasFrontCover => CoverArtArchive is { Front: true } && Id is not null;
+
     public string? CoverUrl =>
-        CoverArtArchive is { Front: true } && Id is not null
+        HasFrontCover
             ? $"{CoverArtArchiveUrl}/release/{Id}/front-250"
             : ReleaseGroup?.Id is { } releaseGroupId
                 ? $"{CoverArtArchiveUrl}/release-group/{releaseGroupId}/front-250"

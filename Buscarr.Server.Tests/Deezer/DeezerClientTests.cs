@@ -1,0 +1,70 @@
+using System.Net;
+using System.Web;
+using Buscarr.Server.Deezer;
+using Buscarr.Server.Tests.Fakes;
+
+namespace Buscarr.Server.Tests.Deezer;
+
+public sealed class DeezerClientTests
+{
+    private const string Cover = "https://cdn-images.dzcdn.net/images/cover/abc/250x250-000000-80-0-0.jpg";
+
+    [Fact]
+    public async Task AlbumCoverAsync_ReturnsTheCoverOfTheAlbumThatMatches()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
+            ("Project46", "Tr3S (English Edition)", "https://cdn-images.dzcdn.net/images/cover/outra/250x250.jpg"),
+            ("Project46", "Tr3S", Cover))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        var cover = await client.AlbumCoverAsync("Project46", "Tr3s");
+
+        Assert.Equal(Cover, cover);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("api.deezer.com", request.Uri.Host);
+        Assert.Equal("artist:\"Project46\" album:\"Tr3s\"", HttpUtility.ParseQueryString(request.Uri.Query)["q"]);
+    }
+
+    [Fact]
+    public async Task AlbumCoverAsync_ReturnsNullWithoutAnExactTitle()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
+            ("Project46", "Tr3S (English Edition)", Cover))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumCoverAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
+    public async Task AlbumCoverAsync_ReturnsNullForAHomonymousAlbumOfAnotherArtist()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
+            ("Outra Banda", "Tr3s", Cover))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumCoverAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
+    public async Task AlbumCoverAsync_ReturnsNullWhenDeezerFails()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumCoverAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
+    public async Task AlbumCoverAsync_StripsQuotesFromTheSearch()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
+            ("Guns \"N\" Roses", "The \"Best\" Of", Cover))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        var cover = await client.AlbumCoverAsync("Guns \"N\" Roses", "The \"Best\" Of");
+
+        Assert.Equal(Cover, cover);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("artist:\"Guns N Roses\" album:\"The Best Of\"", HttpUtility.ParseQueryString(request.Uri.Query)["q"]);
+    }
+}

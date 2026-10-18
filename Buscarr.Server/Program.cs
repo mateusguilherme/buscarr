@@ -1,4 +1,5 @@
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
@@ -16,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.SetMinimumLevel(LogLevel.Warning);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new MusicBrainzClient(new HttpClient(), TimeProvider.System));
+builder.Services.AddSingleton(new DeezerClient(new HttpClient { Timeout = TimeSpan.FromSeconds(10) }));
 builder.Services.AddSingleton<ServerSettingsStore>();
 builder.Services.AddSingleton(services => new FanartTvClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(5) },

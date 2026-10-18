@@ -1,6 +1,7 @@
 using System.Net;
 using System.Web;
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
@@ -24,8 +25,11 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly Dictionary<string, string> _releases = [];
     private readonly HashSet<string> _failing = [];
     private readonly List<string> _libraryAlbums = [];
+    private readonly List<(string Artist, string Title, string Cover)> _deezerAlbums = [];
     private bool _libraryFailing;
     private readonly MusicBrainzClient _musicBrainz;
+    private readonly FakeHttpMessageHandler _deezerHandler;
+    private readonly DeezerClient _deezer;
     private readonly RequestGenerator _generator;
 
     public RequestGeneratorTests()
@@ -36,8 +40,10 @@ public sealed class RequestGeneratorTests : IDisposable
         _musicBrainz = new MusicBrainzClient(
             new HttpClient(new FakeHttpMessageHandler(Respond)),
             new FakeTimeProvider(Now) { AutoAdvanceAmount = TimeSpan.FromSeconds(1) });
+        _deezerHandler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums])));
+        _deezer = new DeezerClient(new HttpClient(_deezerHandler));
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
-        _generator = new RequestGenerator(_db, _musicBrainz, subsonic, new FakeTimeProvider(Now));
+        _generator = new RequestGenerator(_db, _musicBrainz, _deezer, subsonic, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -255,6 +261,69 @@ public sealed class RequestGeneratorTests : IDisposable
         Assert.Equal(["g1", "g2", "stale"], groups.Order());
     }
 
+    [Fact]
+    public async Task GenerateAsync_FallsBackToTheDeezerCoverWhenTheArchiveHasNone()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+        _deezerAlbums.Add(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_KeepsTheArchiveCoverWithoutAskingDeezerWhenAnEditionHasOne()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _deezerAlbums.Add(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://coverartarchive.org/release/r1/front-250", request.CoverUrl);
+        Assert.Empty(_deezerHandler.Requests);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_KeepsTheArchiveFallbackWhenDeezerHasNothing()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://coverartarchive.org/release-group/g1/front-250", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FillsTheCoverOfAnExistingRequest()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+        var existing = Request("g1", trackCount: 12, state: DownloadState.NotFound, attempts: 2);
+        existing.CoverUrl = "https://coverartarchive.org/release-group/g1/front-250";
+        _db.DownloadRequests.Add(existing);
+        await _db.SaveChangesAsync();
+        _deezerAlbums.Add(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg", request.CoverUrl);
+        Assert.Equal((DownloadState.NotFound, 2), (request.State, request.Attempts));
+    }
+
     private RequestGenerator WithLibrary()
     {
         var subsonic = new SubsonicClient(
@@ -263,7 +332,7 @@ public sealed class RequestGeneratorTests : IDisposable
             "fulano",
             "segredo123");
 
-        return new RequestGenerator(_db, _musicBrainz, subsonic, new FakeTimeProvider(Now));
+        return new RequestGenerator(_db, _musicBrainz, _deezer, subsonic, new FakeTimeProvider(Now));
     }
 
     private HttpResponseMessage RespondLikeSubsonic(HttpRequestMessage request) =>

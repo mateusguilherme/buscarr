@@ -1,4 +1,5 @@
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
@@ -10,6 +11,7 @@ namespace Buscarr.Server.Downloads;
 public sealed class RequestGenerator(
     BuscarrDbContext db,
     MusicBrainzClient musicBrainz,
+    DeezerClient deezer,
     SubsonicClient subsonic,
     TimeProvider time)
 {
@@ -17,7 +19,7 @@ public sealed class RequestGenerator(
     {
         var now = time.GetUtcNow();
         var existing = await db.DownloadRequests.ToListAsync();
-        var keys = existing.Select(Key).ToHashSet();
+        var existingByKey = existing.ToLookup(Key);
         var wanted = new HashSet<(string, int, string)>();
         var complete = true;
         LibraryIndex? library = null;
@@ -58,7 +60,7 @@ public sealed class RequestGenerator(
 
                 foreach (var album in albums)
                 {
-                    Add(artist, album, edition, quality, library, wanted, keys, now);
+                    await AddAsync(artist, album, edition, quality, library, wanted, existingByKey, now);
                 }
             }
         }
@@ -74,14 +76,14 @@ public sealed class RequestGenerator(
         await db.SaveChangesAsync();
     }
 
-    private void Add(
+    private async Task AddAsync(
         ListedArtist artist,
         Album album,
         string edition,
         string quality,
         LibraryIndex? library,
         HashSet<(string, int, string)> wanted,
-        HashSet<(string, int, string)> keys,
+        ILookup<(string, int, string), DownloadRequest> existing,
         DateTimeOffset now)
     {
         if (album.First.Category is not { } category || !artist.ReleaseTypes.Contains(category))
@@ -109,8 +111,20 @@ public sealed class RequestGenerator(
         var firstReleaseDate = album.First.ReleaseGroup!.FirstReleaseDate ?? album.First.Date;
         var key = (album.First.ReleaseGroup!.Id!, chosen.TrackCount, quality);
 
-        if (!wanted.Add(key) || keys.Contains(key))
+        if (!wanted.Add(key))
         {
+            return;
+        }
+
+        var coverUrl = await CoverUrlAsync(artist.Name, album, chosen);
+
+        if (existing.Contains(key))
+        {
+            foreach (var request in existing[key])
+            {
+                request.CoverUrl = coverUrl ?? request.CoverUrl;
+            }
+
             return;
         }
 
@@ -125,10 +139,22 @@ public sealed class RequestGenerator(
             EditionReleaseId = chosen.Id,
             TrackCount = chosen.TrackCount,
             Quality = quality,
-            CoverUrl = chosen.CoverUrl ?? album.First.CoverUrl,
+            CoverUrl = coverUrl,
             State = DownloadState.Waiting,
             NextAttemptAt = RetrySchedule.FirstAttempt(now, firstReleaseDate),
         });
+    }
+
+    private async Task<string?> CoverUrlAsync(string artist, Album album, Release chosen)
+    {
+        var coverUrl = chosen.CoverUrl ?? album.First.CoverUrl;
+
+        if (album.Editions.Any(release => release.HasFrontCover))
+        {
+            return coverUrl;
+        }
+
+        return await deezer.AlbumCoverAsync(artist, album.First.Title) ?? coverUrl;
     }
 
     private static (string, int, string) Key(DownloadRequest request) =>

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Web;
 using Buscarr.Server.Data;
+using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
@@ -83,6 +84,9 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
             services.AddSingleton(new MusicBrainzClient(
                 new HttpClient(MusicBrainz),
                 new FakeTimeProvider { AutoAdvanceAmount = TimeSpan.FromSeconds(1) }));
+            services.RemoveAll<DeezerClient>();
+            services.AddSingleton(new DeezerClient(
+                new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums())))));
             services.RemoveAll<FanartTvClient>();
             services.AddSingleton(new FanartTvClient(new HttpClient(FanartTv), "chave-de-teste"));
             services.RemoveAll<SlskdClient>();
