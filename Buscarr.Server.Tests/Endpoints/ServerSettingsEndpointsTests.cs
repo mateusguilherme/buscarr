@@ -87,11 +87,14 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
                 "http://navidrome:4533",
                 "fulano",
                 true,
+                true,
+                "id-spotify",
                 true),
             JsonSerializer.Deserialize<ServerSettingsView>(body, JsonSerializerOptions.Web));
         Assert.DoesNotContain("chave-slskd", body);
         Assert.DoesNotContain("senha-navidrome", body);
         Assert.DoesNotContain("chave-fanart", body);
+        Assert.DoesNotContain("segredo-spotify", body);
     }
 
     [Fact]
@@ -102,12 +105,13 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
 
         await admin.PutAsJsonAsync(
             "/api/server-settings",
-            Update() with { SlskdApiKey = null, SubsonicPassword = "", FanartTvApiKey = null });
+            Update() with { SlskdApiKey = null, SubsonicPassword = "", FanartTvApiKey = null, SpotifyClientSecret = null });
         var settings = await admin.GetFromJsonAsync<ServerSettingsView>("/api/server-settings");
 
         Assert.True(settings!.HasSlskdApiKey);
         Assert.False(settings.HasSubsonicPassword);
         Assert.True(settings.HasFanartTvApiKey);
+        Assert.True(settings.HasSpotifyClientSecret);
     }
 
     [Fact]
@@ -214,6 +218,20 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
         Assert.Equal(new ConnectionStatus("not-configured", null), notConfigured.Subsonic);
         Assert.Equal(new ConnectionStatus("ok", null), configured!.Subsonic);
         Assert.Equal(new ConnectionStatus("ok", null), configured.FanartTv);
+        Assert.Equal(new ConnectionStatus("ok", null), configured.Spotify);
+    }
+
+    [Fact]
+    public async Task Status_TellsWhenSpotifyIsNotConfigured()
+    {
+        var admin = await _factory.CreateLoggedInClientAsync(admin: true);
+        await admin.PutAsJsonAsync(
+            "/api/server-settings",
+            Update() with { SpotifyClientId = "", SpotifyClientSecret = "" });
+
+        var status = await admin.GetFromJsonAsync<ServerStatus>("/api/server-settings/status");
+
+        Assert.Equal(new ConnectionStatus("not-configured", null), status!.Spotify);
     }
 
     [Fact]
@@ -265,7 +283,9 @@ public sealed class ServerSettingsEndpointsTests : IClassFixture<BuscarrApiFacto
             "http://navidrome:4533",
             "fulano",
             "senha-navidrome",
-            "chave-fanart");
+            "chave-fanart",
+            "id-spotify",
+            "segredo-spotify");
 
     private static async Task<Dictionary<string, string>> PutExpectingErrorsAsync(HttpClient client, ServerSettingsUpdate update)
     {

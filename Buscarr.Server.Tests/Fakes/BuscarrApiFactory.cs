@@ -9,6 +9,7 @@ using Buscarr.Server.FanartTv;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Spotify;
 using Buscarr.Server.Subsonic;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -45,6 +46,11 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
     public FakeTimeProvider Time { get; } = new(DateTimeOffset.UtcNow);
 
     public FakeSlskd Slskd { get; } = new();
+
+    public FakeHttpMessageHandler Spotify { get; } = new(request =>
+        request.RequestUri!.Host == "accounts.spotify.com"
+            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
+            : FakeHttpMessageHandler.Json(SpotifyJson.Albums()));
 
     public FakeHttpMessageHandler Subsonic { get; } =
         new(_ => FakeHttpMessageHandler.Json(SubsonicJson.Ok()));
@@ -102,6 +108,13 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
                 var store = provider.GetRequiredService<ServerSettingsStore>();
 
                 return new SubsonicClient(new HttpClient(Subsonic), () => store.Current);
+            });
+            services.RemoveAll<SpotifyClient>();
+            services.AddSingleton(provider =>
+            {
+                var store = provider.GetRequiredService<ServerSettingsStore>();
+
+                return new SpotifyClient(new HttpClient(Spotify), () => store.Current, Time);
             });
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
 

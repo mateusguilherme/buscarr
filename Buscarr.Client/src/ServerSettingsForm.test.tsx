@@ -15,12 +15,15 @@ const saved: ServerSettings = {
   subsonicUser: 'fulano',
   hasSubsonicPassword: false,
   hasFanartTvApiKey: true,
+  spotifyClientId: 'id-spotify',
+  hasSpotifyClientSecret: true,
 };
 
 const statusOk = {
   slskd: { state: 'ok', message: null },
   subsonic: { state: 'ok', message: null },
   fanartTv: { state: 'ok', message: null },
+  spotify: { state: 'ok', message: null },
 };
 
 function field(label: string) {
@@ -42,6 +45,8 @@ describe('ServerSettingsForm', () => {
     expect(field('Chave de API do slskd').value).toBe('');
     expect(field('Chave de API do slskd').placeholder).toBe('Salva. Deixe em branco para manter.');
     expect(field('Senha').placeholder).toBe('');
+    expect(field('Client ID do Spotify').value).toBe('id-spotify');
+    expect(field('Client secret do Spotify').placeholder).toBe('Salva. Deixe em branco para manter.');
   });
 
   it('salva mantendo as chaves que não foram digitadas e testa as conexões', async () => {
@@ -65,6 +70,8 @@ describe('ServerSettingsForm', () => {
       subsonicUser: 'fulano',
       subsonicPassword: 'segredo',
       fanartTvApiKey: null,
+      spotifyClientId: 'id-spotify',
+      spotifyClientSecret: null,
     });
     expect(await screen.findByText('slskd: conectado ao Soulseek.')).toBeDefined();
     expect(field('Senha').value).toBe('');
@@ -110,6 +117,7 @@ describe('ServerSettingsForm', () => {
         slskd: { state: 'offline', message: null },
         subsonic: { state: 'error', message: 'Wrong username or password' },
         fanartTv: { state: 'error', message: 'chave inválida' },
+        spotify: { state: 'error', message: 'credenciais inválidas' },
       },
     });
     render(<ServerSettingsForm initial={saved} />);
@@ -120,6 +128,7 @@ describe('ServerSettingsForm', () => {
     expect(await screen.findByText('slskd: responde, mas não está conectado ao Soulseek.')).toBeDefined();
     expect(screen.getByText('Servidor de música: erro (Wrong username or password).')).toBeDefined();
     expect(screen.getByText('fanart.tv: erro (chave inválida).')).toBeDefined();
+    expect(screen.getByText('Spotify: erro (credenciais inválidas).')).toBeDefined();
   });
 
   it('desabilita o testar enquanto há mudanças não salvas', async () => {
@@ -152,6 +161,7 @@ describe('ServerSettingsForm', () => {
         slskd: { state: 'ok', message: null },
         subsonic: { state: 'not-configured', message: null },
         fanartTv: { state: 'not-configured', message: null },
+        spotify: { state: 'not-configured', message: null },
       },
     });
     render(<ServerSettingsForm initial={saved} />);
@@ -160,5 +170,6 @@ describe('ServerSettingsForm', () => {
 
     expect(await screen.findByText('Servidor de música: não configurado.')).toBeDefined();
     expect(screen.getByText('fanart.tv: não configurado.')).toBeDefined();
+    expect(screen.getByText('Spotify: não configurado.')).toBeDefined();
   });
 });

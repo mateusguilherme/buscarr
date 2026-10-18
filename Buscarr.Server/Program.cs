@@ -8,6 +8,7 @@ using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Spotify;
 using Buscarr.Server.Subsonic;
 using Buscarr.Server.Users;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -28,6 +29,10 @@ builder.Services.AddSingleton(services => new SlskdClient(
 builder.Services.AddSingleton(services => new SubsonicClient(
     new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
     CurrentSettings(services)));
+builder.Services.AddSingleton(services => new SpotifyClient(
+    new HttpClient { Timeout = TimeSpan.FromSeconds(10) },
+    CurrentSettings(services),
+    services.GetRequiredService<TimeProvider>()));
 builder.Services.AddDbContext<BuscarrDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Buscarr")));
 builder.Services.AddScoped<UserStore>();

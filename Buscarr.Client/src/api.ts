@@ -145,6 +145,8 @@ export type ServerSettings = {
   subsonicUser: string;
   hasSubsonicPassword: boolean;
   hasFanartTvApiKey: boolean;
+  spotifyClientId: string;
+  hasSpotifyClientSecret: boolean;
 };
 
 export type ServerSettingsUpdate = {
@@ -157,11 +159,18 @@ export type ServerSettingsUpdate = {
   subsonicUser: string;
   subsonicPassword: string | null;
   fanartTvApiKey: string | null;
+  spotifyClientId: string;
+  spotifyClientSecret: string | null;
 };
 
 export type ConnectionState = 'ok' | 'not-configured' | 'offline' | 'error';
 export type ConnectionStatus = { state: ConnectionState; message: string | null };
-export type ServerStatus = { slskd: ConnectionStatus; subsonic: ConnectionStatus; fanartTv: ConnectionStatus };
+export type ServerStatus = {
+  slskd: ConnectionStatus;
+  subsonic: ConnectionStatus;
+  fanartTv: ConnectionStatus;
+  spotify: ConnectionStatus;
+};
 
 export class ServerSettingsError extends Error {
   readonly errors: Record<string, string>;

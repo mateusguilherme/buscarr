@@ -134,6 +134,8 @@ describe('SettingsPage', () => {
           subsonicUser: '',
           hasSubsonicPassword: false,
           hasFanartTvApiKey: false,
+          spotifyClientId: '',
+          hasSpotifyClientSecret: false,
         },
       },
     );

@@ -9,14 +9,25 @@ import {
 } from './api';
 import { t } from './i18n';
 
-type TextField = 'slskdUrl' | 'downloadsPath' | 'libraryPath' | 'rejectedPath' | 'subsonicUrl' | 'subsonicUser';
-type SecretField = 'slskdApiKey' | 'subsonicPassword' | 'fanartTvApiKey';
+type TextField =
+  | 'slskdUrl'
+  | 'downloadsPath'
+  | 'libraryPath'
+  | 'rejectedPath'
+  | 'subsonicUrl'
+  | 'subsonicUser'
+  | 'spotifyClientId';
+type SecretField = 'slskdApiKey' | 'subsonicPassword' | 'fanartTvApiKey' | 'spotifyClientSecret';
 type Secret = { value: string; saved: boolean; cleared: boolean };
 
-const savedFlags: Record<SecretField, 'hasSlskdApiKey' | 'hasSubsonicPassword' | 'hasFanartTvApiKey'> = {
+const savedFlags: Record<
+  SecretField,
+  'hasSlskdApiKey' | 'hasSubsonicPassword' | 'hasFanartTvApiKey' | 'hasSpotifyClientSecret'
+> = {
   slskdApiKey: 'hasSlskdApiKey',
   subsonicPassword: 'hasSubsonicPassword',
   fanartTvApiKey: 'hasFanartTvApiKey',
+  spotifyClientSecret: 'hasSpotifyClientSecret',
 };
 
 function valuesFrom(settings: ServerSettings): Record<TextField, string> {
@@ -27,6 +38,7 @@ function valuesFrom(settings: ServerSettings): Record<TextField, string> {
     rejectedPath: settings.rejectedPath,
     subsonicUrl: settings.subsonicUrl,
     subsonicUser: settings.subsonicUser,
+    spotifyClientId: settings.spotifyClientId,
   };
 }
 
@@ -35,6 +47,7 @@ function secretsFrom(settings: ServerSettings): Record<SecretField, Secret> {
     slskdApiKey: { value: '', saved: settings.hasSlskdApiKey, cleared: false },
     subsonicPassword: { value: '', saved: settings.hasSubsonicPassword, cleared: false },
     fanartTvApiKey: { value: '', saved: settings.hasFanartTvApiKey, cleared: false },
+    spotifyClientSecret: { value: '', saved: settings.hasSpotifyClientSecret, cleared: false },
   };
 }
 
@@ -46,7 +59,10 @@ function secretUpdate(secret: Secret): string | null {
   return secret.cleared ? '' : null;
 }
 
-function describe(name: 'slskdStatus' | 'subsonicStatus' | 'fanartTvStatus', status: ConnectionStatus) {
+function describe(
+  name: 'slskdStatus' | 'subsonicStatus' | 'fanartTvStatus' | 'spotifyStatus',
+  status: ConnectionStatus,
+) {
   const texts = t.server[name];
 
   return status.state === 'error' ? texts.error(status.message ?? '') : texts[status.state];
@@ -100,6 +116,7 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
         slskdApiKey: secretUpdate(secrets.slskdApiKey),
         subsonicPassword: secretUpdate(secrets.subsonicPassword),
         fanartTvApiKey: secretUpdate(secrets.fanartTvApiKey),
+        spotifyClientSecret: secretUpdate(secrets.spotifyClientSecret),
       });
     } catch (err) {
       if (err instanceof ServerSettingsError) {
@@ -208,6 +225,15 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
           </fieldset>
         </div>
 
+        <div className="card settings">
+          <fieldset>
+            <legend>{t.server.spotify}</legend>
+            <p className="settings-note">{t.server.spotifyHint}</p>
+            {text('spotifyClientId', t.server.spotifyClientId)}
+            {secret('spotifyClientSecret', t.server.spotifyClientSecret, t.server.spotifyClientSecretName)}
+          </fieldset>
+        </div>
+
         {alert && (
           <p className="alert" role="alert">
             {alert}
@@ -234,6 +260,7 @@ export function ServerSettingsForm({ initial }: { initial: ServerSettings }) {
             <li data-state={status.slskd.state}>{describe('slskdStatus', status.slskd)}</li>
             <li data-state={status.subsonic.state}>{describe('subsonicStatus', status.subsonic)}</li>
             <li data-state={status.fanartTv.state}>{describe('fanartTvStatus', status.fanartTv)}</li>
+            <li data-state={status.spotify.state}>{describe('spotifyStatus', status.spotify)}</li>
           </ul>
         )}
       </form>

@@ -16,6 +16,8 @@ public sealed record ServerSettings
     public string? SubsonicUser { get; init; }
     public string? SubsonicPassword { get; init; }
     public string? FanartTvApiKey { get; init; }
+    public string? SpotifyClientId { get; init; }
+    public string? SpotifyClientSecret { get; init; }
 
     public ImportOptions Import => new(LibraryPath, DownloadsPath, RejectedPath);
 }

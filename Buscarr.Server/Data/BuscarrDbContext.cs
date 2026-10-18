@@ -71,6 +71,8 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             settings.Property(s => s.SubsonicUser).HasMaxLength(256);
             settings.Property(s => s.SubsonicPassword).HasMaxLength(256);
             settings.Property(s => s.FanartTvApiKey).HasMaxLength(256);
+            settings.Property(s => s.SpotifyClientId).HasMaxLength(256);
+            settings.Property(s => s.SpotifyClientSecret).HasMaxLength(256);
             settings.Ignore(s => s.Import);
         });
     }

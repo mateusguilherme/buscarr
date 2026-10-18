@@ -205,6 +205,8 @@ const serverSettings = {
   subsonicUser: '',
   hasSubsonicPassword: false,
   hasFanartTvApiKey: false,
+  spotifyClientId: '',
+  hasSpotifyClientSecret: false,
 };
 
 const serverUpdate = {
@@ -217,6 +219,8 @@ const serverUpdate = {
   subsonicUser: '',
   subsonicPassword: null,
   fanartTvApiKey: null,
+  spotifyClientId: '',
+  spotifyClientSecret: null,
 };
 
 describe('getServerSettings', () => {

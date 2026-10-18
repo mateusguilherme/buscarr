@@ -3,6 +3,7 @@ using Buscarr.Server.Deezer;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Spotify;
 using Buscarr.Server.Subsonic;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ public sealed class RequestGenerator(
     BuscarrDbContext db,
     MusicBrainzClient musicBrainz,
     DeezerClient deezer,
+    SpotifyClient spotify,
     SubsonicClient subsonic,
     TimeProvider time)
 {
@@ -154,7 +156,9 @@ public sealed class RequestGenerator(
             return coverUrl;
         }
 
-        return await deezer.AlbumCoverAsync(artist, album.First.Title) ?? coverUrl;
+        return await deezer.AlbumCoverAsync(artist, album.First.Title)
+            ?? await spotify.AlbumCoverAsync(artist, album.First.Title)
+            ?? coverUrl;
     }
 
     private static (string, int, string) Key(DownloadRequest request) =>

@@ -6,6 +6,7 @@ using Buscarr.Server.Downloads;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
+using Buscarr.Server.Spotify;
 using Buscarr.Server.Subsonic;
 using Buscarr.Server.Tests.Fakes;
 using Buscarr.Server.Users;
@@ -26,10 +27,13 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly HashSet<string> _failing = [];
     private readonly List<string> _libraryAlbums = [];
     private readonly List<(string Artist, string Title, string Cover)> _deezerAlbums = [];
+    private readonly List<(string Artist, string Title, string Cover)> _spotifyAlbums = [];
     private bool _libraryFailing;
     private readonly MusicBrainzClient _musicBrainz;
     private readonly FakeHttpMessageHandler _deezerHandler;
     private readonly DeezerClient _deezer;
+    private readonly FakeHttpMessageHandler _spotifyHandler;
+    private readonly SpotifyClient _spotify;
     private readonly RequestGenerator _generator;
 
     public RequestGeneratorTests()
@@ -42,8 +46,12 @@ public sealed class RequestGeneratorTests : IDisposable
             new FakeTimeProvider(Now) { AutoAdvanceAmount = TimeSpan.FromSeconds(1) });
         _deezerHandler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums])));
         _deezer = new DeezerClient(new HttpClient(_deezerHandler));
+        _spotifyHandler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
+            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
+            : FakeHttpMessageHandler.Json(SpotifyJson.Albums([.. _spotifyAlbums])));
+        _spotify = new SpotifyClient(new HttpClient(_spotifyHandler), "id-1", "segredo-1", new FakeTimeProvider(Now));
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
-        _generator = new RequestGenerator(_db, _musicBrainz, _deezer, subsonic, new FakeTimeProvider(Now));
+        _generator = new RequestGenerator(_db, _musicBrainz, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -291,7 +299,7 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
-    public async Task GenerateAsync_KeepsTheArchiveFallbackWhenDeezerHasNothing()
+    public async Task GenerateAsync_KeepsTheArchiveFallbackWhenDeezerAndSpotifyHaveNothing()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
         _releases["nirvana"] = Releases(
@@ -302,6 +310,38 @@ public sealed class RequestGeneratorTests : IDisposable
 
         var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
         Assert.Equal("https://coverartarchive.org/release-group/g1/front-250", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AsksSpotifyWhenDeezerAlsoHasNoCover()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+        _spotifyAlbums.Add(("Nirvana", "Nevermind", "https://i.scdn.co/image/n1"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://i.scdn.co/image/n1", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_DoesNotAskSpotifyWhenDeezerHasTheCover()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+        _deezerAlbums.Add(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg"));
+        _spotifyAlbums.Add(("Nirvana", "Nevermind", "https://i.scdn.co/image/n1"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg", request.CoverUrl);
+        Assert.Empty(_spotifyHandler.Requests);
     }
 
     [Fact]
@@ -332,7 +372,7 @@ public sealed class RequestGeneratorTests : IDisposable
             "fulano",
             "segredo123");
 
-        return new RequestGenerator(_db, _musicBrainz, _deezer, subsonic, new FakeTimeProvider(Now));
+        return new RequestGenerator(_db, _musicBrainz, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
     }
 
     private HttpResponseMessage RespondLikeSubsonic(HttpRequestMessage request) =>

@@ -172,6 +172,14 @@ namespace Buscarr.Server.Data.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SpotifyClientId")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SpotifyClientSecret")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SubsonicPassword")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");

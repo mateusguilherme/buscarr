@@ -58,6 +58,8 @@ public sealed class ServerSettingsStore
             SubsonicUser = Value("Subsonic:User"),
             SubsonicPassword = Value("Subsonic:Password"),
             FanartTvApiKey = Value("FanartTv:ApiKey"),
+            SpotifyClientId = Value("Spotify:ClientId"),
+            SpotifyClientSecret = Value("Spotify:ClientSecret"),
         };
     }
 }

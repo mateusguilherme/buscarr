@@ -36,6 +36,8 @@ services:
       Subsonic__User: "…"
       Subsonic__Password: "…"
       FanartTv__ApiKey: "…"
+      Spotify__ClientId: "…"
+      Spotify__ClientSecret: "…"
     restart: unless-stopped
 ```
 
@@ -46,7 +48,7 @@ Notes:
 - **`user`** must be able to write to the library, to slskd's `complete/` folder and to the `/data` volume (the SQLite database lives there, and the startup migration writes to it).
 - **Paths are what buscarr sees.** `Slskd__DownloadsPath` is the `complete/` folder as mounted *in this container*; it does not have to match slskd's internal path, because buscarr finds each album's folder by its file names.
 - **`Library__RejectedPath`** defaults to a `rejected/` folder next to the downloads; folders that fail verification are moved there with a `.reason.txt` explaining why, never deleted.
-- **Optional pieces degrade gracefully.** Without `Library__Path` + `Slskd__DownloadsPath`, buscarr only downloads into `complete/` (state "Downloaded") and never touches the library. Without `Subsonic__*`, it does not skip albums the library already has.
+- **Optional pieces degrade gracefully.** Without `Library__Path` + `Slskd__DownloadsPath`, buscarr only downloads into `complete/` (state "Downloaded") and never touches the library. Without `Subsonic__*`, it does not skip albums the library already has. Without `Spotify__*` (a client ID and secret from [developer.spotify.com](https://developer.spotify.com/dashboard)), covers missing from both the Cover Art Archive and Deezer stay blank.
 - Every external call has a timeout (HTTP clients and the ffmpeg processes), so a stuck dependency cannot hang a worker forever; no external watchdog is needed.
 
 ## Soulseek account
