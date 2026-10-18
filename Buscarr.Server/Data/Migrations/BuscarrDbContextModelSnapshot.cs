@@ -24,10 +24,12 @@ namespace Buscarr.Server.Data.Migrations
 
                     b.Property<string>("ArtistId")
                         .IsRequired()
+                        .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ArtistName")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Attempts")
@@ -40,18 +42,23 @@ namespace Buscarr.Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("CoverUrl")
+                        .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Directory")
+                        .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("EditionReleaseId")
+                        .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Failure")
+                        .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FirstReleaseDate")
+                        .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("NextAttemptAt")
@@ -62,10 +69,12 @@ namespace Buscarr.Server.Data.Migrations
 
                     b.Property<string>("Quality")
                         .IsRequired()
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ReleaseGroupId")
                         .IsRequired()
+                        .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("State")
@@ -73,6 +82,7 @@ namespace Buscarr.Server.Data.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("TrackCount")
@@ -83,9 +93,11 @@ namespace Buscarr.Server.Data.Migrations
 
                     b.Property<string>("Type")
                         .IsRequired()
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Username")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -102,19 +114,24 @@ namespace Buscarr.Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("ArtistId")
+                        .HasMaxLength(36)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Area")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Disambiguation")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Image")
+                        .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.PrimitiveCollection<string>("ReleaseTypes")
@@ -132,30 +149,39 @@ namespace Buscarr.Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("DownloadsPath")
+                        .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FanartTvApiKey")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LibraryPath")
+                        .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RejectedPath")
+                        .HasMaxLength(1024)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SlskdApiKey")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SlskdUrl")
+                        .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SubsonicPassword")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SubsonicUrl")
+                        .HasMaxLength(2048)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("SubsonicUser")
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -170,10 +196,12 @@ namespace Buscarr.Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("EditionPreference")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .IsRequired()
+                        .HasMaxLength(254)
                         .HasColumnType("TEXT")
                         .UseCollation("NOCASE");
 
@@ -182,13 +210,16 @@ namespace Buscarr.Server.Data.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
+                        .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("QualityPreference")
+                        .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
