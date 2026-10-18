@@ -148,6 +148,70 @@ public sealed class DownloadEndpointsTests
     }
 
     [Fact]
+    public async Task RetryDownload_OfAMissingRequest_Returns404()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+
+        var response = await client.PostAsync("/api/downloads/123/retry", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RetryDownload_BringsAFailedRequestForwardToNow()
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", DownloadState.Failed, nextAttemptInDays: 7));
+        var ticks = factory.Time.GetUtcNow().Ticks;
+        var now = new DateTimeOffset(ticks - ticks % TimeSpan.TicksPerSecond + TimeSpan.TicksPerSecond, TimeSpan.Zero);
+        factory.Time.SetUtcNow(now);
+
+        var response = await client.PostAsync($"/api/downloads/{request.Id}/retry", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var downloads = await client.GetFromJsonAsync<List<DownloadItem>>("/api/downloads");
+        var download = Assert.Single(downloads!);
+        Assert.Equal("waiting", download.State);
+        Assert.Equal(now, download.NextAttemptAt);
+    }
+
+    [Theory]
+    [InlineData(DownloadState.Waiting)]
+    [InlineData(DownloadState.NotFound)]
+    public async Task RetryDownload_AcceptsRequestsWaitingForARetry(DownloadState state)
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", state, nextAttemptInDays: 7));
+
+        var response = await client.PostAsync($"/api/downloads/{request.Id}/retry", null);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("waiting", await StateAsync(client, request.Id));
+    }
+
+    [Theory]
+    [InlineData(DownloadState.Searching, "searching")]
+    [InlineData(DownloadState.Downloading, "downloading")]
+    [InlineData(DownloadState.Downloaded, "downloaded")]
+    [InlineData(DownloadState.Cancelled, "cancelled")]
+    [InlineData(DownloadState.Importing, "importing")]
+    [InlineData(DownloadState.Imported, "imported")]
+    public async Task RetryDownload_RefusesRequestsNotWaitingForARetry(DownloadState state, string name)
+    {
+        await using var factory = new BuscarrApiFactory();
+        var client = await factory.CreateLoggedInClientAsync();
+        var request = await SeedAsync(factory, Request("g1", state));
+
+        var response = await client.PostAsync($"/api/downloads/{request.Id}/retry", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(name, await StateAsync(client, request.Id));
+    }
+
+    [Fact]
     public async Task Events_WithoutLogin_Returns401()
     {
         await using var factory = new BuscarrApiFactory();

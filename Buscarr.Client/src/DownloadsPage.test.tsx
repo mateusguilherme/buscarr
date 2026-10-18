@@ -120,6 +120,29 @@ describe('DownloadsPage', () => {
     expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
   });
 
+  it('tenta de novo um download que falhou', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: [download({ state: 'failed', failure: 'stalled', nextAttemptAt: '2999-01-01T12:00:00Z' })] },
+      { status: 204 },
+    );
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Tentar agora' }));
+
+    expect(await screen.findByText('Aguardando busca')).toBeDefined();
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/downloads/1/retry');
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('não oferece tentar de novo durante o download', async () => {
+    mockFetch({ status: 200, body: [download({ state: 'downloading' })] });
+    renderPage();
+
+    await screen.findByText('Baixando 0/12');
+
+    expect(screen.queryByRole('button', { name: 'Tentar agora' })).toBeNull();
+  });
+
   it('refaz a busca quando o SSE cai', async () => {
     mockFetch(
       { status: 200, body: [] },

@@ -15,6 +15,7 @@ const ptBR = {
     saveSettingsError: (status: number) => `Erro ${status} ao salvar as configurações.`,
     downloadsError: (status: number) => `Erro ${status} ao carregar os downloads.`,
     cancelDownloadError: (status: number) => `Erro ${status} ao cancelar o download.`,
+    retryDownloadError: (status: number) => `Erro ${status} ao tentar de novo.`,
     serverSettingsError: (status: number) => `Erro ${status} ao carregar as configurações do servidor.`,
     saveServerSettingsError: (status: number) => `Erro ${status} ao salvar as configurações do servidor.`,
     serverStatusError: (status: number) => `Erro ${status} ao testar as conexões.`,
@@ -172,6 +173,7 @@ const ptBR = {
     rejected: 'nenhuma pasta passou na verificação',
     cancelled: 'Cancelado',
     cancel: 'Cancelar',
+    retry: 'Tentar agora',
     tracks: (count: number) => `${count} faixas`,
     types: {
       album: 'Álbum',
@@ -205,6 +207,7 @@ const en: Messages = {
     saveSettingsError: (status) => `Error ${status} saving the settings.`,
     downloadsError: (status) => `Error ${status} loading the downloads.`,
     cancelDownloadError: (status) => `Error ${status} cancelling the download.`,
+    retryDownloadError: (status) => `Error ${status} retrying the download.`,
     serverSettingsError: (status) => `Error ${status} loading the server settings.`,
     saveServerSettingsError: (status) => `Error ${status} saving the server settings.`,
     serverStatusError: (status) => `Error ${status} testing the connections.`,
@@ -362,6 +365,7 @@ const en: Messages = {
     rejected: 'no folder passed verification',
     cancelled: 'Cancelled',
     cancel: 'Cancel',
+    retry: 'Try now',
     tracks: (count) => `${count} tracks`,
     types: {
       album: 'Album',

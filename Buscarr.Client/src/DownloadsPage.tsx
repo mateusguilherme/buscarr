@@ -93,6 +93,12 @@ export function DownloadsPage() {
                   setDownloads((current) =>
                     current && current.map((other) =>
                       other.id === download.id ? { ...other, state: 'cancelled' } : other))}
+                onRetried={() =>
+                  setDownloads((current) =>
+                    current && current.map((other) =>
+                      other.id === download.id
+                        ? { ...other, state: 'waiting', nextAttemptAt: new Date().toISOString() }
+                        : other))}
               />
             ))}
           </ul>

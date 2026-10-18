@@ -33,6 +33,7 @@ public static class DownloadEndpoints
 
         group.MapGet("/", GetDownloads);
         group.MapPost("/{id:int}/cancel", CancelDownload);
+        group.MapPost("/{id:int}/retry", RetryDownload);
         group.MapGet("/events", StreamEvents);
     }
 
@@ -64,6 +65,27 @@ public static class DownloadEndpoints
         {
             runner.Cancel(id);
         }
+
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> RetryDownload(BuscarrDbContext db, TimeProvider time, int id)
+    {
+        var request = await db.DownloadRequests.FindAsync(id);
+
+        if (request is null)
+        {
+            return Results.NotFound();
+        }
+
+        if (request.State is not (DownloadState.Waiting or DownloadState.NotFound or DownloadState.Failed))
+        {
+            return Results.Conflict();
+        }
+
+        request.State = DownloadState.Waiting;
+        request.NextAttemptAt = time.GetUtcNow();
+        await db.SaveChangesAsync();
 
         return Results.NoContent();
     }

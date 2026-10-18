@@ -246,6 +246,14 @@ export async function cancelDownload(id: number): Promise<void> {
   }
 }
 
+export async function retryDownload(id: number): Promise<void> {
+  const res = await fetch(`/api/downloads/${id}/retry`, { method: 'POST' });
+
+  if (!res.ok) {
+    throw new Error(t.api.retryDownloadError(res.status));
+  }
+}
+
 export async function findArtists(query: string): Promise<Artist[]> {
   const res = await fetch(`/api/artists?q=${encodeURIComponent(query)}`);
 

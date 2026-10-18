@@ -1,9 +1,17 @@
 import { useState } from 'react';
-import { cancelDownload, type Download } from './api';
+import { cancelDownload, retryDownload, type Download } from './api';
 import { DiscIcon } from './icons';
 import { locale, t } from './i18n';
 
 const cancellable = ['waiting', 'searching', 'not-found', 'downloading', 'failed'];
+
+function retryable(download: Download): boolean {
+  return (
+    download.state === 'not-found' ||
+    download.state === 'failed' ||
+    (download.state === 'waiting' && new Date(download.nextAttemptAt).getTime() > Date.now())
+  );
+}
 
 function when(date: string): string {
   return new Date(date).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' });
@@ -68,8 +76,17 @@ function stateLabel(download: Download): string {
   }
 }
 
-export function DownloadItem({ download, onCancelled }: { download: Download; onCancelled: () => void }) {
+export function DownloadItem({
+  download,
+  onCancelled,
+  onRetried,
+}: {
+  download: Download;
+  onCancelled: () => void;
+  onRetried: () => void;
+}) {
   const [cancelling, setCancelling] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [coverFailed, setCoverFailed] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -84,6 +101,20 @@ export function DownloadItem({ download, onCancelled }: { download: Download; on
       setError((err as Error).message);
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleRetry() {
+    setError(undefined);
+    setRetrying(true);
+
+    try {
+      await retryDownload(download.id);
+      onRetried();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -118,6 +149,11 @@ export function DownloadItem({ download, onCancelled }: { download: Download; on
           </p>
         )}
       </div>
+      {retryable(download) && (
+        <button className="button-ghost button-small" disabled={retrying} onClick={handleRetry}>
+          {t.downloads.retry}
+        </button>
+      )}
       {cancellable.includes(download.state) && (
         <button className="button-ghost button-small" disabled={cancelling} onClick={handleCancel}>
           {t.downloads.cancel}
