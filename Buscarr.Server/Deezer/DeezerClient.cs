@@ -7,6 +7,23 @@ namespace Buscarr.Server.Deezer;
 public sealed class DeezerClient(HttpClient http)
 {
     private const string SearchUrl = "https://api.deezer.com/search/album";
+    private const string AlbumUrl = "https://api.deezer.com/album";
+
+    public async Task<string?> AlbumCoverByBarcodeAsync(string barcode)
+    {
+        try
+        {
+            var album = await http.GetFromJsonAsync<UpcAlbum>($"{AlbumUrl}/upc:{Uri.EscapeDataString(barcode)}");
+
+            return album?.CoverMedium;
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar a capa do código {barcode} no Deezer: {e.Message}");
+
+            return null;
+        }
+    }
 
     public async Task<string?> AlbumCoverAsync(string artist, string album)
     {
@@ -31,6 +48,13 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     private static string Term(string value) => value.Replace("\"", "");
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class UpcAlbum
+    {
+        [JsonPropertyName("cover_medium")]
+        public string? CoverMedium { get; init; }
+    }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class AlbumSearch

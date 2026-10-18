@@ -55,6 +55,13 @@ public static class MusicBrainzJson
         return release;
     }
 
+    public static Dictionary<string, object> WithBarcode(Dictionary<string, object> release, string barcode)
+    {
+        release["barcode"] = barcode;
+
+        return release;
+    }
+
     public static Dictionary<string, object> WithArtistCredit(Dictionary<string, object> release, params string[] names)
     {
         release["artist-credit"] = names.Select((name, index) => new

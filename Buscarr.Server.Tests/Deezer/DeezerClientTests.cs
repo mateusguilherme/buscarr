@@ -55,6 +55,38 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsTheCoverOfTheExactAlbum()
+    {
+        var handler = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.Album("AJULLIACOSTA", "SALA VERMELHA #03 - Ajuliacosta", Cover)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        var cover = await client.AlbumCoverByBarcodeAsync("198748762851");
+
+        Assert.Equal(Cover, cover);
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("https://api.deezer.com/album/upc:198748762851", request.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsNullForABarcodeDeezerDoesNotKnow()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.NotFound()));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumCoverByBarcodeAsync("198748762851"));
+    }
+
+    [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsNullWhenDeezerFails()
+    {
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.AlbumCoverByBarcodeAsync("198748762851"));
+    }
+
+    [Fact]
     public async Task AlbumCoverAsync_StripsQuotesFromTheSearch()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(

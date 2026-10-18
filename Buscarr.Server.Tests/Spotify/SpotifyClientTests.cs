@@ -96,6 +96,37 @@ public sealed class SpotifyClientTests
     }
 
     [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsThe300PixelCoverOfTheFirstMatch()
+    {
+        var handler = Handler(SpotifyJson.Albums(("AJULLIACOSTA", "SALA VERMELHA #03 - Ajuliacosta", Cover)));
+
+        var cover = await Client(handler).AlbumCoverByBarcodeAsync("198748762851");
+
+        Assert.Equal(Cover, cover);
+        var search = handler.Requests[1];
+        Assert.Equal("upc:198748762851", HttpUtility.ParseQueryString(search.Uri.Query)["q"]);
+        Assert.Equal("album", HttpUtility.ParseQueryString(search.Uri.Query)["type"]);
+    }
+
+    [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsNullWithoutAMatch()
+    {
+        var handler = Handler(SpotifyJson.Albums());
+
+        Assert.Null(await Client(handler).AlbumCoverByBarcodeAsync("198748762851"));
+    }
+
+    [Fact]
+    public async Task AlbumCoverByBarcodeAsync_ReturnsNullWithoutCredentialsWithoutCallingSpotify()
+    {
+        var handler = Handler(SpotifyJson.Albums());
+        var client = new SpotifyClient(new HttpClient(handler), null, null, _time);
+
+        Assert.Null(await client.AlbumCoverByBarcodeAsync("198748762851"));
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
     public async Task PingAsync_PassesWithGoodCredentialsAndThrowsOnBadOnes()
     {
         var good = Handler(SpotifyJson.Albums());

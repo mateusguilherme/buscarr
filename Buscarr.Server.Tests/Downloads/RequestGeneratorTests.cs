@@ -28,6 +28,8 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly List<string> _libraryAlbums = [];
     private readonly List<(string Artist, string Title, string Cover)> _deezerAlbums = [];
     private readonly List<(string Artist, string Title, string Cover)> _spotifyAlbums = [];
+    private readonly Dictionary<string, (string Artist, string Title, string Cover)> _deezerByBarcode = [];
+    private readonly Dictionary<string, (string Artist, string Title, string Cover)> _spotifyByBarcode = [];
     private bool _libraryFailing;
     private readonly MusicBrainzClient _musicBrainz;
     private readonly FakeHttpMessageHandler _deezerHandler;
@@ -44,11 +46,38 @@ public sealed class RequestGeneratorTests : IDisposable
         _musicBrainz = new MusicBrainzClient(
             new HttpClient(new FakeHttpMessageHandler(Respond)),
             new FakeTimeProvider(Now) { AutoAdvanceAmount = TimeSpan.FromSeconds(1) });
-        _deezerHandler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums])));
+        _deezerHandler = new FakeHttpMessageHandler(request =>
+        {
+            var path = request.RequestUri!.AbsolutePath;
+
+            if (path.StartsWith("/album/upc:", StringComparison.Ordinal))
+            {
+                return _deezerByBarcode.TryGetValue(path["/album/upc:".Length..], out var album)
+                    ? FakeHttpMessageHandler.Json(DeezerJson.Album(album.Artist, album.Title, album.Cover))
+                    : FakeHttpMessageHandler.Json(DeezerJson.NotFound());
+            }
+
+            return FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums]));
+        });
         _deezer = new DeezerClient(new HttpClient(_deezerHandler));
-        _spotifyHandler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
-            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
-            : FakeHttpMessageHandler.Json(SpotifyJson.Albums([.. _spotifyAlbums])));
+        _spotifyHandler = new FakeHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.Host == "accounts.spotify.com")
+            {
+                return FakeHttpMessageHandler.Json(SpotifyJson.Token());
+            }
+
+            var query = HttpUtility.ParseQueryString(request.RequestUri.Query)["q"] ?? "";
+
+            if (query.StartsWith("upc:", StringComparison.Ordinal))
+            {
+                return _spotifyByBarcode.TryGetValue(query["upc:".Length..], out var album)
+                    ? FakeHttpMessageHandler.Json(SpotifyJson.Albums(album))
+                    : FakeHttpMessageHandler.Json(SpotifyJson.Albums());
+            }
+
+            return FakeHttpMessageHandler.Json(SpotifyJson.Albums([.. _spotifyAlbums]));
+        });
         _spotify = new SpotifyClient(new HttpClient(_spotifyHandler), "id-1", "segredo-1", new FakeTimeProvider(Now));
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
         _generator = new RequestGenerator(_db, _musicBrainz, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
@@ -378,6 +407,45 @@ public sealed class RequestGeneratorTests : IDisposable
 
         var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
         Assert.Equal("https://i.scdn.co/image/m1", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FindsTheCoverByTheBarcodeOnDeezer()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["single"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithBarcode(
+                WithPrimaryType(
+                    WithMedia(WithCoverArt(Release("#SV 03", "2024-10-11", "2024-10-11"), "r1", "g1", front: false), ("Digital Media", 1)),
+                    "Single"),
+                "198748762851"));
+        _deezerByBarcode["198748762851"] =
+            ("AJULLIACOSTA", "SALA VERMELHA #03", "https://cdn-images.dzcdn.net/images/cover/sv/250x250-000000-80-0-0.jpg");
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/sv/250x250-000000-80-0-0.jpg", request.CoverUrl);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FindsTheCoverByTheBarcodeOnSpotify()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["single"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithBarcode(
+                WithPrimaryType(
+                    WithMedia(WithCoverArt(Release("#SV 03", "2024-10-11", "2024-10-11"), "r1", "g1", front: false), ("Digital Media", 1)),
+                    "Single"),
+                "198748762851"));
+        _spotifyByBarcode["198748762851"] = ("AJULLIACOSTA", "SALA VERMELHA #03", "https://i.scdn.co/image/sv");
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://i.scdn.co/image/sv", request.CoverUrl);
     }
 
     [Fact]

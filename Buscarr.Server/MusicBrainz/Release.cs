@@ -12,6 +12,8 @@ public sealed class Release
     public required string Title { get; init; }
     public string? Date { get; init; }
 
+    public string? Barcode { get; init; }
+
     public string? Disambiguation { get; init; }
 
     public List<Medium> Media { get; init; } = [];

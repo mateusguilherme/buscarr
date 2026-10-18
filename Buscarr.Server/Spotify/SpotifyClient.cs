@@ -55,14 +55,7 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
                 Names.Normalize(item.Name) == Names.Normalize(album)
                 && item.Artists.Any(credited => Names.Normalize(credited.Name) == Names.Normalize(artist)));
 
-            if (match is null)
-            {
-                return null;
-            }
-
-            var images = match.Images.OrderByDescending(image => image.Width).ToList();
-
-            return (images.FirstOrDefault(image => image.Width <= 300) ?? images.LastOrDefault())?.Url;
+            return match is null ? null : Cover(match);
         }
         catch (Exception e)
         {
@@ -70,6 +63,42 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
 
             return null;
         }
+    }
+
+    public async Task<string?> AlbumCoverByBarcodeAsync(string barcode)
+    {
+        if (!IsConfigured)
+        {
+            return null;
+        }
+
+        try
+        {
+            var query = Uri.EscapeDataString($"upc:{barcode}");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{SearchUrl}?q={query}&type=album&limit=1");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync());
+
+            using var response = await http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var search = await response.Content.ReadFromJsonAsync<AlbumSearch>();
+            var match = search?.Albums?.Items.FirstOrDefault();
+
+            return match is null ? null : Cover(match);
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao buscar a capa do código {barcode} no Spotify: {e.Message}");
+
+            return null;
+        }
+    }
+
+    private static string? Cover(AlbumItem match)
+    {
+        var images = match.Images.OrderByDescending(image => image.Width).ToList();
+
+        return (images.FirstOrDefault(image => image.Width <= 300) ?? images.LastOrDefault())?.Url;
     }
 
     private async Task<string> TokenAsync()

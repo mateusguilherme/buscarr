@@ -159,10 +159,27 @@ public sealed class RequestGenerator(
         }
 
         var credited = album.First.CreditedArtists.Append(artist.Name).Distinct().ToList();
+        var barcodes = Barcodes(chosen, album);
+
+        foreach (var barcode in barcodes)
+        {
+            if (await deezer.AlbumCoverByBarcodeAsync(barcode) is { } cover)
+            {
+                return cover;
+            }
+        }
 
         foreach (var name in credited)
         {
             if (await deezer.AlbumCoverAsync(name, album.First.Title) is { } cover)
+            {
+                return cover;
+            }
+        }
+
+        foreach (var barcode in barcodes)
+        {
+            if (await spotify.AlbumCoverByBarcodeAsync(barcode) is { } cover)
             {
                 return cover;
             }
@@ -178,6 +195,14 @@ public sealed class RequestGenerator(
 
         return coverUrl;
     }
+
+    private static List<string> Barcodes(Release chosen, Album album) =>
+        [.. album.Editions
+            .Prepend(chosen)
+            .Select(release => release.Barcode)
+            .OfType<string>()
+            .Where(barcode => barcode.Length > 0)
+            .Distinct()];
 
     private static (string, int, string) Key(DownloadRequest request) =>
         (request.ReleaseGroupId, request.TrackCount, request.Quality);
