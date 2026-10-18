@@ -94,7 +94,7 @@ export function DownloadItem({
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [coverFailed, setCoverFailed] = useState(false);
+  const [failedCover, setFailedCover] = useState<string>();
   const [error, setError] = useState<string>();
 
   async function handleCancel() {
@@ -128,8 +128,13 @@ export function DownloadItem({
   return (
     <li className="card artist-card">
       <span className="avatar" aria-hidden="true">
-        {download.coverUrl && !coverFailed ? (
-          <img src={download.coverUrl} alt="" loading="lazy" onError={() => setCoverFailed(true)} />
+        {download.coverUrl && download.coverUrl !== failedCover ? (
+          <img
+            src={download.coverUrl}
+            alt=""
+            loading="lazy"
+            onError={() => setFailedCover(download.coverUrl ?? undefined)}
+          />
         ) : (
           <DiscIcon />
         )}

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -139,6 +139,23 @@ describe('DownloadsPage', () => {
     expect(credit.getAttribute('title')).toBe('Maru2D, AJULLIACOSTA, NADAMAL & DJ LN');
     expect(screen.getByText('Do Corre').getAttribute('title')).toBe('Do Corre');
     expect(screen.queryByText('Nirvana')).toBeNull();
+  });
+
+  it('tenta a capa de novo quando a URL muda', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderPage();
+    await screen.findByText('Nenhum download ainda. Adicione artistas à lista.');
+    const cover = () => document.querySelector('.avatar img') as HTMLImageElement | null;
+
+    FakeEventSource.instances[0].emit([download({ coverUrl: 'https://capas.local/quebrada.jpg' })]);
+    await screen.findByText('Nevermind');
+    fireEvent.error(cover()!);
+
+    expect(cover()).toBeNull();
+
+    FakeEventSource.instances[0].emit([download({ coverUrl: 'https://capas.local/boa.jpg' })]);
+
+    await waitFor(() => expect(cover()?.src).toBe('https://capas.local/boa.jpg'));
   });
 
   it('tenta de novo um download que falhou', async () => {

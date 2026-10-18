@@ -118,7 +118,7 @@ public sealed class RequestGenerator(
             return;
         }
 
-        var coverUrl = await CoverUrlAsync(artist, album, chosen);
+        var coverUrl = await FoundCoverAsync(artist, album, chosen);
 
         if (existing.Contains(key))
         {
@@ -143,19 +143,17 @@ public sealed class RequestGenerator(
             EditionReleaseId = chosen.Id,
             TrackCount = chosen.TrackCount,
             Quality = quality,
-            CoverUrl = coverUrl,
+            CoverUrl = coverUrl ?? chosen.CoverUrl ?? album.First.CoverUrl,
             State = DownloadState.Waiting,
             NextAttemptAt = RetrySchedule.FirstAttempt(now, firstReleaseDate),
         });
     }
 
-    private async Task<string?> CoverUrlAsync(ListedArtist artist, Album album, Release chosen)
+    private async Task<string?> FoundCoverAsync(ListedArtist artist, Album album, Release chosen)
     {
-        var coverUrl = chosen.CoverUrl ?? album.First.CoverUrl;
-
         if (album.Editions.Any(release => release.HasFrontCover))
         {
-            return coverUrl;
+            return chosen.CoverUrl ?? album.First.CoverUrl;
         }
 
         var credited = album.First.CreditedArtists.Append(artist.Name).Distinct().ToList();
@@ -193,7 +191,7 @@ public sealed class RequestGenerator(
             }
         }
 
-        return coverUrl;
+        return null;
     }
 
     private static List<string> Barcodes(Release chosen, Album album) =>

@@ -486,6 +486,24 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_KeepsTheStoredCoverWhenTheLookupsFindNothing()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = Releases(
+            1,
+            WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false), ("CD", 12)));
+        var existing = Request("g1", trackCount: 12, state: DownloadState.NotFound);
+        existing.CoverUrl = "https://cdn-images.dzcdn.net/images/cover/boa/250x250-000000-80-0-0.jpg";
+        _db.DownloadRequests.Add(existing);
+        await _db.SaveChangesAsync();
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/boa/250x250-000000-80-0-0.jpg", request.CoverUrl);
+    }
+
+    [Fact]
     public async Task GenerateAsync_FillsTheCoverOfAnExistingRequest()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
