@@ -343,6 +343,36 @@ public sealed class SearchQueueTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessNextAsync_DiscardsTheOutcomeOfARequestDeletedDuringTheSearch()
+    {
+        var request = await AddRequestAsync();
+        _slskd.Answer("Nirvana Nevermind", Response("fulano", AlbumFiles(Nevermind, 12)));
+
+        var process = _queue.ProcessNextAsync();
+
+        while (await StateAsync(request.Id) != DownloadState.Searching)
+        {
+            await Task.Delay(1);
+        }
+
+        await DeleteRequestAsync(request.Id);
+
+        while (!process.IsCompleted)
+        {
+            _time.Advance(TimeSpan.FromSeconds(1));
+            await Task.Delay(1);
+        }
+
+        var searched = await process;
+
+        Assert.Empty(searched!.Folders);
+
+        await using var db = NewContext();
+
+        Assert.Empty(await db.SearchCandidates.ToListAsync());
+    }
+
+    [Fact]
     public async Task RecoverAsync_PutsInFlightRequestsBackInTheQueue()
     {
         var searching = await AddRequestAsync(releaseGroupId: "g1", state: DownloadState.Searching, nextAttemptIn: TimeSpan.FromDays(1));
@@ -421,6 +451,12 @@ public sealed class SearchQueueTests : IDisposable
         await db.DownloadRequests
             .Where(r => r.Id == id)
             .ExecuteUpdateAsync(set => set.SetProperty(r => r.State, state));
+    }
+
+    private async Task DeleteRequestAsync(int id)
+    {
+        await using var db = NewContext();
+        await db.DownloadRequests.Where(r => r.Id == id).ExecuteDeleteAsync();
     }
 
     private BuscarrDbContext NewContext() =>

@@ -73,9 +73,10 @@ public sealed class SearchQueue(BuscarrDbContext db, AlbumSearch search, TimePro
             await Console.Error.WriteLineAsync($"erro ao buscar {request.ArtistName} {request.Title}: {e.Message}");
         }
 
-        await db.Entry(request).ReloadAsync();
+        var entry = db.Entry(request);
+        await entry.ReloadAsync();
 
-        if (request.State != DownloadState.Searching)
+        if (entry.State == EntityState.Detached || request.State != DownloadState.Searching)
         {
             return new SearchedRequest(request.Id, []);
         }
