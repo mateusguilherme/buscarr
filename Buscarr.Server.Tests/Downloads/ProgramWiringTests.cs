@@ -4,6 +4,7 @@ using Buscarr.Server.Import;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Subsonic;
 using Buscarr.Server.Tests.Fakes;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -22,6 +23,20 @@ public class ProgramWiringTests(BuscarrApiFactory factory) : IClassFixture<Busca
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<SearchQueue>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<ImportQueue>());
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<RequestGenerator>());
+    }
+
+    [Fact]
+    public async Task TheDatabaseRunsInWalMode()
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<BuscarrDbContext>();
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = "pragma journal_mode;";
+
+        Assert.Equal("wal", (string?)await command.ExecuteScalarAsync());
     }
 
     [Fact]
