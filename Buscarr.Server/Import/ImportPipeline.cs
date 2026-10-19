@@ -220,7 +220,7 @@ public sealed class ImportPipeline(
         {
             Directory.CreateDirectory(Options.Rejected);
             var target = Path.Combine(Options.Rejected, $"{Path.GetFileName(directory)}-{Guid.NewGuid():N}");
-            Directory.Move(directory, target);
+            DirectoryMove.Move(directory, target);
             File.WriteAllText(
                 $"{target}.reason.txt",
                 $"{request.ArtistName} - {request.Title}: {reason}{Environment.NewLine}");
