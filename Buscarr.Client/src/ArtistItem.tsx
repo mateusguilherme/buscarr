@@ -68,6 +68,7 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
       <div className="artist-info">
         <Link
           className="artist-name card-link"
+          title={artist.name}
           to={`/artists/${artist.id}/releases`}
           state={{ name: artist.name, from: location.pathname + location.search }}
         >
@@ -75,7 +76,7 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
         </Link>
         {(artist.disambiguation || artist.area) && (
           <div className="artist-meta">
-            {artist.disambiguation && <span>{artist.disambiguation}</span>}
+            {artist.disambiguation && <span title={artist.disambiguation}>{artist.disambiguation}</span>}
             {artist.area && (
               <span className="chip">
                 <PinIcon />

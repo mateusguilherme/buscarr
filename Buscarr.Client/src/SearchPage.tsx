@@ -144,7 +144,7 @@ export function SearchPage({ onLogout }: { onLogout: () => void }) {
           </p>
         )}
         {visible.length > 0 && (
-          <ul className="card-grid">
+          <ul className="card-grid artist-grid">
             {visible.map((artist) => (
               <ArtistItem
                 key={artist.id}

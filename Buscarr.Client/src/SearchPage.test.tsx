@@ -205,6 +205,7 @@ describe('SearchPage', () => {
     const list = screen.getByRole('list');
 
     expect(list.className).toContain('card-grid');
+    expect(list.className).toContain('artist-grid');
     expect(within(list).getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
     expect(screen.getByRole('main').className).toContain('page-wide');
   });
