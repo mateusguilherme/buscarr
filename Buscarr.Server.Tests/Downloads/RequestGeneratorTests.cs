@@ -35,6 +35,8 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly Dictionary<string, string> _deezerArtists = [];
     private bool _libraryFailing;
     private string? _photoSavedWhenNirvanaWasFetched;
+    private readonly HashSet<string> _brokenCovers = [];
+    private readonly FakeHttpMessageHandler _coverArt;
     private readonly MusicBrainzClient _musicBrainz;
     private readonly ArtistImages _images;
     private readonly FakeHttpMessageHandler _deezerHandler;
@@ -95,12 +97,15 @@ public sealed class RequestGeneratorTests : IDisposable
             new HttpClient(new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Status(HttpStatusCode.NotFound))),
             "chave-de-teste");
         _images = new ArtistImages(fanartTv, _deezer, _spotify);
+        _coverArt = new FakeHttpMessageHandler(request => _brokenCovers.Contains(request.RequestUri!.ToString())
+            ? FakeHttpMessageHandler.Status(HttpStatusCode.InternalServerError)
+            : FakeHttpMessageHandler.Status(HttpStatusCode.OK));
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
         _generator = new RequestGenerator(
             _db,
             _musicBrainz,
             _images,
-            new AlbumCovers(_deezer, _spotify),
+            new AlbumCovers(_deezer, _spotify, new HttpClient(_coverArt)),
             subsonic,
             new FakeTimeProvider(Now));
     }
@@ -382,6 +387,20 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_FallsBackToDeezerWhenTheArchiveCoverIsBroken()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
+        _releases["nirvana"] = NirvanaReleases();
+        _brokenCovers.Add("https://coverartarchive.org/release/r1/front-500");
+        _deezerAlbums.Add(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg"));
+
+        await _generator.GenerateAsync();
+
+        var request = Assert.Single(await _db.DownloadRequests.Where(r => r.ReleaseGroupId == "g1").ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/cover/n1/250x250-000000-80-0-0.jpg", request.CoverUrl);
+    }
+
+    [Fact]
     public async Task GenerateAsync_KeepsTheArchiveFallbackWhenDeezerAndSpotifyHaveNothing()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
@@ -645,7 +664,7 @@ public sealed class RequestGeneratorTests : IDisposable
             _db,
             _musicBrainz,
             _images,
-            new AlbumCovers(_deezer, _spotify),
+            new AlbumCovers(_deezer, _spotify, new HttpClient(_coverArt)),
             subsonic,
             new FakeTimeProvider(Now));
     }

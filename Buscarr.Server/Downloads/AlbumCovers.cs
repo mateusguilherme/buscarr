@@ -1,16 +1,21 @@
+using System.Collections.Concurrent;
 using Buscarr.Server.Deezer;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Spotify;
 
 namespace Buscarr.Server.Downloads;
 
-public sealed class AlbumCovers(DeezerClient deezer, SpotifyClient spotify)
+public sealed class AlbumCovers(DeezerClient deezer, SpotifyClient spotify, HttpClient http)
 {
+    private readonly ConcurrentDictionary<string, bool> _verified = new();
+
     public async Task<string?> FindAsync(Album album, Release chosen, IEnumerable<string> artistNames)
     {
-        if (album.Editions.Any(release => release.HasFrontCover))
+        if (album.Editions.Any(release => release.HasFrontCover)
+            && (chosen.CoverUrl ?? album.First.CoverUrl) is { } archive
+            && await ServesAsync(archive))
         {
-            return chosen.CoverUrl ?? album.First.CoverUrl;
+            return archive;
         }
 
         var credited = artistNames.Distinct().ToList();
@@ -49,6 +54,32 @@ public sealed class AlbumCovers(DeezerClient deezer, SpotifyClient spotify)
         }
 
         return null;
+    }
+
+    private async Task<bool> ServesAsync(string url)
+    {
+        if (_verified.TryGetValue(url, out var known))
+        {
+            return known;
+        }
+
+        bool serves;
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Head, url);
+            using var response = await http.SendAsync(request);
+            serves = response.IsSuccessStatusCode;
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao verificar a capa {url}: {e.Message}");
+            serves = false;
+        }
+
+        _verified[url] = serves;
+
+        return serves;
     }
 
     private static List<string> Barcodes(Release chosen, Album album) =>

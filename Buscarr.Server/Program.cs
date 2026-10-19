@@ -38,7 +38,10 @@ builder.Services.AddDbContext<BuscarrDbContext>(options =>
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
 builder.Services.AddSingleton<ArtistImages>();
-builder.Services.AddSingleton<AlbumCovers>();
+builder.Services.AddSingleton(services => new AlbumCovers(
+    services.GetRequiredService<DeezerClient>(),
+    services.GetRequiredService<SpotifyClient>(),
+    new HttpClient { Timeout = TimeSpan.FromSeconds(10) }));
 builder.Services.AddSingleton<GeneratorTrigger>();
 builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddScoped<RequestGenerator>();
