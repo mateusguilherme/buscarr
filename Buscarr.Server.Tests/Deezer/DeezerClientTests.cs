@@ -135,6 +135,17 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task ArtistImageAsync_IgnoresThePlaceholderOfAnArtistWithoutPhoto()
+    {
+        var placeholder = "https://cdn-images.dzcdn.net/images/artist/d41d8cd98f00b204e9800998ecf8427e/500x500-000000-80-0-0.jpg";
+        var handler = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("Radiohead", placeholder)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Null(await client.ArtistImageAsync("323887691"));
+    }
+
+    [Fact]
     public async Task ArtistImageAsync_ReturnsNullWithoutAPictureOrOnFailure()
     {
         var empty = new FakeHttpMessageHandler(_ =>

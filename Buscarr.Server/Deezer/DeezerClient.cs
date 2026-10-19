@@ -9,6 +9,7 @@ public sealed class DeezerClient(HttpClient http)
     private const string SearchUrl = "https://api.deezer.com/search/album";
     private const string AlbumUrl = "https://api.deezer.com/album";
     private const string ArtistUrl = "https://api.deezer.com/artist";
+    private const string PlaceholderHash = "d41d8cd98f00b204e9800998ecf8427e";
 
     public async Task<string?> ArtistImageAsync(string id)
     {
@@ -96,8 +97,12 @@ public sealed class DeezerClient(HttpClient http)
 
     private static string Term(string value) => value.Replace("\"", "");
 
-    private static string? Biggest(string? big, string? medium) =>
-        string.IsNullOrEmpty(big) ? medium : big;
+    private static string? Biggest(string? big, string? medium)
+    {
+        var picture = string.IsNullOrEmpty(big) ? medium : big;
+
+        return picture is null || picture.Contains(PlaceholderHash, StringComparison.Ordinal) ? null : picture;
+    }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class DeezerArtist
