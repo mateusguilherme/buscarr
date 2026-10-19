@@ -22,10 +22,11 @@ function release(overrides: Partial<ArtistRelease> = {}): ArtistRelease {
   };
 }
 
-function renderPage(state?: { name?: string; from?: string }) {
+function renderPage(state?: { name?: string }) {
   render(
     <MemoryRouter initialEntries={[{ pathname: `/artists/${artistId}/releases`, state }]}>
       <Routes>
+        <Route path="/" element={<p>página inicial</p>} />
         <Route path="/artists/:id/releases" element={<ReleasesPage />} />
       </Routes>
     </MemoryRouter>,
@@ -132,22 +133,35 @@ describe('ReleasesPage', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('Erro 500 ao carregar os lançamentos.');
   });
 
-  it('usa o título genérico quando abre direto pela URL', async () => {
+  it('usa o título genérico e volta à home quando abre direto pela URL', async () => {
     mockFetch({ status: 200, body: [] });
     renderPage();
 
     expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Lançamentos' })).toBeDefined();
-    expect(screen.getByRole('link', { name: 'Voltar' }).getAttribute('href')).toBe('/');
 
     await screen.findByText('Nenhum lançamento encontrado.');
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+
+    expect(screen.getByText('página inicial')).toBeDefined();
   });
 
-  it('volta para a página de origem', async () => {
+  it('volta pelo histórico do navegador', async () => {
     mockFetch({ status: 200, body: [] });
-    renderPage({ name: 'Nirvana', from: '/?q=nirvana' });
-
-    expect(screen.getByRole('link', { name: 'Voltar' }).getAttribute('href')).toBe('/?q=nirvana');
-
+    render(
+      <MemoryRouter
+        initialEntries={['/?q=nirvana', { pathname: `/artists/${artistId}/releases`, state: { name: 'Nirvana' } }]}
+        initialIndex={1}
+      >
+        <Routes>
+          <Route path="/" element={<p>resultado da busca</p>} />
+          <Route path="/artists/:id/releases" element={<ReleasesPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
     await screen.findByText('Nenhum lançamento encontrado.');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
+
+    expect(screen.getByText('resultado da busca')).toBeDefined();
   });
 });

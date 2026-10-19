@@ -261,15 +261,15 @@ describe('SearchPage', () => {
     renderSearchPage();
     await screen.findByText('Nirvana');
 
-    expect(screen.queryByRole('link', { name: 'Voltar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Voltar' })).toBeNull();
 
     await search('caetano');
     await screen.findByText('Caetano Veloso');
-    await userEvent.click(screen.getByRole('link', { name: 'Voltar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Voltar' }));
 
     expect(await screen.findByText('Nirvana')).toBeDefined();
     expect(screen.queryByText('Caetano Veloso')).toBeNull();
-    expect(screen.queryByRole('link', { name: 'Voltar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Voltar' })).toBeNull();
     expect((screen.getByPlaceholderText('Nome do artista') as HTMLInputElement).value).toBe('');
   });
 

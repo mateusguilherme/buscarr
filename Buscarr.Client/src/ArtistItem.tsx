@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router';
+import { Link } from 'react-router';
 import { addToList, getListEntry, removeFromList, type Artist, type ListSettings } from './api';
 import { Avatar } from './Avatar';
 import { ListDialog } from './ListDialog';
@@ -7,7 +7,6 @@ import { PinIcon } from './icons';
 import { t } from './i18n';
 
 export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: () => void }) {
-  const location = useLocation();
   const [listed, setListed] = useState(artist.listed);
   const [dialog, setDialog] = useState<ListSettings | null>(null);
   const [error, setError] = useState<string>();
@@ -70,7 +69,7 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
           className="artist-name card-link"
           title={artist.name}
           to={`/artists/${artist.id}/releases`}
-          state={{ name: artist.name, from: location.pathname + location.search }}
+          state={{ name: artist.name }}
         >
           {artist.name}
         </Link>

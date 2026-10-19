@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
 import { getArtistReleases, requestAlbum, type ArtistRelease } from './api';
+import { BackLink } from './BackLink';
 import { Header } from './Header';
-import { ArrowLeftIcon, DiscIcon } from './icons';
+import { DiscIcon } from './icons';
 import { t } from './i18n';
 
 const typeOrder = ['album', 'ep', 'single', 'live', 'compilation', 'soundtrack', 'remix', 'demo'];
@@ -31,7 +32,7 @@ function groupByType(releases: ArtistRelease[]): [string, ArtistRelease[]][] {
 
 export function ReleasesPage() {
   const { id } = useParams();
-  const state = useLocation().state as { name?: string; from?: string } | null;
+  const state = useLocation().state as { name?: string } | null;
   const [releases, setReleases] = useState<ArtistRelease[] | null>(null);
   const [requesting, setRequesting] = useState<string>();
   const [failedCovers, setFailedCovers] = useState<string[]>([]);
@@ -78,10 +79,7 @@ export function ReleasesPage() {
       <Header title={state?.name ?? t.releases.show} />
 
       <main className="page">
-        <Link to={state?.from ?? '/'} className="back">
-          <ArrowLeftIcon />
-          {t.common.back}
-        </Link>
+        <BackLink />
 
         {error && (
           <p className="alert" role="alert">

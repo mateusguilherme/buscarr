@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import { getServerSettings, getSettings, saveSettings, type ServerSettings, type Settings } from './api';
+import { BackLink } from './BackLink';
 import { Header } from './Header';
-import { ArrowLeftIcon } from './icons';
 import { t } from './i18n';
 import { editionOptions, qualityOptions } from './options';
 import { ServerSettingsForm } from './ServerSettingsForm';
@@ -75,10 +74,7 @@ export function SettingsPage() {
       <Header title={t.settings.title} />
 
       <main className="page">
-        <Link to="/" className="back">
-          <ArrowLeftIcon />
-          {t.common.back}
-        </Link>
+        <BackLink />
 
         {error && (
           <p className="alert" role="alert">

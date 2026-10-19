@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router';
 import { getDownloads, getQuarantine, type Download, type QuarantinedAlbum } from './api';
+import { BackLink } from './BackLink';
 import { awaitingRelease, DownloadItem } from './DownloadItem';
 import { Header } from './Header';
-import { ArrowLeftIcon } from './icons';
 import { QuarantineItem } from './QuarantineItem';
 import { t } from './i18n';
 
@@ -98,10 +97,7 @@ export function DownloadsPage() {
       <Header title={t.downloads.title} />
 
       <main className="page">
-        <Link to="/" className="back">
-          <ArrowLeftIcon />
-          {t.common.back}
-        </Link>
+        <BackLink />
 
         {error && (
           <p className="alert" role="alert">

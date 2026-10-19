@@ -109,7 +109,7 @@ describe('SettingsPage', () => {
 
     await radio(/^A original/);
 
-    expect(screen.getByRole('link', { name: 'Voltar' }).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('button', { name: 'Voltar' })).toBeDefined();
   });
 
   it('não mostra as configurações do servidor para quem não é admin', async () => {

@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { findArtists, getList, type Artist } from './api';
 import { ArtistItem } from './ArtistItem';
+import { BackLink } from './BackLink';
 import { Header } from './Header';
-import { ArrowLeftIcon, SearchIcon } from './icons';
+import { SearchIcon } from './icons';
 import { t } from './i18n';
 
 function normalize(text: string) {
@@ -113,12 +114,7 @@ export function SearchPage({ onLogout }: { onLogout: () => void }) {
       </Header>
 
       <main className="page">
-        {!listing && (
-          <Link to="/" className="back">
-            <ArrowLeftIcon />
-            {t.common.back}
-          </Link>
-        )}
+        {!listing && <BackLink />}
 
         {message && (
           <p className="status" role="status">
