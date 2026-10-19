@@ -238,7 +238,7 @@ const ptBR = {
     empty: 'Nenhum lançamento encontrado.',
     request: 'Baixar',
     requested: 'Pedido',
-    close: 'Fechar',
+    inLibrary: 'Na biblioteca',
   },
   quarantine: {
     title: 'Quarentena',
@@ -491,7 +491,7 @@ const en: Messages = {
     empty: 'No releases found.',
     request: 'Download',
     requested: 'Requested',
-    close: 'Close',
+    inLibrary: 'In the library',
   },
   quarantine: {
     title: 'Quarantine',

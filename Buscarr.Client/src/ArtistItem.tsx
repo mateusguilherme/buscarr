@@ -1,15 +1,15 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router';
 import { addToList, getListEntry, removeFromList, type Artist, type ListSettings } from './api';
 import { Avatar } from './Avatar';
 import { ListDialog } from './ListDialog';
-import { ReleasesDialog } from './ReleasesDialog';
 import { PinIcon } from './icons';
 import { t } from './i18n';
 
 export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: () => void }) {
+  const location = useLocation();
   const [listed, setListed] = useState(artist.listed);
   const [dialog, setDialog] = useState<ListSettings | null>(null);
-  const [releasesOpen, setReleasesOpen] = useState(false);
   const [error, setError] = useState<string>();
   const [dialogError, setDialogError] = useState<string>();
   const [saving, setSaving] = useState(false);
@@ -85,9 +85,13 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
         )}
       </div>
       <div className="artist-actions">
-        <button className="button-ghost button-small" onClick={() => setReleasesOpen(true)}>
+        <Link
+          className="button-ghost button-small"
+          to={`/artists/${artist.id}/releases`}
+          state={{ name: artist.name, from: location.pathname + location.search }}
+        >
           {t.releases.show}
-        </button>
+        </Link>
         <button
           className={listed ? 'button-ghost button-small' : 'button-primary button-small'}
           aria-pressed={listed}
@@ -97,8 +101,6 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
           {listed ? t.artist.inList : t.artist.addToList}
         </button>
       </div>
-
-      {releasesOpen && <ReleasesDialog artist={artist} onClose={() => setReleasesOpen(false)} />}
 
       {dialog && (
         <ListDialog

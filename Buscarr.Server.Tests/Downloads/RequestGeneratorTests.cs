@@ -95,7 +95,13 @@ public sealed class RequestGeneratorTests : IDisposable
             "chave-de-teste");
         _images = new ArtistImages(fanartTv, _deezer, _spotify);
         var subsonic = new SubsonicClient(new HttpClient(), null, null, null);
-        _generator = new RequestGenerator(_db, _musicBrainz, _images, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
+        _generator = new RequestGenerator(
+            _db,
+            _musicBrainz,
+            _images,
+            new AlbumCovers(_deezer, _spotify),
+            subsonic,
+            new FakeTimeProvider(Now));
     }
 
     public void Dispose()
@@ -602,7 +608,13 @@ public sealed class RequestGeneratorTests : IDisposable
             "fulano",
             "segredo123");
 
-        return new RequestGenerator(_db, _musicBrainz, _images, _deezer, _spotify, subsonic, new FakeTimeProvider(Now));
+        return new RequestGenerator(
+            _db,
+            _musicBrainz,
+            _images,
+            new AlbumCovers(_deezer, _spotify),
+            subsonic,
+            new FakeTimeProvider(Now));
     }
 
     private HttpResponseMessage RespondLikeSubsonic(HttpRequestMessage request) =>

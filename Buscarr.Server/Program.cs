@@ -38,6 +38,7 @@ builder.Services.AddDbContext<BuscarrDbContext>(options =>
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
 builder.Services.AddSingleton<ArtistImages>();
+builder.Services.AddSingleton<AlbumCovers>();
 builder.Services.AddSingleton<GeneratorTrigger>();
 builder.Services.AddSingleton<WorkerHeartbeat>();
 builder.Services.AddScoped<RequestGenerator>();

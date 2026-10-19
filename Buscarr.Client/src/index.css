@@ -110,6 +110,19 @@ button {
   border-color: var(--border);
 }
 
+a.button-ghost {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
 .button-ghost:hover {
   background: var(--surface-2);
 }
@@ -776,8 +789,7 @@ button {
   padding-top: 0.75rem;
 }
 
-.source-list,
-.release-list {
+.source-list {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -797,8 +809,4 @@ button {
 .source-row > .chip {
   flex: none;
   margin-left: auto;
-}
-
-.releases-dialog .release-list {
-  margin-bottom: 1rem;
 }

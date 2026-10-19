@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Buscarr.Server.Data;
+using Buscarr.Server.Downloads;
 using Buscarr.Server.FanartTv;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
+using Buscarr.Server.Subsonic;
 using Buscarr.Server.Users;
 using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +23,8 @@ public record ArtistRelease(
     string? FirstReleaseDate,
     string? CoverUrl,
     int TrackCount,
-    bool Requested);
+    bool Requested,
+    bool InLibrary);
 
 public static class ArtistEndpoints
 {
@@ -37,6 +40,8 @@ public static class ArtistEndpoints
         MusicBrainzClient musicBrainz,
         BuscarrDbContext db,
         UserStore users,
+        AlbumCovers covers,
+        SubsonicClient subsonic,
         ClaimsPrincipal user,
         string id)
     {
@@ -64,20 +69,56 @@ public static class ArtistEndpoints
                 .ToListAsync())
             .ToHashSet();
 
-        return Results.Json(albums
+        var pairs = albums
             .Where(album => album.First.ReleaseGroup?.Id is not null)
             .Select(album => (Album: album, Chosen: Editions.Choose(album.Editions, edition)))
             .Where(pair => pair.Chosen.TrackCount > 0)
-            .Select(pair => new ArtistRelease(
+            .ToList();
+        var library = await LibraryAsync(subsonic);
+        var coverUrls = await Task.WhenAll(pairs.Select(pair =>
+            covers.FindAsync(pair.Album, pair.Chosen, pair.Album.First.CreditedArtists)));
+
+        return Results.Json(pairs
+            .Select((pair, index) => new ArtistRelease(
                 pair.Album.First.ReleaseGroup!.Id!,
                 pair.Album.First.Title,
                 pair.Album.First.Category ?? "album",
                 pair.Album.First.ReleaseGroup!.FirstReleaseDate ?? pair.Album.First.Date,
-                pair.Chosen.CoverUrl ?? pair.Album.First.CoverUrl,
+                coverUrls[index] ?? pair.Chosen.CoverUrl ?? pair.Album.First.CoverUrl,
                 pair.Chosen.TrackCount,
-                requested.Contains(pair.Album.First.ReleaseGroup!.Id!)))
+                requested.Contains(pair.Album.First.ReleaseGroup!.Id!),
+                InLibrary(library, pair.Album, pair.Chosen)))
             .OrderByDescending(release => release.FirstReleaseDate ?? "", StringComparer.Ordinal)
             .ToList());
+    }
+
+    private static async Task<LibraryIndex?> LibraryAsync(SubsonicClient subsonic)
+    {
+        if (!subsonic.IsConfigured)
+        {
+            return null;
+        }
+
+        try
+        {
+            return new LibraryIndex(await subsonic.AlbumsAsync());
+        }
+        catch (Exception e)
+        {
+            await Console.Error.WriteLineAsync($"erro ao listar a biblioteca: {e.Message}");
+
+            return null;
+        }
+    }
+
+    private static bool InLibrary(LibraryIndex? library, Album album, Release chosen)
+    {
+        var ids = album.Editions
+            .Select(release => release.Id)
+            .OfType<string>()
+            .Append(album.First.ReleaseGroup!.Id!);
+
+        return library?.TrackCount(ids, album.First.Title, album.First.CreditedAs ?? "") >= chosen.TrackCount;
     }
 
     private static async Task<IResult> SearchArtists(

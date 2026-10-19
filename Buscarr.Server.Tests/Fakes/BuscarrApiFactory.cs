@@ -39,7 +39,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         FanartTv = new FakeHttpMessageHandler(RespondLikeFanartTv);
     }
 
-    private FakeHttpMessageHandler MusicBrainz { get; } = new(RespondLikeMusicBrainz);
+    public FakeHttpMessageHandler MusicBrainz { get; } = new(RespondLikeMusicBrainz);
 
     public FakeHttpMessageHandler FanartTv { get; }
 

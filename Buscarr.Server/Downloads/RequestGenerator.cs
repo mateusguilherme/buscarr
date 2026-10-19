@@ -1,9 +1,7 @@
 using Buscarr.Server.Data;
-using Buscarr.Server.Deezer;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Slskd;
-using Buscarr.Server.Spotify;
 using Buscarr.Server.Subsonic;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,8 +11,7 @@ public sealed class RequestGenerator(
     BuscarrDbContext db,
     MusicBrainzClient musicBrainz,
     ArtistImages images,
-    DeezerClient deezer,
-    SpotifyClient spotify,
+    AlbumCovers covers,
     SubsonicClient subsonic,
     TimeProvider time)
 {
@@ -126,7 +123,7 @@ public sealed class RequestGenerator(
             return;
         }
 
-        var coverUrl = await FoundCoverAsync(artist, album, chosen);
+        var coverUrl = await covers.FindAsync(album, chosen, album.First.CreditedArtists.Append(artist.Name));
 
         if (existing.Contains(key))
         {
@@ -157,51 +154,6 @@ public sealed class RequestGenerator(
         });
     }
 
-    private async Task<string?> FoundCoverAsync(ListedArtist artist, Album album, Release chosen)
-    {
-        if (album.Editions.Any(release => release.HasFrontCover))
-        {
-            return chosen.CoverUrl ?? album.First.CoverUrl;
-        }
-
-        var credited = album.First.CreditedArtists.Append(artist.Name).Distinct().ToList();
-        var barcodes = Barcodes(chosen, album);
-
-        foreach (var barcode in barcodes)
-        {
-            if (await deezer.AlbumCoverByBarcodeAsync(barcode) is { } cover)
-            {
-                return cover;
-            }
-        }
-
-        foreach (var name in credited)
-        {
-            if (await deezer.AlbumCoverAsync(name, album.First.Title) is { } cover)
-            {
-                return cover;
-            }
-        }
-
-        foreach (var barcode in barcodes)
-        {
-            if (await spotify.AlbumCoverByBarcodeAsync(barcode) is { } cover)
-            {
-                return cover;
-            }
-        }
-
-        foreach (var name in credited)
-        {
-            if (await spotify.AlbumCoverAsync(name, album.First.Title) is { } cover)
-            {
-                return cover;
-            }
-        }
-
-        return null;
-    }
-
     private async Task<string?> ImageAsync(string contact, ListedArtist artist)
     {
         try
@@ -215,14 +167,6 @@ public sealed class RequestGenerator(
             return null;
         }
     }
-
-    private static List<string> Barcodes(Release chosen, Album album) =>
-        [.. album.Editions
-            .Prepend(chosen)
-            .Select(release => release.Barcode)
-            .OfType<string>()
-            .Where(barcode => barcode.Length > 0)
-            .Distinct()];
 
     private static (string, int, string) Key(DownloadRequest request) =>
         (request.ReleaseGroupId, request.TrackCount, request.Quality);

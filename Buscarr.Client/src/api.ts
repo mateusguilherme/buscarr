@@ -260,6 +260,7 @@ export type ArtistRelease = {
   coverUrl: string | null;
   trackCount: number;
   requested: boolean;
+  inLibrary: boolean;
 };
 
 export async function getCandidates(id: number): Promise<SourceCandidate[]> {
