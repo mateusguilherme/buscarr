@@ -240,7 +240,7 @@ describe('SearchPage', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('/api/artists?q=nirvana');
   });
 
-  it('mostra cada candidato com a descrição e a área, sem link para uma página do artista', async () => {
+  it('mostra cada candidato com a descrição e a área, com link para os lançamentos', async () => {
     mockFetch(
       { status: 200, body: [] },
       {
@@ -256,8 +256,13 @@ describe('SearchPage', () => {
 
     await search('rancore');
 
-    expect(await screen.findAllByText('Rancore')).toHaveLength(3);
-    expect(screen.queryByRole('link', { name: 'Rancore' })).toBeNull();
+    const links = await screen.findAllByRole('link', { name: 'Rancore' });
+
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/artists/e33ee038/releases',
+      '/artists/83048ffe/releases',
+      '/artists/b533daaf/releases',
+    ]);
     expect(screen.getByText('Italian rapper Tarek Iurcich')).toBeDefined();
     expect(screen.getByText('Italy')).toBeDefined();
     expect(screen.getByText('Brazillian Rock Band')).toBeDefined();

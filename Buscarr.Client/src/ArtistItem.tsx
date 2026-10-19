@@ -66,7 +66,13 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
     <li className="card artist-card">
       <Avatar image={artist.image} />
       <div className="artist-info">
-        <span className="artist-name">{artist.name}</span>
+        <Link
+          className="artist-name card-link"
+          to={`/artists/${artist.id}/releases`}
+          state={{ name: artist.name, from: location.pathname + location.search }}
+        >
+          {artist.name}
+        </Link>
         {(artist.disambiguation || artist.area) && (
           <div className="artist-meta">
             {artist.disambiguation && <span>{artist.disambiguation}</span>}
@@ -85,13 +91,6 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
         )}
       </div>
       <div className="artist-actions">
-        <Link
-          className="button-ghost button-small"
-          to={`/artists/${artist.id}/releases`}
-          state={{ name: artist.name, from: location.pathname + location.search }}
-        >
-          {t.releases.show}
-        </Link>
         <button
           className={listed ? 'button-ghost button-small' : 'button-primary button-small'}
           aria-pressed={listed}

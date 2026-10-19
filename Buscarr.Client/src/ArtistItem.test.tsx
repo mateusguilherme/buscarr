@@ -25,8 +25,9 @@ describe('ArtistItem', () => {
       </MemoryRouter>,
     );
 
-    const link = screen.getByRole('link', { name: 'Lançamentos' });
+    const link = screen.getByRole('link', { name: 'Nirvana' });
 
     expect(link.getAttribute('href')).toBe('/artists/5b11f4ce-a62d-471e-81fc-a69a8278c7da/releases');
+    expect(screen.queryByRole('link', { name: 'Lançamentos' })).toBeNull();
   });
 });
