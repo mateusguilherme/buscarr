@@ -5,11 +5,11 @@ import { LoginForm } from './LoginForm';
 import { mockFetch } from './test-utils';
 
 describe('LoginForm', () => {
-  it('mostra a marca e o slogan', () => {
+  it('mostra a marca, sem slogan', () => {
     render(<LoginForm onLogin={vi.fn()} />);
 
     expect(screen.getByRole('heading', { name: 'buscarr' })).toBeDefined();
-    expect(screen.getByText('Encontre o artista certo.')).toBeDefined();
+    expect(screen.queryByText('Encontre o artista certo.')).toBeNull();
   });
 
   it('começa no modo de login, sem o campo de nome', () => {

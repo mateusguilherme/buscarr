@@ -34,7 +34,6 @@ const ptBR = {
     signIn: 'Entrar',
     createUser: 'Criar usuário',
     haveUser: 'Já tenho usuário',
-    tagline: 'Encontre o artista certo.',
   },
   search: {
     menu: 'Menu',
@@ -291,7 +290,6 @@ const en: Messages = {
     signIn: 'Sign in',
     createUser: 'Create account',
     haveUser: 'I already have an account',
-    tagline: 'Find the right artist.',
   },
   search: {
     menu: 'Menu',

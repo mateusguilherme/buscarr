@@ -33,7 +33,6 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
         <h1 className="brand brand-large">
           <Brand />
         </h1>
-        <p className="tagline">{t.login.tagline}</p>
         <form className="stack" onSubmit={handleSubmit}>
           <input
             type="email"
