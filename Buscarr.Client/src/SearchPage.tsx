@@ -1,9 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
 import { findArtists, getList, logout, type Artist, type User } from './api';
 import { ArtistItem } from './ArtistItem';
 import { Header } from './Header';
-import { SearchIcon } from './icons';
+import { ArrowLeftIcon, SearchIcon } from './icons';
 import { t } from './i18n';
 
 function normalize(text: string) {
@@ -81,6 +81,19 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
     setSearchParams({ q: String(new FormData(e.currentTarget).get('q')) });
   }
 
+  function handleEscape(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Escape') {
+      return;
+    }
+
+    if (e.currentTarget.value) {
+      e.currentTarget.value = '';
+      setFilter('');
+    } else {
+      e.currentTarget.blur();
+    }
+  }
+
   async function handleLogout() {
     try {
       await logout();
@@ -116,10 +129,18 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
               autoFocus
               defaultValue={searchParams.get('q') ?? ''}
               onChange={(e) => setFilter(e.target.value)}
+              onKeyDown={handleEscape}
             />
             <button className="button-primary">{t.search.search}</button>
           </div>
         </form>
+
+        {!listing && (
+          <Link to="/" className="back">
+            <ArrowLeftIcon />
+            {t.common.back}
+          </Link>
+        )}
 
         {message && (
           <p className="status" role="status">

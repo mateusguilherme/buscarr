@@ -441,6 +441,12 @@ a.button-ghost {
   height: 1rem;
 }
 
+.search + .back {
+  display: flex;
+  width: fit-content;
+  margin: -1.25rem 0 1.25rem;
+}
+
 .page-title {
   margin: 1.25rem 0 1.5rem;
   font-size: clamp(1.75rem, 5vw, 2.5rem);

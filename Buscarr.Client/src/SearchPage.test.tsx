@@ -180,6 +180,55 @@ describe('SearchPage', () => {
     expect(await screen.findByText('Nirvana')).toBeDefined();
   });
 
+  it('limpa o texto da pesquisa com Esc, mantendo o foco', async () => {
+    mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+    const input = screen.getByPlaceholderText('Nome do artista');
+    await userEvent.type(input, 'nir');
+    expect(screen.queryByText('Rancore')).toBeNull();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect((input as HTMLInputElement).value).toBe('');
+    expect(screen.getByText('Rancore')).toBeDefined();
+    expect(screen.getByText('Nirvana')).toBeDefined();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('tira o foco do campo com Esc quando não há texto', async () => {
+    mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+    const input = screen.getByPlaceholderText('Nome do artista');
+    input.focus();
+
+    await userEvent.keyboard('{Escape}');
+
+    expect(document.activeElement).not.toBe(input);
+  });
+
+  it('limpa a busca e volta à lista pelo link Voltar', async () => {
+    mockFetch(
+      { status: 200, body: listed },
+      { status: 200, body: [{ id: 'e33ee038', name: 'Caetano Veloso', disambiguation: null, area: null }] },
+      { status: 200, body: listed },
+    );
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    expect(screen.queryByRole('link', { name: 'Voltar' })).toBeNull();
+
+    await search('caetano');
+    await screen.findByText('Caetano Veloso');
+    await userEvent.click(screen.getByRole('link', { name: 'Voltar' }));
+
+    expect(await screen.findByText('Nirvana')).toBeDefined();
+    expect(screen.queryByText('Caetano Veloso')).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Voltar' })).toBeNull();
+    expect((screen.getByPlaceholderText('Nome do artista') as HTMLInputElement).value).toBe('');
+  });
+
   it('busca só pelo nome, sem filtros', async () => {
     const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
     renderSearchPage();
