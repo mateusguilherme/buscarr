@@ -9,9 +9,9 @@ import { t } from './i18n';
 
 const retryWait = 10_000;
 
-type Filter = 'all' | 'active' | 'scheduled' | 'done';
+type Filter = 'active' | 'scheduled' | 'done';
 
-const filters: Filter[] = ['all', 'active', 'scheduled', 'done'];
+const filters: Filter[] = ['active', 'scheduled', 'done'];
 
 function filterOf(download: Download): Filter {
   if (['imported', 'downloaded', 'cancelled'].includes(download.state)) {
@@ -24,10 +24,10 @@ function filterOf(download: Download): Filter {
 export function DownloadsPage() {
   const [downloads, setDownloads] = useState<Download[] | null>(null);
   const [quarantine, setQuarantine] = useState<QuarantinedAlbum[]>([]);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<Filter | undefined>('active');
   const [error, setError] = useState<string>();
   const failedCount = downloads?.filter((download) => download.state === 'failed').length ?? 0;
-  const shown = downloads?.filter((download) => filter === 'all' || filterOf(download) === filter);
+  const shown = downloads?.filter((download) => !filter || filterOf(download) === filter);
 
   useEffect(() => {
     let ignore = false;
@@ -123,7 +123,7 @@ export function DownloadsPage() {
                 key={value}
                 className={value === filter ? 'button-primary button-small' : 'button-ghost button-small'}
                 aria-pressed={value === filter}
-                onClick={() => setFilter(value)}
+                onClick={() => setFilter((current) => (current === value ? undefined : value))}
               >
                 {t.downloads.filters[value]}
               </button>

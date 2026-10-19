@@ -99,6 +99,7 @@ describe('DownloadsPage', () => {
       download({ id: 7, title: 'Sliver', state: 'verifying' }),
       download({ id: 8, title: 'Love Buzz', state: 'waiting', nextAttemptAt: '2999-01-01T12:00:00Z' }),
     ]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativos' }));
 
     expect(await screen.findByText('Baixando 7/12')).toBeDefined();
     expect(screen.getByText('Na fila do peer (posição 3)')).toBeDefined();
@@ -122,6 +123,7 @@ describe('DownloadsPage', () => {
       download({ id: 3, title: 'Bleach', state: 'failed', failure: 'fake-audio' }),
       download({ id: 4, title: 'Incesticide', state: 'failed', failure: 'wrong-tracks' }),
     ]);
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativos' }));
 
     expect(await screen.findByText('Importando')).toBeDefined();
     expect(screen.getByText('Importado')).toBeDefined();
@@ -138,6 +140,7 @@ describe('DownloadsPage', () => {
     renderPage();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Ativos' }));
 
     expect(await screen.findByText('Cancelado')).toBeDefined();
     const call = fetchMock.mock.calls.find((args) => args[0] === '/api/downloads/1/cancel');
@@ -210,6 +213,7 @@ describe('DownloadsPage', () => {
     expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
 
     FakeEventSource.instances[0].onerror?.();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativos' }));
 
     expect(await screen.findByText('Baixado')).toBeDefined();
     expect(FakeEventSource.instances[0].closed).toBe(true);
@@ -228,6 +232,7 @@ describe('DownloadsPage', () => {
       { status: 200, body: [] },
     );
     renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ativos' }));
 
     expect(await screen.findByText('Importado em MP3 320, buscando FLAC')).toBeDefined();
   });
@@ -241,6 +246,7 @@ describe('DownloadsPage', () => {
       { status: 200, body: [] },
     );
     renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Lançamentos' }));
 
     expect(await screen.findByText('Aguardando o lançamento (2999-05-01)')).toBeDefined();
   });
@@ -260,9 +266,7 @@ describe('DownloadsPage', () => {
     renderPage();
     await screen.findByText('Ativo');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Ativos' }));
-
-    expect(screen.getByText('Ativo')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Ativos' }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.queryByText('Agendado')).toBeNull();
     expect(screen.queryByText('Feito')).toBeNull();
 
@@ -274,10 +278,13 @@ describe('DownloadsPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Concluídos' }));
 
     expect(screen.getByText('Feito')).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Todos' })).toBeNull();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Todos' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Concluídos' }));
 
     expect(screen.getByText('Ativo')).toBeDefined();
+    expect(screen.getByText('Agendado')).toBeDefined();
+    expect(screen.getByText('Feito')).toBeDefined();
   });
 
   it('mostra as fontes da última busca e baixa a escolhida', async () => {

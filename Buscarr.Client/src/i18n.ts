@@ -195,7 +195,6 @@ const ptBR = {
       flac: 'FLAC',
     } as Record<string, string>,
     filters: {
-      all: 'Todos',
       active: 'Ativos',
       scheduled: 'Lançamentos',
       done: 'Concluídos',
@@ -453,7 +452,6 @@ const en: Messages = {
       flac: 'FLAC',
     } as Record<string, string>,
     filters: {
-      all: 'All',
       active: 'Active',
       scheduled: 'Releases',
       done: 'Done',
