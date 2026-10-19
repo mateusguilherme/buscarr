@@ -23,6 +23,17 @@ public class MusicBrainzClientTests
     }
 
     [Fact]
+    public async Task FindArtistsAsync_MatchesNamesIgnoringDiacritics()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(
+            Artists(("1", "Motörhead"), ("2", "Lemmy Kilmister"), ("3", "MOTORHEADACHE"))));
+
+        var artists = await client.FindArtistsAsync(Contact, "motorhead");
+
+        Assert.Equal(["1", "3"], artists.Select(a => a.Id));
+    }
+
+    [Fact]
     public async Task FindArtistsAsync_ReturnsEmptyWhenNoNameContainsQuery()
     {
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Artists(("1", "Something Else"))));

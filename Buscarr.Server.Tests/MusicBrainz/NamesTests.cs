@@ -6,7 +6,15 @@ public class NamesTests
 {
     [Fact]
     public void Normalize_TrimsAndLowercases() =>
-        Assert.Equal("sigur rós", Names.Normalize("  Sigur Rós "));
+        Assert.Equal("nirvana", Names.Normalize("  Nirvana "));
+
+    [Fact]
+    public void Normalize_StripsDiacritics()
+    {
+        Assert.Equal("motorhead", Names.Normalize("Motörhead"));
+        Assert.Equal("sigur ros", Names.Normalize("  Sigur Rós "));
+        Assert.Equal("beyonce", Names.Normalize("Beyoncé"));
+    }
 
     [Fact]
     public void Normalize_ReplacesTypographicHyphenAndApostrophe()
