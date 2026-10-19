@@ -140,7 +140,7 @@ public class ReleaseTests
             ReleaseGroup = new ReleaseGroup { Id = "g1" },
         };
 
-        Assert.Equal("https://coverartarchive.org/release/r1/front-250", release.CoverUrl);
+        Assert.Equal("https://coverartarchive.org/release/r1/front-500", release.CoverUrl);
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class ReleaseTests
             ReleaseGroup = new ReleaseGroup { Id = "g1" },
         };
 
-        Assert.Equal("https://coverartarchive.org/release-group/g1/front-250", release.CoverUrl);
+        Assert.Equal("https://coverartarchive.org/release-group/g1/front-500", release.CoverUrl);
     }
 
     [Fact]

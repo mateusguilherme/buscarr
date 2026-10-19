@@ -66,7 +66,7 @@ public sealed partial class FanartTvClient(HttpClient http, Func<ServerSettings>
             ?? throw new JsonException("resposta vazia do fanart.tv");
         var image = MostLiked(artist.ArtistThumb) ?? MostLiked(artist.ArtistBackground);
 
-        return image is null ? null : FullSizeAsset().Replace(image.Url, "https://assets.fanart.tv/preview/");
+        return image is null ? null : Insecure().Replace(image.Url, "https://");
     }
 
     private async Task<HttpResponseMessage> GetArtistAsync(string musicBrainzId, string apiKey, string? clientKey)
@@ -99,8 +99,8 @@ public sealed partial class FanartTvClient(HttpClient http, Func<ServerSettings>
     private static FanartTvImage? MostLiked(List<FanartTvImage> images) =>
         images.MaxBy(image => image.Likes);
 
-    [GeneratedRegex("^https?://assets\\.fanart\\.tv/fanart/")]
-    private static partial Regex FullSizeAsset();
+    [GeneratedRegex("^http://")]
+    private static partial Regex Insecure();
 
     private sealed class FanartTvArtist
     {

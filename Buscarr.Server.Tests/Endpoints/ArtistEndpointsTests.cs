@@ -95,7 +95,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                     "Nevermind",
                     "album",
                     "1991-09-24",
-                    "https://coverartarchive.org/release/r1/front-250",
+                    "https://coverartarchive.org/release/r1/front-500",
                     12,
                     false,
                     false),
@@ -104,7 +104,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                     "Sliver",
                     "single",
                     "1990-09-01",
-                    "https://coverartarchive.org/release/r3/front-250",
+                    "https://coverartarchive.org/release/r3/front-500",
                     2,
                     false,
                     false),
@@ -156,7 +156,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
             $"/api/artists/{BuscarrApiFactory.NirvanaId}/releases");
 
         Assert.Equal(
-            "https://coverartarchive.org/release-group/g1/front-250",
+            "https://coverartarchive.org/release-group/g1/front-500",
             Assert.Single(releases!).CoverUrl);
     }
 

@@ -264,8 +264,8 @@ public class MusicBrainzClientTests
 
         Assert.Equal(
             [
-                "https://coverartarchive.org/release/r1/front-250",
-                "https://coverartarchive.org/release-group/g2/front-250",
+                "https://coverartarchive.org/release/r1/front-500",
+                "https://coverartarchive.org/release-group/g2/front-500",
             ],
             releases.Select(r => r.First.CoverUrl));
     }

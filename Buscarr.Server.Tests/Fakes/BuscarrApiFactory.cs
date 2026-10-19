@@ -29,7 +29,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
     public const string NirvanaId = "5b11f4ce-a62d-471e-81fc-a69a8278c7da";
 
     public const string NirvanaImage =
-        $"https://assets.fanart.tv/preview/music/{NirvanaId}/artistthumb/nirvana.jpg";
+        $"https://assets.fanart.tv/fanart/music/{NirvanaId}/artistthumb/nirvana.jpg";
 
     private readonly string _databasePath =
         Path.Combine(Path.GetTempPath(), $"buscarr-tests-{Guid.NewGuid()}.db");

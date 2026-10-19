@@ -376,7 +376,7 @@ public sealed class RequestGeneratorTests : IDisposable
         await _generator.GenerateAsync();
 
         var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
-        Assert.Equal("https://coverartarchive.org/release/r1/front-250", request.CoverUrl);
+        Assert.Equal("https://coverartarchive.org/release/r1/front-500", request.CoverUrl);
         Assert.Empty(_deezerHandler.Requests);
     }
 
@@ -391,7 +391,7 @@ public sealed class RequestGeneratorTests : IDisposable
         await _generator.GenerateAsync();
 
         var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
-        Assert.Equal("https://coverartarchive.org/release-group/g1/front-250", request.CoverUrl);
+        Assert.Equal("https://coverartarchive.org/release-group/g1/front-500", request.CoverUrl);
     }
 
     [Fact]

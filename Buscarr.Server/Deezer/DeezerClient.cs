@@ -15,8 +15,9 @@ public sealed class DeezerClient(HttpClient http)
         try
         {
             var artist = await http.GetFromJsonAsync<DeezerArtist>($"{ArtistUrl}/{Uri.EscapeDataString(id)}");
+            var picture = Biggest(artist?.PictureBig, artist?.PictureMedium);
 
-            return string.IsNullOrEmpty(artist?.PictureMedium) ? null : artist.PictureMedium;
+            return string.IsNullOrEmpty(picture) ? null : picture;
         }
         catch (Exception e)
         {
@@ -32,7 +33,7 @@ public sealed class DeezerClient(HttpClient http)
         {
             var album = await http.GetFromJsonAsync<UpcAlbum>($"{AlbumUrl}/upc:{Uri.EscapeDataString(barcode)}");
 
-            return album?.CoverMedium;
+            return Biggest(album?.CoverBig, album?.CoverMedium);
         }
         catch (Exception e)
         {
@@ -49,12 +50,12 @@ public sealed class DeezerClient(HttpClient http)
         try
         {
             var search = await http.GetFromJsonAsync<AlbumSearch>($"{SearchUrl}?q={query}");
-
-            return search?.Albums
+            var match = search?.Albums
                 .FirstOrDefault(result =>
                     Names.Normalize(result.Artist?.Name ?? "") == Names.Normalize(artist)
-                    && Names.Normalize(result.Title) == Names.Normalize(album))
-                ?.CoverMedium;
+                    && Names.Normalize(result.Title) == Names.Normalize(album));
+
+            return match is null ? null : Biggest(match.CoverBig, match.CoverMedium);
         }
         catch (Exception e)
         {
@@ -95,9 +96,15 @@ public sealed class DeezerClient(HttpClient http)
 
     private static string Term(string value) => value.Replace("\"", "");
 
+    private static string? Biggest(string? big, string? medium) =>
+        string.IsNullOrEmpty(big) ? medium : big;
+
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class DeezerArtist
     {
+        [JsonPropertyName("picture_big")]
+        public string? PictureBig { get; init; }
+
         [JsonPropertyName("picture_medium")]
         public string? PictureMedium { get; init; }
     }
@@ -105,6 +112,9 @@ public sealed class DeezerClient(HttpClient http)
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
     private sealed class UpcAlbum
     {
+        [JsonPropertyName("cover_big")]
+        public string? CoverBig { get; init; }
+
         [JsonPropertyName("cover_medium")]
         public string? CoverMedium { get; init; }
     }
@@ -122,6 +132,9 @@ public sealed class DeezerClient(HttpClient http)
         public long Id { get; init; }
 
         public required string Title { get; init; }
+
+        [JsonPropertyName("cover_big")]
+        public string? CoverBig { get; init; }
 
         [JsonPropertyName("cover_medium")]
         public string? CoverMedium { get; init; }

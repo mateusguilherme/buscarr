@@ -12,7 +12,7 @@ public class FanartTvClientTests
     private const string ApiKey = "chave-de-teste";
     private const string NirvanaId = "5b11f4ce-a62d-471e-81fc-a69a8278c7da";
     private const string Assets = $"http://assets.fanart.tv/fanart/music/{NirvanaId}";
-    private const string Previews = $"https://assets.fanart.tv/preview/music/{NirvanaId}";
+    private const string SecureAssets = $"https://assets.fanart.tv/fanart/music/{NirvanaId}";
 
     private ServerSettings _settings = new();
 
@@ -30,7 +30,7 @@ public class FanartTvClientTests
     }
 
     [Fact]
-    public async Task ArtistImageAsync_ReturnsAPreviewOfTheMostLikedThumb()
+    public async Task ArtistImageAsync_ReturnsTheFullSizeOfTheMostLikedThumbOverHttps()
     {
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Artist(
             ("artistthumb", $"{Assets}/artistthumb/nirvana-a.jpg", 1),
@@ -39,7 +39,7 @@ public class FanartTvClientTests
 
         var image = await client.ArtistImageAsync(NirvanaId);
 
-        Assert.Equal($"{Previews}/artistthumb/nirvana-b.jpg", image);
+        Assert.Equal($"{SecureAssets}/artistthumb/nirvana-b.jpg", image);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class FanartTvClientTests
 
         var image = await client.ArtistImageAsync(NirvanaId);
 
-        Assert.Equal($"{Previews}/artistbackground/nirvana-b.jpg", image);
+        Assert.Equal($"{SecureAssets}/artistbackground/nirvana-b.jpg", image);
     }
 
     [Fact]

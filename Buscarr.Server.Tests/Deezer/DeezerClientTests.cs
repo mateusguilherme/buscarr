@@ -26,6 +26,17 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task AlbumCoverAsync_PrefersTheBigCover()
+    {
+        var big = "https://cdn-images.dzcdn.net/images/cover/abc/500x500-000000-80-0-0.jpg";
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.AlbumsWithBigCovers(
+            ("Project46", "Tr3S", Cover, big))));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Equal(big, await client.AlbumCoverAsync("Project46", "Tr3s"));
+    }
+
+    [Fact]
     public async Task AlbumCoverAsync_ReturnsNullWithoutAnExactTitle()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums(
@@ -69,6 +80,17 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
+    public async Task AlbumCoverByBarcodeAsync_PrefersTheBigCover()
+    {
+        var big = "https://cdn-images.dzcdn.net/images/cover/abc/500x500-000000-80-0-0.jpg";
+        var handler = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.Album("AJULLIACOSTA", "SALA VERMELHA #03 - Ajuliacosta", Cover, big)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Equal(big, await client.AlbumCoverByBarcodeAsync("198748762851"));
+    }
+
+    [Fact]
     public async Task AlbumCoverByBarcodeAsync_ReturnsNullForABarcodeDeezerDoesNotKnow()
     {
         var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.NotFound()));
@@ -99,6 +121,17 @@ public sealed class DeezerClientTests
         Assert.Equal(picture, image);
         var request = Assert.Single(handler.Requests);
         Assert.Equal("https://api.deezer.com/artist/52654632", request.Uri.ToString());
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_PrefersTheBigPicture()
+    {
+        var big = "https://cdn-images.dzcdn.net/images/artist/abc/500x500-000000-80-0-0.jpg";
+        var handler = new FakeHttpMessageHandler(_ =>
+            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", "medium.jpg", big)));
+        var client = new DeezerClient(new HttpClient(handler));
+
+        Assert.Equal(big, await client.ArtistImageAsync("52654632"));
     }
 
     [Fact]

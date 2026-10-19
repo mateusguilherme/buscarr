@@ -40,9 +40,9 @@ public sealed class Release
 
     public string? CoverUrl =>
         HasFrontCover
-            ? $"{CoverArtArchiveUrl}/release/{Id}/front-250"
+            ? $"{CoverArtArchiveUrl}/release/{Id}/front-500"
             : ReleaseGroup?.Id is { } releaseGroupId
-                ? $"{CoverArtArchiveUrl}/release-group/{releaseGroupId}/front-250"
+                ? $"{CoverArtArchiveUrl}/release-group/{releaseGroupId}/front-500"
                 : null;
 
     private static readonly string[] SecondaryCategories = ["compilation", "soundtrack", "remix", "demo", "live"];
