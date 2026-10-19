@@ -73,7 +73,9 @@ public sealed class RequestGeneratorTests : IDisposable
 
             return FakeHttpMessageHandler.Json(DeezerJson.Albums([.. _deezerAlbums]));
         });
-        _deezer = new DeezerClient(new HttpClient(_deezerHandler));
+        _deezer = new DeezerClient(
+            new HttpClient(_deezerHandler),
+            new FakeTimeProvider(Now) { AutoAdvanceAmount = TimeSpan.FromSeconds(1) });
         _spotifyHandler = new FakeHttpMessageHandler(request =>
         {
             if (request.RequestUri!.Host == "accounts.spotify.com")

@@ -2,12 +2,69 @@ using System.Net;
 using System.Web;
 using Buscarr.Server.Deezer;
 using Buscarr.Server.Tests.Fakes;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Buscarr.Server.Tests.Deezer;
 
 public sealed class DeezerClientTests
 {
     private const string Cover = "https://cdn-images.dzcdn.net/images/cover/abc/250x250-000000-80-0-0.jpg";
+
+    [Fact]
+    public async Task Requests_WaitBetweenCallsToRespectTheQuota()
+    {
+        var time = new FakeTimeProvider();
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.Albums()));
+        var client = new DeezerClient(new HttpClient(handler), time);
+        await client.AlbumCoverAsync("Paramore", "Brand New Eyes");
+
+        var second = client.AlbumCoverAsync("Paramore", "Riot!");
+
+        Assert.False(second.IsCompleted);
+        Assert.Single(handler.Requests);
+
+        time.Advance(TimeSpan.FromMilliseconds(200));
+        await second;
+
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Requests_PauseAndRetryWhenTheQuotaRunsOut()
+    {
+        var time = new FakeTimeProvider();
+        var responses = new Queue<HttpResponseMessage>(
+        [
+            FakeHttpMessageHandler.Json(DeezerJson.QuotaExceeded()),
+            FakeHttpMessageHandler.Json(DeezerJson.Albums(("Paramore", "Brand New Eyes", Cover))),
+        ]);
+        var handler = new FakeHttpMessageHandler(_ => responses.Dequeue());
+        var client = new DeezerClient(new HttpClient(handler), time);
+
+        var cover = client.AlbumCoverAsync("Paramore", "Brand New Eyes");
+
+        Assert.False(cover.IsCompleted);
+        time.Advance(TimeSpan.FromSeconds(5));
+
+        Assert.Equal(Cover, await cover);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Requests_GiveUpAfterThreeQuotaFailures()
+    {
+        var time = new FakeTimeProvider();
+        var handler = new FakeHttpMessageHandler(_ => FakeHttpMessageHandler.Json(DeezerJson.QuotaExceeded()));
+        var client = new DeezerClient(new HttpClient(handler), time);
+
+        var cover = client.AlbumCoverAsync("Paramore", "Brand New Eyes");
+
+        time.Advance(TimeSpan.FromSeconds(5));
+        time.Advance(TimeSpan.FromSeconds(5));
+
+        Assert.Null(await cover);
+        Assert.Equal(3, handler.Requests.Count);
+    }
 
     [Fact]
     public async Task AlbumCoverAsync_ReturnsTheCoverOfTheAlbumThatMatches()

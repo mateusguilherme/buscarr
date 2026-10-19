@@ -123,7 +123,7 @@ public class ArtistImagesTests
 
         return new ArtistImages(
             new FanartTvClient(http(), "chave-de-teste"),
-            new DeezerClient(http()),
+            new DeezerClient(http(), new FakeTimeProvider { AutoAdvanceAmount = TimeSpan.FromSeconds(1) }),
             new SpotifyClient(http(), "id-1", "segredo-1", new FakeTimeProvider()));
     }
 

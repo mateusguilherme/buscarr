@@ -28,6 +28,12 @@ public static class DeezerJson
             error = new { type = "DataException", message = "no data", code = 800 },
         });
 
+    public static string QuotaExceeded() =>
+        JsonSerializer.Serialize(new
+        {
+            error = new { type = "Exception", message = "Quota limit exceeded", code = 4 },
+        });
+
     public static string Albums(params (string Artist, string Title, string Cover)[] albums) =>
         JsonSerializer.Serialize(new
         {

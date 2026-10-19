@@ -4,18 +4,30 @@ using JetBrains.Annotations;
 
 namespace Buscarr.Server.Deezer;
 
-public sealed class DeezerClient(HttpClient http)
+public sealed class DeezerClient(HttpClient http, TimeProvider time)
 {
     private const string SearchUrl = "https://api.deezer.com/search/album";
     private const string AlbumUrl = "https://api.deezer.com/album";
     private const string ArtistUrl = "https://api.deezer.com/artist";
     private const string PlaceholderHash = "d41d8cd98f00b204e9800998ecf8427e";
+    private const int QuotaCode = 4;
+    private const int MaxAttempts = 3;
+    private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan QuotaPause = TimeSpan.FromSeconds(5);
+
+    private readonly SemaphoreSlim _turn = new(1, 1);
+    private long? _lastRequest;
+
+    public DeezerClient(HttpClient http)
+        : this(http, TimeProvider.System)
+    {
+    }
 
     public async Task<(string Url, int Fans)?> ArtistImageAsync(string id)
     {
         try
         {
-            var artist = await http.GetFromJsonAsync<DeezerArtist>($"{ArtistUrl}/{Uri.EscapeDataString(id)}");
+            var artist = await FetchAsync<DeezerArtist>($"{ArtistUrl}/{Uri.EscapeDataString(id)}");
             var picture = Biggest(artist?.PictureBig, artist?.PictureMedium);
 
             return picture is null ? null : (picture, artist!.Fans);
@@ -32,7 +44,7 @@ public sealed class DeezerClient(HttpClient http)
     {
         try
         {
-            var album = await http.GetFromJsonAsync<UpcAlbum>($"{AlbumUrl}/upc:{Uri.EscapeDataString(barcode)}");
+            var album = await FetchAsync<UpcAlbum>($"{AlbumUrl}/upc:{Uri.EscapeDataString(barcode)}");
 
             return Biggest(album?.CoverBig, album?.CoverMedium);
         }
@@ -50,7 +62,7 @@ public sealed class DeezerClient(HttpClient http)
 
         try
         {
-            var search = await http.GetFromJsonAsync<AlbumSearch>($"{SearchUrl}?q={query}");
+            var search = await FetchAsync<AlbumSearch>($"{SearchUrl}?q={query}");
             var match = search?.Albums
                 .FirstOrDefault(result =>
                     Names.Normalize(result.Artist?.Name ?? "") == Names.Normalize(artist)
@@ -72,7 +84,7 @@ public sealed class DeezerClient(HttpClient http)
 
         try
         {
-            var search = await http.GetFromJsonAsync<AlbumSearch>($"{SearchUrl}?q={query}");
+            var search = await FetchAsync<AlbumSearch>($"{SearchUrl}?q={query}");
             var match = search?.Albums
                 .FirstOrDefault(result =>
                     Names.Normalize(result.Artist?.Name ?? "") == Names.Normalize(artist)
@@ -83,7 +95,7 @@ public sealed class DeezerClient(HttpClient http)
                 return null;
             }
 
-            var tracks = await http.GetFromJsonAsync<AlbumTrackList>($"{AlbumUrl}/{match.Id}/tracks?limit=100");
+            var tracks = await FetchAsync<AlbumTrackList>($"{AlbumUrl}/{match.Id}/tracks?limit=100");
 
             return tracks is { Tracks.Count: > 0 } ? [.. tracks.Tracks.Select(track => track.Duration)] : null;
         }
@@ -92,6 +104,56 @@ public sealed class DeezerClient(HttpClient http)
             await Console.Error.WriteLineAsync($"erro ao buscar as durações de {artist} - {album} no Deezer: {e.Message}");
 
             return null;
+        }
+    }
+
+    private async Task<T?> FetchAsync<T>(string url) where T : DeezerResponse
+    {
+        for (var attempts = 1; ; attempts++)
+        {
+            await WaitTurnAsync();
+            var payload = await http.GetFromJsonAsync<T>(url);
+
+            if (payload?.Error is not { } error)
+            {
+                return payload;
+            }
+
+            if (error.Code != QuotaCode)
+            {
+                return null;
+            }
+
+            if (attempts == MaxAttempts)
+            {
+                throw new HttpRequestException("quota do Deezer estourada");
+            }
+
+            await Task.Delay(QuotaPause, time);
+        }
+    }
+
+    private async Task WaitTurnAsync()
+    {
+        await _turn.WaitAsync();
+
+        try
+        {
+            if (_lastRequest is { } last)
+            {
+                var wait = Interval - time.GetElapsedTime(last);
+
+                if (wait > TimeSpan.Zero)
+                {
+                    await Task.Delay(wait, time);
+                }
+            }
+
+            _lastRequest = time.GetTimestamp();
+        }
+        finally
+        {
+            _turn.Release();
         }
     }
 
@@ -105,7 +167,21 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-    private sealed class DeezerArtist
+    private class DeezerResponse
+    {
+        [JsonPropertyName("error")]
+        public DeezerError? Error { get; init; }
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class DeezerError
+    {
+        [JsonPropertyName("code")]
+        public int Code { get; init; }
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class DeezerArtist : DeezerResponse
     {
         [JsonPropertyName("picture_big")]
         public string? PictureBig { get; init; }
@@ -118,7 +194,7 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-    private sealed class UpcAlbum
+    private sealed class UpcAlbum : DeezerResponse
     {
         [JsonPropertyName("cover_big")]
         public string? CoverBig { get; init; }
@@ -128,7 +204,7 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-    private sealed class AlbumSearch
+    private sealed class AlbumSearch : DeezerResponse
     {
         [JsonPropertyName("data")]
         public List<AlbumResult> Albums { get; init; } = [];
@@ -151,7 +227,7 @@ public sealed class DeezerClient(HttpClient http)
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-    private sealed class AlbumTrackList
+    private sealed class AlbumTrackList : DeezerResponse
     {
         [JsonPropertyName("data")]
         public List<AlbumTrack> Tracks { get; init; } = [];
