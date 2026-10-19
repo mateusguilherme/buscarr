@@ -63,7 +63,7 @@ export function ArtistItem({ artist, onRemoved }: { artist: Artist; onRemoved?: 
   }
 
   return (
-    <li className="card artist-card">
+    <li className="card artist-card grid-card">
       <Avatar image={artist.image} />
       <div className="artist-info">
         <Link

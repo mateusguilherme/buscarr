@@ -196,6 +196,17 @@ describe('SearchPage', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('mostra os artistas numa grade', async () => {
+    mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    const list = screen.getByRole('list');
+
+    expect(list.className).toContain('card-grid');
+    expect(within(list).getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
+  });
+
   it('não foca o campo de busca ao abrir a home', async () => {
     mockFetch({ status: 200, body: listed });
     renderSearchPage();

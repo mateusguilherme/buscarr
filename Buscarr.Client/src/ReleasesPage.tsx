@@ -99,12 +99,12 @@ export function ReleasesPage() {
         {releases && releases.length > 0 && groupByType(releases).map(([type, grouped]) => (
           <section key={type} className="release-section">
             <h2 className="section-title">{t.releases.sections[type] ?? type}</h2>
-            <ul className="artist-list">
+            <ul className="card-grid">
               {grouped.map((release) => {
                 const cover = release.coverUrl;
 
                 return (
-                  <li key={release.releaseGroupId} className="card artist-card">
+                  <li key={release.releaseGroupId} className="card artist-card grid-card">
                     <span className="avatar" aria-hidden="true">
                       {cover && !failedCovers.includes(cover) ? (
                         <img

@@ -74,6 +74,20 @@ describe('ReleasesPage', () => {
     expect(within(sections[3].closest('section')!).getByText('MTV Unplugged in New York')).toBeDefined();
   });
 
+  it('mostra os lançamentos numa grade', async () => {
+    mockFetch({
+      status: 200,
+      body: [release(), release({ releaseGroupId: 'g2', title: 'Heart-Shaped Box', type: 'single' })],
+    });
+    renderPage({ name: 'Nirvana' });
+    await screen.findByText('Nevermind');
+
+    const lists = screen.getAllByRole('list');
+
+    expect(lists.every((list) => list.className.includes('card-grid'))).toBe(true);
+    expect(screen.getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
+  });
+
   it('troca a capa quebrada pelo ícone de disco', async () => {
     mockFetch({ status: 200, body: [release({ coverUrl: 'https://capas.local/quebrada.jpg' })] });
     renderPage({ name: 'Nirvana' });
