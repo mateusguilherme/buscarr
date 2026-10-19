@@ -1,6 +1,6 @@
 import { t } from './i18n';
 
-export type User = { email: string; name: string };
+export type User = { email: string };
 export type Artist = {
   id: string;
   name: string;
@@ -43,8 +43,8 @@ export async function login(email: string, password: string): Promise<User> {
   return res.json();
 }
 
-export async function register(email: string, name: string, password: string): Promise<User> {
-  const res = await postJson('/api/auth/register', { email, name, password });
+export async function register(email: string, password: string): Promise<User> {
+  const res = await postJson('/api/auth/register', { email, password });
 
   if (res.status === 409) {
     throw new Error(t.api.emailTaken);

@@ -28,7 +28,6 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
         modelBuilder.Entity<User>(user =>
         {
             user.Property(u => u.Email).HasMaxLength(254).UseCollation("NOCASE");
-            user.Property(u => u.Name).HasMaxLength(256);
             user.Property(u => u.PasswordHash).HasMaxLength(256);
             user.Property(u => u.EditionPreference).HasMaxLength(32);
             user.Property(u => u.QualityPreference).HasMaxLength(32);

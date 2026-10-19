@@ -29,7 +29,6 @@ const ptBR = {
   },
   login: {
     email: 'E-mail',
-    name: 'Nome',
     password: 'Senha',
     signIn: 'Entrar',
     createUser: 'Criar usuário',
@@ -285,7 +284,6 @@ const en: Messages = {
   },
   login: {
     email: 'Email',
-    name: 'Name',
     password: 'Password',
     signIn: 'Sign in',
     createUser: 'Create account',

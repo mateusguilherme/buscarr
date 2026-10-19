@@ -25,15 +25,15 @@ describe('getCurrentUser', () => {
   });
 
   it('devolve o usuário logado', async () => {
-    mockFetch({ status: 200, body: { email: 'fulano@exemplo.com', name: 'Fulano' } });
+    mockFetch({ status: 200, body: { email: 'fulano@exemplo.com' } });
 
-    expect(await getCurrentUser()).toEqual({ email: 'fulano@exemplo.com', name: 'Fulano' });
+    expect(await getCurrentUser()).toEqual({ email: 'fulano@exemplo.com' });
   });
 });
 
 describe('login', () => {
   it('envia e-mail e senha como JSON', async () => {
-    const fetchMock = mockFetch({ status: 200, body: { email: 'fulano@exemplo.com', name: 'Fulano' } });
+    const fetchMock = mockFetch({ status: 200, body: { email: 'fulano@exemplo.com' } });
 
     await login('fulano@exemplo.com', 'segredo123');
 
@@ -51,10 +51,21 @@ describe('login', () => {
 });
 
 describe('register', () => {
+  it('envia só e-mail e senha como JSON', async () => {
+    const fetchMock = mockFetch({ status: 200, body: { email: 'fulano@exemplo.com' } });
+
+    await register('fulano@exemplo.com', 'segredo123');
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/auth/register');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(init?.body as string)).toEqual({ email: 'fulano@exemplo.com', password: 'segredo123' });
+  });
+
   it('avisa quando o e-mail já existe', async () => {
     mockFetch({ status: 409 });
 
-    await expect(register('fulano@exemplo.com', 'Fulano', 'segredo123')).rejects.toThrow(
+    await expect(register('fulano@exemplo.com', 'segredo123')).rejects.toThrow(
       'Já existe um usuário com esse e-mail.',
     );
   });
@@ -62,7 +73,7 @@ describe('register', () => {
   it('avisa quando faltam dados ou a senha é curta', async () => {
     mockFetch({ status: 400 });
 
-    await expect(register('fulano@exemplo.com', 'Fulano', 'curta')).rejects.toThrow(
+    await expect(register('fulano@exemplo.com', 'curta')).rejects.toThrow(
       'Preencha todos os campos. A senha precisa ter pelo menos 8 caracteres.',
     );
   });

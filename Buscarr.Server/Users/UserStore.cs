@@ -10,14 +10,14 @@ public class UserStore(BuscarrDbContext db)
 {
     private static readonly PasswordHasher<User> Hasher = new();
 
-    public async Task<User?> CreateAsync(string email, string name, string password)
+    public async Task<User?> CreateAsync(string email, string password)
     {
         if (await db.Users.AnyAsync(u => u.Email == email))
         {
             return null;
         }
 
-        var user = new User { Email = email, Name = name, IsAdmin = !await db.Users.AnyAsync() };
+        var user = new User { Email = email, IsAdmin = !await db.Users.AnyAsync() };
         user.PasswordHash = Hasher.HashPassword(user, password);
         db.Users.Add(user);
         await db.SaveChangesAsync();

@@ -67,7 +67,7 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
         var email = $"{Guid.NewGuid()}@exemplo.com";
         var response = await client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest(email, "Fulano", "segredo123"));
+            new RegisterRequest(email, "segredo123"));
         response.EnsureSuccessStatusCode();
 
         using var scope = Services.CreateScope();

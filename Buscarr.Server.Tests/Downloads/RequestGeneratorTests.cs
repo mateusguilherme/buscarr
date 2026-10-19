@@ -632,7 +632,6 @@ public sealed class RequestGeneratorTests : IDisposable
         var user = new User
         {
             Email = email,
-            Name = "Fulano",
             QualityPreference = quality,
             EditionPreference = edition,
         };

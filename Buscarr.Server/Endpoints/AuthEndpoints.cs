@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace Buscarr.Server.Endpoints;
 
-public record RegisterRequest(string? Email, string? Name, string? Password);
+public record RegisterRequest(string? Email, string? Password);
 
 public record LoginRequest(string? Email, string? Password);
 
-public record UserInfo(string Email, string Name, bool IsAdmin);
+public record UserInfo(string Email, bool IsAdmin);
 
 public static class AuthEndpoints
 {
@@ -28,7 +28,6 @@ public static class AuthEndpoints
     private static async Task<IResult> Me(ClaimsPrincipal user, UserStore users) =>
         Results.Json(new UserInfo(
             user.FindFirstValue(ClaimTypes.Email) ?? "",
-            user.FindFirstValue(ClaimTypes.Name) ?? "",
             await users.IsAdminAsync(user.UserId())));
 
     private static async Task<IResult> Register(
@@ -37,15 +36,14 @@ public static class AuthEndpoints
         HttpContext context)
     {
         var email = request.Email?.Trim() ?? "";
-        var name = request.Name?.Trim() ?? "";
         var password = request.Password ?? "";
 
-        if (email.Length == 0 || name.Length == 0 || password.Length < MinPasswordLength)
+        if (email.Length == 0 || password.Length < MinPasswordLength)
         {
             return Results.BadRequest();
         }
 
-        var user = await users.CreateAsync(email, name, password);
+        var user = await users.CreateAsync(email, password);
 
         if (user is null)
         {
@@ -54,7 +52,7 @@ public static class AuthEndpoints
 
         await SignInAsync(context, user);
 
-        return Results.Json(new UserInfo(user.Email, user.Name, user.IsAdmin));
+        return Results.Json(new UserInfo(user.Email, user.IsAdmin));
     }
 
     private static async Task<IResult> Login(
@@ -71,7 +69,7 @@ public static class AuthEndpoints
 
         await SignInAsync(context, user);
 
-        return Results.Json(new UserInfo(user.Email, user.Name, user.IsAdmin));
+        return Results.Json(new UserInfo(user.Email, user.IsAdmin));
     }
 
     private static IResult Logout() =>
@@ -83,7 +81,6 @@ public static class AuthEndpoints
             [
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, user.Name),
             ],
             CookieAuthenticationDefaults.AuthenticationScheme);
 

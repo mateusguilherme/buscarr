@@ -21,13 +21,12 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
         var client = factory.CreateClient();
         var email = NewEmail();
 
-        var response = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Fulano", "segredo123"));
+        var response = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "segredo123"));
         var me = await client.GetFromJsonAsync<UserInfo>("/api/auth/me");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(email, me?.Email);
-        Assert.Equal("Fulano", me?.Name);
-    }
+            }
 
     [Fact]
     public async Task Register_MakesOnlyTheFirstUserAnAdmin()
@@ -38,11 +37,11 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
         var firstEmail = NewEmail();
         var secondEmail = NewEmail();
 
-        await first.PostAsJsonAsync("/api/auth/register", new RegisterRequest(firstEmail, "Fulano", "segredo123"));
-        await second.PostAsJsonAsync("/api/auth/register", new RegisterRequest(secondEmail, "Beltrano", "segredo123"));
+        await first.PostAsJsonAsync("/api/auth/register", new RegisterRequest(firstEmail, "segredo123"));
+        await second.PostAsJsonAsync("/api/auth/register", new RegisterRequest(secondEmail, "segredo123"));
 
-        Assert.Equal(new UserInfo(firstEmail, "Fulano", true), await first.GetFromJsonAsync<UserInfo>("/api/auth/me"));
-        Assert.Equal(new UserInfo(secondEmail, "Beltrano", false), await second.GetFromJsonAsync<UserInfo>("/api/auth/me"));
+        Assert.Equal(new UserInfo(firstEmail, true), await first.GetFromJsonAsync<UserInfo>("/api/auth/me"));
+        Assert.Equal(new UserInfo(secondEmail, false), await second.GetFromJsonAsync<UserInfo>("/api/auth/me"));
     }
 
     [Fact]
@@ -50,7 +49,7 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     {
         var response = await factory.CreateClient().PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest(NewEmail(), "Fulano", "curta"));
+            new RegisterRequest(NewEmail(), "curta"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -59,11 +58,11 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     public async Task Register_WithExistingEmail_Returns409()
     {
         var email = NewEmail();
-        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Fulano", "segredo123"));
+        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "segredo123"));
 
         var response = await factory.CreateClient().PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest(email.ToUpperInvariant(), "Outro", "outrasenha"));
+            new RegisterRequest(email.ToUpperInvariant(), "outrasenha"));
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -72,7 +71,7 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     public async Task Login_WithCorrectPassword_StartsSession()
     {
         var email = NewEmail();
-        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Fulano", "segredo123"));
+        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "segredo123"));
         var client = factory.CreateClient();
 
         var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "segredo123"));
@@ -86,7 +85,7 @@ public class AuthEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
     public async Task Login_WithWrongPassword_Returns401()
     {
         var email = NewEmail();
-        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "Fulano", "segredo123"));
+        await factory.CreateClient().PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "segredo123"));
 
         var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "errada123"));
 

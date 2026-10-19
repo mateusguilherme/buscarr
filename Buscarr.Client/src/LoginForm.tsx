@@ -6,7 +6,6 @@ import { t } from './i18n';
 export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
   const [creating, setCreating] = useState(false);
   const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
 
@@ -15,7 +14,7 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
     setError(undefined);
 
     try {
-      const user = creating ? await register(email, name, password) : await login(email, password);
+      const user = creating ? await register(email, password) : await login(email, password);
       onLogin(user);
     } catch (err) {
       setError((err as Error).message);
@@ -43,15 +42,6 @@ export function LoginForm({ onLogin }: { onLogin: (user: User) => void }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          {creating && (
-            <input
-              placeholder={t.login.name}
-              required
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          )}
           <input
             type="password"
             placeholder={t.login.password}

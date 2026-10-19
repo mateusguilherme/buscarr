@@ -12,25 +12,24 @@ describe('LoginForm', () => {
     expect(screen.queryByText('Encontre o artista certo.')).toBeNull();
   });
 
-  it('começa no modo de login, sem o campo de nome', () => {
+  it('começa no modo de login', () => {
     render(<LoginForm onLogin={vi.fn()} />);
 
     expect(screen.getByPlaceholderText('E-mail')).toBeDefined();
     expect(screen.getByPlaceholderText('Senha')).toBeDefined();
-    expect(screen.queryByPlaceholderText('Nome')).toBeNull();
   });
 
-  it('troca para o cadastro pelo botão Criar usuário', async () => {
+  it('troca para o cadastro pelo botão Criar usuário, pedindo só e-mail e senha', async () => {
     render(<LoginForm onLogin={vi.fn()} />);
 
     await userEvent.click(screen.getByRole('button', { name: 'Criar usuário' }));
 
-    expect(screen.getByPlaceholderText('Nome')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Já tenho usuário' })).toBeDefined();
+    expect(screen.queryByPlaceholderText('Nome')).toBeNull();
   });
 
   it('entra e avisa quem logou', async () => {
-    const user = { email: 'fulano@exemplo.com', name: 'Fulano' };
+    const user = { email: 'fulano@exemplo.com' };
     mockFetch({ status: 200, body: user });
     const onLogin = vi.fn();
     render(<LoginForm onLogin={onLogin} />);

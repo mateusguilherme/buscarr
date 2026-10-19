@@ -28,7 +28,7 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task CreateAsync_StoresHashedPassword()
     {
-        var user = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        var user = await _users.CreateAsync("fulano@exemplo.com", "segredo123");
 
         Assert.NotNull(user);
         Assert.NotEqual(0, user.Id);
@@ -39,9 +39,9 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task CreateAsync_ReturnsNullWhenEmailExistsIgnoringCase()
     {
-        await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        await _users.CreateAsync("fulano@exemplo.com", "segredo123");
 
-        var duplicate = await _users.CreateAsync("FULANO@exemplo.com", "Outro", "outrasenha");
+        var duplicate = await _users.CreateAsync("FULANO@exemplo.com", "outrasenha");
 
         Assert.Null(duplicate);
     }
@@ -49,17 +49,17 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task VerifyAsync_ReturnsUserForCorrectPasswordIgnoringEmailCase()
     {
-        await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        await _users.CreateAsync("fulano@exemplo.com", "segredo123");
 
         var user = await _users.VerifyAsync("Fulano@Exemplo.com", "segredo123");
 
-        Assert.Equal("Fulano", user?.Name);
+        Assert.Equal("fulano@exemplo.com", user?.Email);
     }
 
     [Fact]
     public async Task VerifyAsync_ReturnsNullForWrongPassword()
     {
-        await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
+        await _users.CreateAsync("fulano@exemplo.com", "segredo123");
 
         var user = await _users.VerifyAsync("fulano@exemplo.com", "errada123");
 
@@ -77,8 +77,8 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task CreateAsync_MakesOnlyTheFirstUserAnAdmin()
     {
-        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
-        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+        var first = await _users.CreateAsync("fulano@exemplo.com", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "segredo123");
 
         Assert.True(await _users.IsAdminAsync(first!.Id));
         Assert.False(await _users.IsAdminAsync(second!.Id));
@@ -87,8 +87,8 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task EnsureAdminAsync_PromotesTheOldestUserWhenNoneIsAdmin()
     {
-        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
-        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+        var first = await _users.CreateAsync("fulano@exemplo.com", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "segredo123");
         await _db.Users.ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, false));
 
         await _users.EnsureAdminAsync();
@@ -100,8 +100,8 @@ public sealed class UserStoreTests : IDisposable
     [Fact]
     public async Task EnsureAdminAsync_KeepsTheAdminThereIs()
     {
-        var first = await _users.CreateAsync("fulano@exemplo.com", "Fulano", "segredo123");
-        var second = await _users.CreateAsync("beltrano@exemplo.com", "Beltrano", "segredo123");
+        var first = await _users.CreateAsync("fulano@exemplo.com", "segredo123");
+        var second = await _users.CreateAsync("beltrano@exemplo.com", "segredo123");
         await _db.Users.ExecuteUpdateAsync(setters => setters.SetProperty(u => u.IsAdmin, u => u.Id == second!.Id));
 
         await _users.EnsureAdminAsync();
