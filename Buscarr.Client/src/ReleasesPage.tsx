@@ -77,7 +77,7 @@ export function ReleasesPage() {
     <>
       <Header />
 
-      <main className="page">
+      <main className="page page-wide">
         <Link to={state?.from ?? '/'} className="back">
           <ArrowLeftIcon />
           {t.common.back}

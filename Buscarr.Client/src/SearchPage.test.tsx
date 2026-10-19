@@ -8,14 +8,13 @@ import { mockFetch } from './test-utils';
 function renderSearchPage({ url = '/', onLogout = vi.fn() } = {}) {
   render(
     <MemoryRouter initialEntries={[url]}>
-      <SearchPage user={{ email: 'fulano@exemplo.com', name: 'Fulano' }} onLogout={onLogout} />
+      <SearchPage onLogout={onLogout} />
     </MemoryRouter>,
   );
 }
 
 async function search(text: string) {
-  await userEvent.type(screen.getByPlaceholderText('Nome do artista'), text);
-  await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+  await userEvent.type(screen.getByPlaceholderText('Nome do artista'), `${text}{enter}`);
 }
 
 const rancores = [
@@ -38,11 +37,13 @@ async function searchRancores(...responses: { status: number; body?: unknown }[]
 }
 
 describe('SearchPage', () => {
-  it('cumprimenta o usuário', () => {
+  it('mostra a busca no cabeçalho, sem cumprimento e sem botão', () => {
     mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
-    expect(screen.getByText(/Olá, Fulano/)).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('search')).toBeDefined();
+    expect(screen.queryByText(/Olá/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Buscar' })).toBeNull();
   });
 
   it('leva às configurações pelo cabeçalho', () => {
@@ -205,6 +206,7 @@ describe('SearchPage', () => {
 
     expect(list.className).toContain('card-grid');
     expect(within(list).getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
+    expect(screen.getByRole('main').className).toContain('page-wide');
   });
 
   it('não foca o campo de busca ao abrir a home', async () => {
@@ -456,7 +458,7 @@ describe('SearchPage', () => {
 
     await search('rancore');
     await screen.findByText('Erro na busca.');
-    await userEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+    await userEvent.type(screen.getByPlaceholderText('Nome do artista'), '{enter}');
 
     expect(await screen.findByText('Rancore')).toBeDefined();
   });

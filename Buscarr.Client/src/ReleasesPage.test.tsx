@@ -86,6 +86,7 @@ describe('ReleasesPage', () => {
 
     expect(lists.every((list) => list.className.includes('card-grid'))).toBe(true);
     expect(screen.getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
+    expect(screen.getByRole('main').className).toContain('page-wide');
   });
 
   it('troca a capa quebrada pelo ícone de disco', async () => {

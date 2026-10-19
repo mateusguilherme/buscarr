@@ -37,5 +37,5 @@ export function HomePage() {
     return <LoginForm onLogin={setUser} />;
   }
 
-  return <SearchPage user={user} onLogout={() => setUser(null)} />;
+  return <SearchPage onLogout={() => setUser(null)} />;
 }

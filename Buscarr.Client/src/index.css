@@ -180,16 +180,30 @@ a.button-ghost {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  max-width: 52rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: 0.75rem 1.25rem;
 }
 
 .header-actions {
   display: flex;
+  flex: 1;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.75rem;
   min-width: 0;
+}
+
+.header-search {
+  flex: 1;
+  min-width: 0;
+  max-width: 30rem;
+  margin-right: auto;
+}
+
+.header-search input {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
 }
 
 .header-link {
@@ -203,18 +217,14 @@ a.button-ghost {
   color: var(--fg);
 }
 
-.greeting {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 0.9375rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .page {
   max-width: 52rem;
   margin: 0 auto;
   padding: 2rem 1.25rem 4rem;
+}
+
+.page-wide {
+  max-width: 80rem;
 }
 
 .auth {
@@ -273,10 +283,6 @@ a.button-ghost {
 .hint {
   border: 1px dashed var(--border);
   border-radius: var(--radius);
-}
-
-.search {
-  margin-bottom: 2rem;
 }
 
 .search-bar {
@@ -521,10 +527,10 @@ a.button-ghost {
   height: 1rem;
 }
 
-.search + .back {
+.page > .back {
   display: flex;
   width: fit-content;
-  margin: -1.25rem 0 1.25rem;
+  margin-bottom: 1.25rem;
 }
 
 .page-title {

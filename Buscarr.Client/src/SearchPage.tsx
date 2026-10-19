@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
-import { findArtists, getList, logout, type Artist, type User } from './api';
+import { findArtists, getList, logout, type Artist } from './api';
 import { ArtistItem } from './ArtistItem';
 import { Header } from './Header';
 import { ArrowLeftIcon, SearchIcon } from './icons';
@@ -13,7 +13,7 @@ function normalize(text: string) {
     .replace(/[̀-ͯ]/g, '');
 }
 
-export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
+export function SearchPage({ onLogout }: { onLogout: () => void }) {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -106,7 +106,19 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
   return (
     <>
       <Header>
-        <span className="greeting">{t.search.greeting(user.name)}</span>
+        <form key={location.search} className="header-search" role="search" onSubmit={handleSearch}>
+          <div className="search-bar">
+            <SearchIcon />
+            <input
+              name="q"
+              placeholder={t.search.artistName}
+              required
+              defaultValue={searchParams.get('q') ?? ''}
+              onChange={(e) => setFilter(e.target.value)}
+              onKeyDown={handleEscape}
+            />
+          </div>
+        </form>
         <Link to="/downloads" className="header-link">
           {t.search.downloads}
         </Link>
@@ -118,22 +130,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
         </button>
       </Header>
 
-      <main className="page">
-        <form key={location.search} className="search" role="search" onSubmit={handleSearch}>
-          <div className="search-bar">
-            <SearchIcon />
-            <input
-              name="q"
-              placeholder={t.search.artistName}
-              required
-              defaultValue={searchParams.get('q') ?? ''}
-              onChange={(e) => setFilter(e.target.value)}
-              onKeyDown={handleEscape}
-            />
-            <button className="button-primary">{t.search.search}</button>
-          </div>
-        </form>
-
+      <main className="page page-wide">
         {!listing && (
           <Link to="/" className="back">
             <ArrowLeftIcon />
