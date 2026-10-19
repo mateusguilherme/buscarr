@@ -257,7 +257,8 @@ public sealed class DownloadEndpointsTests
 
         var candidates = await client.GetFromJsonAsync<List<SourceCandidate>>($"/api/downloads/{request.Id}/candidates");
 
-        Assert.Equal(["fulano", "faixas"], candidates!.Select(candidate => candidate.Username));
+        Assert.NotNull(candidates);
+        Assert.Equal(["fulano", "faixas"], candidates.Select(candidate => candidate.Username));
         var first = candidates[0];
         Assert.Equal(
             ("1991 - Nevermind", 12, "mp3", 320, true, 0, null),
