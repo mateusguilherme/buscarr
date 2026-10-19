@@ -33,7 +33,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                 new ArtistCard(
                     BuscarrApiFactory.NirvanaId,
                     "Nirvana",
-                    "90s US grunge band",
+                    "90s grunge band",
                     "United States",
                     BuscarrApiFactory.NirvanaImage,
                     false),

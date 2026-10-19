@@ -25,7 +25,7 @@ public static class ListEndpoints
             .Select(artist => new ArtistCard(
                 artist.ArtistId,
                 artist.Name,
-                artist.Disambiguation,
+                Disambiguations.Clean(artist.Disambiguation, artist.Area),
                 artist.Area,
                 artist.Image,
                 true))];

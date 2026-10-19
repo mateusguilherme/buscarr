@@ -148,7 +148,13 @@ public static class ArtistEndpoints
     }
 
     private static ArtistCard Card(Artist artist, string? image, bool listed) =>
-        new(artist.Id, artist.Name, artist.Disambiguation, artist.Area?.Name, image, listed);
+        new(
+            artist.Id,
+            artist.Name,
+            Disambiguations.Clean(artist.Disambiguation, artist.Area?.Name),
+            artist.Area?.Name,
+            image,
+            listed);
 
     internal static async Task<string?> ArtistImageAsync(FanartTvClient fanartTv, string id)
     {
