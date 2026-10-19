@@ -172,6 +172,41 @@ public class MusicBrainzClientTests
     }
 
     [Fact]
+    public async Task ArtistAsync_FreshBypassesTheCache()
+    {
+        var responses = new Queue<string>(
+        [
+            Artist("a1", "AJULLIACOSTA"),
+            Artist("a1", "AJULLIACOSTA", "https://open.spotify.com/artist/abc"),
+        ]);
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(responses.Dequeue()));
+        await client.ArtistAsync(Contact, "a1");
+
+        var artist = await client.ArtistAsync(Contact, "a1", fresh: true);
+
+        Assert.Equal("abc", artist.SpotifyId);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
+    public async Task ArtistAsync_FreshRefreshesTheCache()
+    {
+        var responses = new Queue<string>(
+        [
+            Artist("a1", "AJULLIACOSTA"),
+            Artist("a1", "AJULLIACOSTA", "https://open.spotify.com/artist/abc"),
+        ]);
+        var (client, handler) = CreateClient(_ => FakeHttpMessageHandler.Json(responses.Dequeue()));
+        await client.ArtistAsync(Contact, "a1");
+        await client.ArtistAsync(Contact, "a1", fresh: true);
+
+        var artist = await client.ArtistAsync(Contact, "a1");
+
+        Assert.Equal("abc", artist.SpotifyId);
+        Assert.Equal(2, handler.Requests.Count);
+    }
+
+    [Fact]
     public async Task ReleasesAsync_FetchesEveryPage()
     {
         var pages = new Queue<string>(

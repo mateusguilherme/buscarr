@@ -60,7 +60,13 @@ public sealed class RequestGenerator(
 
                 if (string.IsNullOrEmpty(artist.Image))
                 {
-                    artist.Image = await ImageAsync(user.Email, artist) ?? artist.Image;
+                    var image = await ImageAsync(user.Email, artist);
+
+                    if (image is not null)
+                    {
+                        artist.Image = image;
+                        await db.SaveChangesAsync();
+                    }
                 }
 
                 foreach (var album in albums)
@@ -158,7 +164,7 @@ public sealed class RequestGenerator(
     {
         try
         {
-            return await images.FindAsync(await musicBrainz.ArtistAsync(contact, artist.ArtistId));
+            return await images.FindAsync(await musicBrainz.ArtistAsync(contact, artist.ArtistId, fresh: true));
         }
         catch (Exception e)
         {

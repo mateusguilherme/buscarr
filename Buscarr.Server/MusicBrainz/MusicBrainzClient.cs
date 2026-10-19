@@ -30,8 +30,8 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
             .ToList();
     }
 
-    public Task<Artist> ArtistAsync(string contact, string id) =>
-        GetAsync<Artist>(contact, $"artist/{id}", [("inc", "url-rels")]);
+    public Task<Artist> ArtistAsync(string contact, string id, bool fresh = false) =>
+        GetAsync<Artist>(contact, $"artist/{id}", [("inc", "url-rels")], fresh);
 
     public async Task<List<Album>> ReleasesAsync(string contact, string artistId)
     {
@@ -97,7 +97,8 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
     private async Task<T> GetAsync<T>(
         string contact,
         string path,
-        IEnumerable<(string Key, string Value)> parameters)
+        IEnumerable<(string Key, string Value)> parameters,
+        bool fresh = false)
     {
         var query = string.Join(
             "&",
@@ -107,7 +108,7 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
         var url = $"https://musicbrainz.org/ws/2/{path}?{query}";
         var userAgent = $"{UserAgentProduct} ( {contact} )";
 
-        if (_cache.TryGetValue(url, out var cached) && time.GetElapsedTime(cached.Timestamp) < CacheLife)
+        if (!fresh && _cache.TryGetValue(url, out var cached) && time.GetElapsedTime(cached.Timestamp) < CacheLife)
         {
             return (T)cached.Value;
         }

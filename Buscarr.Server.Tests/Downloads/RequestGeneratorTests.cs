@@ -34,6 +34,7 @@ public sealed class RequestGeneratorTests : IDisposable
     private readonly Dictionary<string, string> _artists = [];
     private readonly Dictionary<string, string> _deezerArtists = [];
     private bool _libraryFailing;
+    private string? _photoSavedWhenNirvanaWasFetched;
     private readonly MusicBrainzClient _musicBrainz;
     private readonly ArtistImages _images;
     private readonly FakeHttpMessageHandler _deezerHandler;
@@ -526,6 +527,38 @@ public sealed class RequestGeneratorTests : IDisposable
     }
 
     [Fact]
+    public async Task GenerateAsync_SavesAFoundPhotoBeforeFinishingTheCycle()
+    {
+        var user = await ListedUserAsync("fulano@exemplo.com", "ajulliacosta", types: ["album"]);
+        _db.ListedArtists.Add(Listed(user.Id, "nirvana", "album"));
+        await _db.SaveChangesAsync();
+        _artists["ajulliacosta"] = Artist("ajulliacosta", "AJULLIACOSTA", "https://www.deezer.com/artist/52654632");
+        _deezerArtists["52654632"] = "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg";
+        _releases["nirvana"] = NirvanaReleases();
+
+        await _generator.GenerateAsync();
+
+        Assert.Equal(
+            "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg",
+            _photoSavedWhenNirvanaWasFetched);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_LooksPastTheCacheWhenRefreshingAPhoto()
+    {
+        await ListedUserAsync("fulano@exemplo.com", "ajulliacosta", types: ["album"]);
+        _artists["ajulliacosta"] = Artist("ajulliacosta", "AJULLIACOSTA");
+        await _musicBrainz.ArtistAsync("fulano@exemplo.com", "ajulliacosta");
+        _artists["ajulliacosta"] = Artist("ajulliacosta", "AJULLIACOSTA", "https://www.deezer.com/artist/52654632");
+        _deezerArtists["52654632"] = "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg";
+
+        await _generator.GenerateAsync();
+
+        var listed = Assert.Single(await _db.ListedArtists.ToListAsync());
+        Assert.Equal("https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg", listed.Image);
+    }
+
+    [Fact]
     public async Task GenerateAsync_StoresTheFullCreditOfTheRelease()
     {
         await ListedUserAsync("fulano@exemplo.com", "nirvana", types: ["album"]);
@@ -687,6 +720,14 @@ public sealed class RequestGeneratorTests : IDisposable
         }
 
         var artist = HttpUtility.ParseQueryString(request.RequestUri!.Query)["artist"]!;
+
+        if (artist == "nirvana")
+        {
+            using var probe = new BuscarrDbContext(
+                new DbContextOptionsBuilder<BuscarrDbContext>().UseSqlite(_connection).Options);
+            _photoSavedWhenNirvanaWasFetched = probe.ListedArtists.AsNoTracking()
+                .SingleOrDefault(listed => listed.ArtistId == "ajulliacosta")?.Image;
+        }
 
         if (_failing.Contains(artist))
         {
