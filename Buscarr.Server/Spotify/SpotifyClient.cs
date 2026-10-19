@@ -111,7 +111,7 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
             response.EnsureSuccessStatusCode();
             var artist = await response.Content.ReadFromJsonAsync<ArtistProfile>();
 
-            return artist is null ? null : Smallest(artist.Images);
+            return artist is null ? null : Large(artist.Images);
         }
         catch (Exception e)
         {
@@ -128,6 +128,13 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
         var sorted = images.OrderByDescending(image => image.Width).ToList();
 
         return (sorted.FirstOrDefault(image => image.Width <= 300) ?? sorted.LastOrDefault())?.Url;
+    }
+
+    private static string? Large(List<AlbumImage> images)
+    {
+        var sorted = images.OrderBy(image => image.Width).ToList();
+
+        return (sorted.FirstOrDefault(image => image.Width >= 500) ?? sorted.LastOrDefault())?.Url;
     }
 
     private async Task<string> TokenAsync()

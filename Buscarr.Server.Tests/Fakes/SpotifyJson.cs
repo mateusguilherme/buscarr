@@ -24,6 +24,13 @@ public static class SpotifyJson
             },
         });
 
+    public static string Artist(string name, params (string Url, int Width)[] images) =>
+        JsonSerializer.Serialize(new
+        {
+            name,
+            images = images.Select(image => new { url = image.Url, width = image.Width, height = image.Width }),
+        });
+
     public static string Albums(params (string Artist, string Title, string Cover)[] albums) =>
         JsonSerializer.Serialize(new
         {

@@ -9,9 +9,9 @@ public sealed class ArtistImages(FanartTvClient fanartTv, DeezerClient deezer, S
 {
     public async Task<string?> FindAsync(Artist artist)
     {
-        if (await FanartTvImageAsync(artist.Id) is { } image)
+        if (artist.SpotifyId is { } spotifyId && await spotify.ArtistImageAsync(spotifyId) is { } photo)
         {
-            return image;
+            return photo;
         }
 
         if (artist.DeezerId is { } deezerId && await deezer.ArtistImageAsync(deezerId) is { } picture)
@@ -19,9 +19,9 @@ public sealed class ArtistImages(FanartTvClient fanartTv, DeezerClient deezer, S
             return picture;
         }
 
-        if (artist.SpotifyId is { } spotifyId && await spotify.ArtistImageAsync(spotifyId) is { } photo)
+        if (await FanartTvImageAsync(artist.Id) is { } image)
         {
-            return photo;
+            return image;
         }
 
         return null;

@@ -127,7 +127,7 @@ public sealed class SpotifyClientTests
     }
 
     [Fact]
-    public async Task ArtistImageAsync_ReturnsThe300PixelImageOfTheArtistPage()
+    public async Task ArtistImageAsync_ReturnsTheLargeImageOfTheArtistPage()
     {
         var image = "https://i.scdn.co/image/artista";
         var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
@@ -136,10 +136,25 @@ public sealed class SpotifyClientTests
 
         var result = await Client(handler).ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd");
 
-        Assert.Equal(image, result);
+        Assert.Equal($"{image}?size=640", result);
         Assert.Equal(
             "https://api.spotify.com/v1/artists/0eHkGhhUyp3LZdtZjaA8gd",
             handler.Requests[1].Uri.ToString());
+    }
+
+    [Fact]
+    public async Task ArtistImageAsync_TakesTheLargestImageWhenNoneIsLargeEnough()
+    {
+        var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
+            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
+            : FakeHttpMessageHandler.Json(SpotifyJson.Artist(
+                "AJULLIACOSTA",
+                ("https://i.scdn.co/image/media", 320),
+                ("https://i.scdn.co/image/pequena", 160))));
+
+        var result = await Client(handler).ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd");
+
+        Assert.Equal("https://i.scdn.co/image/media", result);
     }
 
     [Fact]
