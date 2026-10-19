@@ -236,6 +236,16 @@ const ptBR = {
     request: 'Baixar',
     requested: 'Pedido',
     inLibrary: 'Na biblioteca',
+    sections: {
+      album: 'Álbuns',
+      ep: 'EPs',
+      single: 'Singles',
+      live: 'Ao vivo',
+      compilation: 'Compilações',
+      soundtrack: 'Trilhas sonoras',
+      remix: 'Remixes',
+      demo: 'Demos',
+    } as Record<string, string>,
   },
   quarantine: {
     title: 'Quarentena',
@@ -486,6 +496,16 @@ const en: Messages = {
     request: 'Download',
     requested: 'Requested',
     inLibrary: 'In the library',
+    sections: {
+      album: 'Albums',
+      ep: 'EPs',
+      single: 'Singles',
+      live: 'Live',
+      compilation: 'Compilations',
+      soundtrack: 'Soundtracks',
+      remix: 'Remixes',
+      demo: 'Demos',
+    } as Record<string, string>,
   },
   quarantine: {
     title: 'Quarantine',

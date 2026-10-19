@@ -5,6 +5,30 @@ import { Header } from './Header';
 import { ArrowLeftIcon, DiscIcon } from './icons';
 import { t } from './i18n';
 
+const typeOrder = ['album', 'ep', 'single', 'live', 'compilation', 'soundtrack', 'remix', 'demo'];
+
+function typeRank(type: string) {
+  const index = typeOrder.indexOf(type);
+
+  return index === -1 ? typeOrder.length : index;
+}
+
+function groupByType(releases: ArtistRelease[]): [string, ArtistRelease[]][] {
+  const groups = new Map<string, ArtistRelease[]>();
+
+  for (const release of releases) {
+    const group = groups.get(release.type);
+
+    if (group) {
+      group.push(release);
+    } else {
+      groups.set(release.type, [release]);
+    }
+  }
+
+  return [...groups.entries()].sort(([a], [b]) => typeRank(a) - typeRank(b));
+}
+
 export function ReleasesPage() {
   const { id } = useParams();
   const state = useLocation().state as { name?: string; from?: string } | null;
@@ -72,55 +96,57 @@ export function ReleasesPage() {
           </p>
         )}
         {releases && releases.length === 0 && <p className="status hint">{t.releases.empty}</p>}
-        {releases && releases.length > 0 && (
-          <ul className="artist-list">
-            {releases.map((release) => {
-              const cover = release.coverUrl;
+        {releases && releases.length > 0 && groupByType(releases).map(([type, grouped]) => (
+          <section key={type} className="release-section">
+            <h2 className="section-title">{t.releases.sections[type] ?? type}</h2>
+            <ul className="artist-list">
+              {grouped.map((release) => {
+                const cover = release.coverUrl;
 
-              return (
-                <li key={release.releaseGroupId} className="card artist-card">
-                  <span className="avatar" aria-hidden="true">
-                    {cover && !failedCovers.includes(cover) ? (
-                      <img
-                        src={cover}
-                        alt=""
-                        loading="lazy"
-                        onError={() => setFailedCovers((current) => [...current, cover])}
-                      />
-                    ) : (
-                      <DiscIcon />
-                    )}
-                  </span>
-                  <div className="artist-info">
-                    <span className="artist-name release-title" title={release.title}>
-                      {release.title}
+                return (
+                  <li key={release.releaseGroupId} className="card artist-card">
+                    <span className="avatar" aria-hidden="true">
+                      {cover && !failedCovers.includes(cover) ? (
+                        <img
+                          src={cover}
+                          alt=""
+                          loading="lazy"
+                          onError={() => setFailedCovers((current) => [...current, cover])}
+                        />
+                      ) : (
+                        <DiscIcon />
+                      )}
                     </span>
-                    <div className="artist-meta">
-                      {release.firstReleaseDate && <span>{release.firstReleaseDate.slice(0, 4)}</span>}
-                      <span className="chip">{t.downloads.types[release.type] ?? release.type}</span>
-                      <span>{t.downloads.tracks(release.trackCount)}</span>
+                    <div className="artist-info">
+                      <span className="artist-name release-title" title={release.title}>
+                        {release.title}
+                      </span>
+                      <div className="artist-meta">
+                        {release.firstReleaseDate && <span>{release.firstReleaseDate.slice(0, 4)}</span>}
+                        <span>{t.downloads.tracks(release.trackCount)}</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="artist-actions">
-                    {release.inLibrary ? (
-                      <span className="chip">{t.releases.inLibrary}</span>
-                    ) : release.requested ? (
-                      <span className="chip">{t.releases.requested}</span>
-                    ) : (
-                      <button
-                        className="button-ghost button-small"
-                        disabled={requesting === release.releaseGroupId}
-                        onClick={() => handleRequest(release)}
-                      >
-                        {t.releases.request}
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    <div className="artist-actions">
+                      {release.inLibrary ? (
+                        <span className="chip">{t.releases.inLibrary}</span>
+                      ) : release.requested ? (
+                        <span className="chip">{t.releases.requested}</span>
+                      ) : (
+                        <button
+                          className="button-ghost button-small"
+                          disabled={requesting === release.releaseGroupId}
+                          onClick={() => handleRequest(release)}
+                        >
+                          {t.releases.request}
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
       </main>
     </>
   );

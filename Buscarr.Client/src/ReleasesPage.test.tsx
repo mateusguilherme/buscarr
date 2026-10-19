@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -52,6 +52,26 @@ describe('ReleasesPage', () => {
     const call = fetchMock.mock.calls.find((args) => args[0] === '/api/downloads');
     expect(call?.[1]).toMatchObject({ method: 'POST' });
     expect(JSON.parse(call?.[1]?.body as string)).toEqual({ artistId, releaseGroupId: 'g1' });
+  });
+
+  it('separa os lançamentos por tipo', async () => {
+    mockFetch({
+      status: 200,
+      body: [
+        release({ releaseGroupId: 'g1', title: 'Heart-Shaped Box', type: 'single' }),
+        release({ releaseGroupId: 'g2', title: 'MTV Unplugged in New York', type: 'live' }),
+        release({ releaseGroupId: 'g3', title: 'In Utero' }),
+        release({ releaseGroupId: 'g4', title: 'Hormoaning', type: 'ep' }),
+      ],
+    });
+    renderPage({ name: 'Nirvana' });
+    await screen.findByText('In Utero');
+
+    const sections = screen.getAllByRole('heading', { level: 2 });
+
+    expect(sections.map((heading) => heading.textContent)).toEqual(['Álbuns', 'EPs', 'Singles', 'Ao vivo']);
+    expect(within(sections[1].closest('section')!).getByText('Hormoaning')).toBeDefined();
+    expect(within(sections[3].closest('section')!).getByText('MTV Unplugged in New York')).toBeDefined();
   });
 
   it('troca a capa quebrada pelo ícone de disco', async () => {

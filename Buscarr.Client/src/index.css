@@ -326,6 +326,15 @@ a.button-ghost {
   list-style: none;
 }
 
+.release-section {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.release-section + .release-section {
+  margin-top: 2rem;
+}
+
 .artist-card {
   display: flex;
   flex-wrap: wrap;
