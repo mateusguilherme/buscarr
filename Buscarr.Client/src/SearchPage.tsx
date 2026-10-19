@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
-import { findArtists, logout, type Artist, type User } from './api';
+import { findArtists, getList, logout, type Artist, type User } from './api';
 import { ArtistItem } from './ArtistItem';
 import { Header } from './Header';
 import { SearchIcon } from './icons';
@@ -11,6 +11,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
   const [searchParams, setSearchParams] = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [message, setMessage] = useState('');
+  const listing = !searchParams.get('q');
 
   useEffect(() => {
     const query = searchParams.get('q') ?? '';
@@ -34,11 +35,28 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
       }
     }
 
+    async function loadList() {
+      setArtists([]);
+      setMessage(t.list.loading);
+
+      try {
+        const listedArtists = await getList();
+
+        if (!ignore) {
+          setArtists(listedArtists);
+          setMessage(listedArtists.length > 0 ? '' : t.list.empty);
+        }
+      } catch (err) {
+        if (!ignore) {
+          setMessage((err as Error).message);
+        }
+      }
+    }
+
     if (query) {
       search();
     } else {
-      setArtists([]);
-      setMessage('');
+      loadList();
     }
 
     return () => {
@@ -64,9 +82,6 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
     <>
       <Header>
         <span className="greeting">{t.search.greeting(user.name)}</span>
-        <Link to="/list" className="header-link">
-          {t.search.list}
-        </Link>
         <Link to="/downloads" className="header-link">
           {t.search.downloads}
         </Link>
@@ -98,11 +113,18 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             {message}
           </p>
         )}
-        {!message && artists.length === 0 && <p className="status hint">{t.search.hint}</p>}
         {artists.length > 0 && (
           <ul className="artist-list">
             {artists.map((artist) => (
-              <ArtistItem key={artist.id} artist={artist} />
+              <ArtistItem
+                key={artist.id}
+                artist={artist}
+                onRemoved={
+                  listing
+                    ? () => setArtists((current) => current.filter((other) => other.id !== artist.id))
+                    : undefined
+                }
+              />
             ))}
           </ul>
         )}

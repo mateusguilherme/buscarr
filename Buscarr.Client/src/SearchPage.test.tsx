@@ -23,8 +23,13 @@ const rancores = [
   { id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo', image: null, listed: true },
 ];
 
+const listed = [
+  { id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo', image: null, listed: true },
+  { id: '5b11f4ce', name: 'Nirvana', disambiguation: null, area: null, image: null, listed: true },
+];
+
 async function searchRancores(...responses: { status: number; body?: unknown }[]) {
-  const fetchMock = mockFetch({ status: 200, body: rancores }, ...responses);
+  const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200, body: rancores }, ...responses);
   renderSearchPage();
 
   await search('rancore');
@@ -34,55 +39,115 @@ async function searchRancores(...responses: { status: number; body?: unknown }[]
 
 describe('SearchPage', () => {
   it('cumprimenta o usuário', () => {
+    mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
     expect(screen.getByText(/Olá, Fulano/)).toBeDefined();
   });
 
   it('leva às configurações pelo cabeçalho', () => {
+    mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
     expect(screen.getByRole('link', { name: 'Configurações' }).getAttribute('href')).toBe('/settings');
   });
 
-  it('leva à lista de artistas pelo cabeçalho', () => {
+  it('mostra a lista de artistas na home, sem página de lista separada', async () => {
+    const fetchMock = mockFetch({ status: 200, body: listed });
     renderSearchPage();
 
-    expect(screen.getByRole('link', { name: 'Minha lista' }).getAttribute('href')).toBe('/list');
+    const items = await screen.findAllByRole('listitem');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/list');
+    expect(items.map((item) => within(item).getByRole('button', { name: 'Na lista' }).textContent)).toEqual([
+      'Na lista',
+      'Na lista',
+    ]);
+    expect(within(items[0]).getByText('Rancore')).toBeDefined();
+    expect(within(items[1]).getByText('Nirvana')).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Minha lista' })).toBeNull();
+  });
+
+  it('tira da home o artista removido da lista', async () => {
+    const fetchMock = mockFetch(
+      { status: 200, body: listed },
+      { status: 200, body: { releaseTypes: ['album'] } },
+      { status: 204 },
+    );
+    renderSearchPage();
+    const [rancore] = await screen.findAllByRole('listitem');
+    await userEvent.click(within(rancore).getByRole('button', { name: 'Na lista' }));
+
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Remover da lista' }));
+
+    await waitFor(() => expect(screen.queryByText('Rancore')).toBeNull());
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/list/83048ffe');
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({ method: 'DELETE' });
+  });
+
+  it('convida a buscar quando a lista está vazia', async () => {
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] },
+    );
+    renderSearchPage();
+
+    expect(await screen.findByText('Nenhum artista na lista ainda. Busque pelo nome para adicionar.')).toBeDefined();
+
+    await search('rancore');
+    await screen.findByText('Rancore');
+
+    expect(screen.queryByText(/Nenhum artista na lista/)).toBeNull();
+  });
+
+  it('avisa quando não consegue carregar a lista', async () => {
+    mockFetch({ status: 500 });
+    renderSearchPage();
+
+    expect(await screen.findByText('Erro 500 ao carregar a lista.')).toBeDefined();
+  });
+
+  it('mostra a lista de novo ao voltar da busca', async () => {
+    mockFetch(
+      { status: 200, body: listed },
+      { status: 200, body: [{ id: 'e33ee038', name: 'Caetano Veloso', disambiguation: null, area: null }] },
+      { status: 200, body: listed },
+    );
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    await search('caetano');
+    await screen.findByText('Caetano Veloso');
+    await userEvent.click(screen.getByRole('link', { name: /buscarr/ }));
+
+    expect(await screen.findByText('Nirvana')).toBeDefined();
+    expect(screen.queryByText('Caetano Veloso')).toBeNull();
   });
 
   it('busca só pelo nome, sem filtros', async () => {
-    const fetchMock = mockFetch({ status: 200, body: [] });
+    const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
     renderSearchPage();
 
     expect(screen.queryByRole('combobox')).toBeNull();
 
     await search('nirvana');
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/artists?q=nirvana');
-  });
-
-  it('explica a busca antes da primeira pesquisa', async () => {
-    mockFetch({ status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
-    renderSearchPage();
-
-    expect(screen.getByText('Busque pelo nome do artista.')).toBeDefined();
-
-    await search('rancore');
-    await screen.findByText('Rancore');
-
-    expect(screen.queryByText('Busque pelo nome do artista.')).toBeNull();
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/artists?q=nirvana');
   });
 
   it('mostra cada candidato com a descrição e a área, sem link para uma página do artista', async () => {
-    mockFetch({
-      status: 200,
-      body: [
-        { id: 'e33ee038', name: 'Rancore', disambiguation: 'Italian rapper Tarek Iurcich', area: 'Italy' },
-        { id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' },
-        { id: 'b533daaf', name: 'Rancore', disambiguation: null, area: null },
-      ],
-    });
+    mockFetch(
+      { status: 200, body: [] },
+      {
+        status: 200,
+        body: [
+          { id: 'e33ee038', name: 'Rancore', disambiguation: 'Italian rapper Tarek Iurcich', area: 'Italy' },
+          { id: '83048ffe', name: 'Rancore', disambiguation: 'Brazillian Rock Band', area: 'São Paulo' },
+          { id: 'b533daaf', name: 'Rancore', disambiguation: null, area: null },
+        ],
+      },
+    );
     renderSearchPage();
 
     await search('rancore');
@@ -98,13 +163,16 @@ describe('SearchPage', () => {
 
   it('mostra a foto de cada candidato que tem uma', async () => {
     const photo = 'https://assets.fanart.tv/preview/music/e33ee038/artistthumb/rancore.jpg';
-    mockFetch({
-      status: 200,
-      body: [
-        { id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null, image: photo },
-        { id: '83048ffe', name: 'Rancore', disambiguation: null, area: null, image: null },
-      ],
-    });
+    mockFetch(
+      { status: 200, body: [] },
+      {
+        status: 200,
+        body: [
+          { id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null, image: photo },
+          { id: '83048ffe', name: 'Rancore', disambiguation: null, area: null, image: null },
+        ],
+      },
+    );
     renderSearchPage();
 
     await search('rancore');
@@ -128,7 +196,7 @@ describe('SearchPage', () => {
     await userEvent.click(within(items[0]).getByRole('button', { name: 'Adicionar à lista' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Adicionar Rancore à lista' });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(within(dialog).queryByRole('radio')).toBeNull();
     expect(
       within(dialog)
@@ -156,8 +224,8 @@ describe('SearchPage', () => {
 
     expect(await within(items[0]).findByRole('button', { name: 'Na lista' })).toBeDefined();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/list/e33ee038');
-    expect(fetchMock.mock.calls[1][1]).toMatchObject({
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/list/e33ee038');
+    expect(fetchMock.mock.calls[2][1]).toMatchObject({
       method: 'PUT',
       body: JSON.stringify({ releaseTypes: ['album', 'live'] }),
     });
@@ -181,7 +249,7 @@ describe('SearchPage', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(within(items[0]).getByRole('button', { name: 'Adicionar à lista' })).toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('avisa no modal quando não consegue adicionar', async () => {
@@ -213,14 +281,14 @@ describe('SearchPage', () => {
     await userEvent.click(within(items[1]).getByRole('button', { name: 'Na lista' }));
     const dialog = await screen.findByRole('dialog', { name: 'Rancore na lista' });
 
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/list/83048ffe');
+    expect(fetchMock.mock.calls[2][0]).toBe('/api/list/83048ffe');
     expect((within(dialog).getByRole('checkbox', { name: 'Singles' }) as HTMLInputElement).checked).toBe(true);
 
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'EPs' }));
     await userEvent.click(within(dialog).getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(fetchMock.mock.calls[2][1]).toMatchObject({
+    expect(fetchMock.mock.calls[3][1]).toMatchObject({
       method: 'PUT',
       body: JSON.stringify({ releaseTypes: ['ep', 'single'] }),
     });
@@ -237,8 +305,8 @@ describe('SearchPage', () => {
 
     expect(await within(items[1]).findByRole('button', { name: 'Adicionar à lista' })).toBeDefined();
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(fetchMock.mock.calls[2][0]).toBe('/api/list/83048ffe');
-    expect(fetchMock.mock.calls[2][1]).toMatchObject({ method: 'DELETE' });
+    expect(fetchMock.mock.calls[3][0]).toBe('/api/list/83048ffe');
+    expect(fetchMock.mock.calls[3][1]).toMatchObject({ method: 'DELETE' });
   });
 
   it('refaz a busca que está na URL', async () => {
@@ -251,7 +319,11 @@ describe('SearchPage', () => {
   });
 
   it('busca de novo ao repetir a mesma busca', async () => {
-    mockFetch({ status: 500 }, { status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] });
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 500 },
+      { status: 200, body: [{ id: 'e33ee038', name: 'Rancore', disambiguation: null, area: null }] },
+    );
     renderSearchPage();
 
     await search('rancore');
@@ -262,7 +334,7 @@ describe('SearchPage', () => {
   });
 
   it('avisa quando nenhum artista é encontrado', async () => {
-    mockFetch({ status: 200, body: [] });
+    mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
     renderSearchPage();
 
     await search('zzqxjvkwplm');
@@ -271,7 +343,7 @@ describe('SearchPage', () => {
   });
 
   it('sai da conta pelo botão Sair', async () => {
-    const fetchMock = mockFetch({ status: 200 });
+    const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200 });
     const onLogout = vi.fn();
     renderSearchPage({ onLogout });
 

@@ -40,14 +40,12 @@ const ptBR = {
     greeting: (name: string) => `Olá, ${name}`,
     logout: 'Sair',
     settings: 'Configurações',
-    list: 'Minha lista',
     downloads: 'Downloads',
     artistName: 'Nome do artista',
     search: 'Buscar',
     searching: 'Buscando…',
     notFound: 'Nenhum artista encontrado.',
     error: 'Erro na busca.',
-    hint: 'Busque pelo nome do artista.',
   },
   common: {
     back: 'Voltar',
@@ -74,9 +72,8 @@ const ptBR = {
     remove: 'Remover da lista',
   },
   list: {
-    title: 'Minha lista',
     loading: 'Carregando…',
-    empty: 'Nenhum artista na lista ainda. Adicione pela busca.',
+    empty: 'Nenhum artista na lista ainda. Busque pelo nome para adicionar.',
   },
   settings: {
     title: 'Configurações',
@@ -293,14 +290,12 @@ const en: Messages = {
     greeting: (name) => `Hi, ${name}`,
     logout: 'Sign out',
     settings: 'Settings',
-    list: 'My list',
     downloads: 'Downloads',
     artistName: 'Artist name',
     search: 'Search',
     searching: 'Searching…',
     notFound: 'No artist found.',
     error: 'Search failed.',
-    hint: "Search by the artist's name.",
   },
   common: {
     back: 'Back',
@@ -327,9 +322,8 @@ const en: Messages = {
     remove: 'Remove from list',
   },
   list: {
-    title: 'My list',
     loading: 'Loading…',
-    empty: 'No artists in the list yet. Add them from the search.',
+    empty: 'No artists in the list yet. Search by name to add one.',
   },
   settings: {
     title: 'Settings',
