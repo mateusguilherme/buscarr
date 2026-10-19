@@ -16,10 +16,24 @@ public class ArtistImagesTests
     private const string FanartPhoto = $"https://assets.fanart.tv/fanart/music/{ArtistId}/artistthumb/a.jpg";
 
     private bool _spotifyHasImages = true;
+    private bool _deezerHasPicture = true;
 
     [Fact]
-    public async Task FindAsync_PrefersTheSpotifyPhoto()
+    public async Task FindAsync_PrefersTheDeezerPhoto()
     {
+        var artist = ArtistWith(
+            "https://open.spotify.com/artist/abc",
+            "https://www.deezer.com/artist/52654632");
+
+        var image = await Images().FindAsync(artist);
+
+        Assert.Equal(DeezerPhoto, image);
+    }
+
+    [Fact]
+    public async Task FindAsync_FallsBackToSpotifyWhenDeezerHasNoPhoto()
+    {
+        _deezerHasPicture = false;
         var artist = ArtistWith(
             "https://open.spotify.com/artist/abc",
             "https://www.deezer.com/artist/52654632");
@@ -30,8 +44,9 @@ public class ArtistImagesTests
     }
 
     [Fact]
-    public async Task FindAsync_FallsBackToDeezerWhenSpotifyHasNoPhoto()
+    public async Task FindAsync_FallsBackToFanartWhenStreamingHasNoPhoto()
     {
+        _deezerHasPicture = false;
         _spotifyHasImages = false;
         var artist = ArtistWith(
             "https://open.spotify.com/artist/abc",
@@ -39,7 +54,7 @@ public class ArtistImagesTests
 
         var image = await Images().FindAsync(artist);
 
-        Assert.Equal(DeezerPhoto, image);
+        Assert.Equal(FanartPhoto, image);
     }
 
     [Fact]
@@ -86,7 +101,9 @@ public class ArtistImagesTests
 
         if (host == "api.deezer.com")
         {
-            return FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", DeezerPhoto));
+            return FakeHttpMessageHandler.Json(_deezerHasPicture
+                ? DeezerJson.ArtistProfile("AJULLIACOSTA", DeezerPhoto)
+                : DeezerJson.NotFound());
         }
 
         return FakeHttpMessageHandler.Json(FanartTvJson.Artist(("artistthumb", FanartPhoto, 5)));
