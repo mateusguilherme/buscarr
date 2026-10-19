@@ -8,9 +8,9 @@ import { t } from './i18n';
 
 const retryWait = 10_000;
 
-type Filter = 'active' | 'scheduled' | 'done';
+type Filter = 'active' | 'scheduled' | 'done' | 'quarantine';
 
-const filters: Filter[] = ['active', 'scheduled', 'done'];
+const filters: Exclude<Filter, 'quarantine'>[] = ['active', 'scheduled', 'done'];
 
 function filterOf(download: Download): Filter {
   if (['imported', 'downloaded', 'cancelled'].includes(download.state)) {
@@ -109,10 +109,12 @@ export function DownloadsPage() {
             {t.downloads.loading}
           </p>
         )}
-        {downloads && downloads.length === 0 && <p className="status hint">{t.downloads.empty}</p>}
-        {downloads && downloads.length > 0 && (
+        {downloads && downloads.length === 0 && quarantine.length === 0 && (
+          <p className="status hint">{t.downloads.empty}</p>
+        )}
+        {((downloads && downloads.length > 0) || quarantine.length > 0) && (
           <div className="filters">
-            {filters.map((value) => (
+            {downloads && downloads.length > 0 && filters.map((value) => (
               <button
                 key={value}
                 className={value === filter ? 'button-primary button-small' : 'button-ghost button-small'}
@@ -122,9 +124,18 @@ export function DownloadsPage() {
                 {t.downloads.filters[value]}
               </button>
             ))}
+            {quarantine.length > 0 && (
+              <button
+                className={filter === 'quarantine' ? 'button-primary button-small' : 'button-ghost button-small'}
+                aria-pressed={filter === 'quarantine'}
+                onClick={() => setFilter((current) => (current === 'quarantine' ? undefined : 'quarantine'))}
+              >
+                {t.quarantine.title}
+              </button>
+            )}
           </div>
         )}
-        {shown && shown.length > 0 && (
+        {filter !== 'quarantine' && shown && shown.length > 0 && (
           <ul className="artist-list">
             {shown.map((download) => (
               <DownloadItem
@@ -144,17 +155,21 @@ export function DownloadsPage() {
             ))}
           </ul>
         )}
-        {quarantine.length > 0 && (
+        {filter === 'quarantine' && quarantine.length > 0 && (
           <>
-            <h2 className="section-title">{t.quarantine.title}</h2>
             <p className="status hint">{t.quarantine.hint}</p>
             <ul className="artist-list">
               {quarantine.map((album) => (
                 <QuarantineItem
                   key={album.id}
                   album={album}
-                  onGone={() =>
-                    setQuarantine((current) => current.filter((other) => other.id !== album.id))}
+                  onGone={() => {
+                    setQuarantine((current) => current.filter((other) => other.id !== album.id));
+
+                    if (quarantine.length === 1) {
+                      setFilter('active');
+                    }
+                  }}
                 />
               ))}
             </ul>

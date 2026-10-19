@@ -27,7 +27,7 @@ public static class ListEndpoints
                 artist.Name,
                 Disambiguations.Clean(artist.Disambiguation, artist.Area),
                 artist.Area,
-                artist.Image,
+                ImageEndpoints.Proxied(artist.Image),
                 true))];
 
     private static async Task<IResult> GetEntry(ArtistListStore list, ClaimsPrincipal user, string id) =>

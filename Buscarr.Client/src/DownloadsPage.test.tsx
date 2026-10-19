@@ -370,14 +370,15 @@ describe('DownloadsPage', () => {
     expect(screen.queryByRole('button', { name: 'Baixar desta' })).toBeNull();
   });
 
-  it('mostra a quarentena com o motivo e as ações', async () => {
+  it('mostra a quarentena no seu chip com o motivo e as ações', async () => {
     mockFetch(
       { status: 200, body: [] },
       { status: 200, body: [quarantined()] },
     );
     renderPage();
 
-    expect(await screen.findByText('Quarentena')).toBeDefined();
+    await userEvent.click(await screen.findByRole('button', { name: 'Quarentena' }));
+
     expect(screen.getByText('Nevermind')).toBeDefined();
     expect(screen.getByText('a qualidade anunciada é falsa')).toBeDefined();
     expect(screen.getByText('de fulano')).toBeDefined();
@@ -385,12 +386,26 @@ describe('DownloadsPage', () => {
     expect(screen.getByRole('button', { name: 'Descartar' })).toBeDefined();
   });
 
-  it('esconde a quarentena quando está vazia', async () => {
+  it('esconde o chip de quarentena quando está vazia', async () => {
     mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
     renderPage();
     await screen.findByText('Nenhum download ainda. Adicione artistas à lista.');
 
-    expect(screen.queryByText('Quarentena')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Quarentena' })).toBeNull();
+  });
+
+  it('esconde os downloads enquanto o chip de quarentena está ativo', async () => {
+    mockFetch(
+      { status: 200, body: [download({})] },
+      { status: 200, body: [quarantined()] },
+    );
+    renderPage();
+    await screen.findByText('Nevermind');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Quarentena' }));
+
+    expect(screen.getByText('a qualidade anunciada é falsa')).toBeDefined();
+    expect(screen.queryByText('Aguardando busca')).toBeNull();
   });
 
   it('importa mesmo assim e tira o álbum da quarentena', async () => {
@@ -400,10 +415,11 @@ describe('DownloadsPage', () => {
       { status: 204 },
     );
     renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Quarentena' }));
 
     await userEvent.click(await screen.findByRole('button', { name: 'Importar mesmo assim' }));
 
-    await waitFor(() => expect(screen.queryByText('Quarentena')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Quarentena' })).toBeNull());
     const call = fetchMock.mock.calls.find((args) => args[0] === '/api/quarantine/9/import');
     expect(call?.[1]).toMatchObject({ method: 'POST' });
   });
@@ -415,10 +431,11 @@ describe('DownloadsPage', () => {
       { status: 204 },
     );
     renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Quarentena' }));
 
     await userEvent.click(await screen.findByRole('button', { name: 'Descartar' }));
 
-    await waitFor(() => expect(screen.queryByText('Quarentena')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Quarentena' })).toBeNull());
     const call = fetchMock.mock.calls.find((args) => args[0] === '/api/quarantine/9');
     expect(call?.[1]).toMatchObject({ method: 'DELETE' });
   });
@@ -430,7 +447,7 @@ describe('DownloadsPage', () => {
     );
     renderPage();
 
-    await screen.findByText('Quarentena');
+    await userEvent.click(await screen.findByRole('button', { name: 'Quarentena' }));
 
     expect(screen.queryByRole('button', { name: 'Importar mesmo assim' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Descartar' })).toBeDefined();

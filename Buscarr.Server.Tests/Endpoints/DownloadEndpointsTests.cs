@@ -86,7 +86,7 @@ public sealed class DownloadEndpointsTests
                 "Maru2D & Nirvana",
                 "Nevermind",
                 "album",
-                "https://coverartarchive.org/release/r1/front-250",
+                "/api/images?url=https%3A%2F%2Fcoverartarchive.org%2Frelease%2Fr1%2Ffront-250",
                 12,
                 "mp3-320",
                 "downloading",

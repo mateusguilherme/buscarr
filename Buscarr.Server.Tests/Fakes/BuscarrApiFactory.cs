@@ -6,6 +6,7 @@ using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
+using Buscarr.Server.Images;
 using Buscarr.Server.MusicBrainz;
 using Buscarr.Server.Settings;
 using Buscarr.Server.Slskd;
@@ -56,6 +57,9 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
     public FakeHttpMessageHandler Subsonic { get; } =
         new(_ => FakeHttpMessageHandler.Json(SubsonicJson.Ok()));
+
+    public FakeHttpMessageHandler Images { get; } =
+        new(_ => FakeHttpMessageHandler.Bytes([1, 2, 3], "image/jpeg"));
 
     public bool FanartTvDown { get; init; }
 
@@ -117,6 +121,8 @@ public sealed class BuscarrApiFactory : WebApplicationFactory<Program>
 
                 return new SpotifyClient(new HttpClient(Spotify), () => store.Current, Time);
             });
+            services.RemoveAll<ImageCache>();
+            services.AddSingleton(new ImageCache(new HttpClient(Images)));
             services.AddDataProtection().UseEphemeralDataProtectionProvider();
 
             foreach (var worker in services

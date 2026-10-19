@@ -342,7 +342,7 @@ public static class DownloadEndpoints
             request.Credit ?? request.ArtistName,
             request.Title,
             request.Type,
-            request.CoverUrl,
+            ImageEndpoints.Proxied(request.CoverUrl),
             request.TrackCount,
             request.Quality,
             StateName(request.State),

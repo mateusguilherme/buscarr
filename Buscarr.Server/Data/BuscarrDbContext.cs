@@ -1,4 +1,5 @@
 using Buscarr.Server.Downloads;
+using Buscarr.Server.Images;
 using Buscarr.Server.Import;
 using Buscarr.Server.Lists;
 using Buscarr.Server.Settings;
@@ -23,6 +24,8 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
 
     public DbSet<ServerSettings> ServerSettings => Set<ServerSettings>();
 
+    public DbSet<CachedImage> CachedImages => Set<CachedImage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<User>(user =>
@@ -32,6 +35,13 @@ public class BuscarrDbContext(DbContextOptions<BuscarrDbContext> options) : DbCo
             user.Property(u => u.EditionPreference).HasMaxLength(32);
             user.Property(u => u.QualityPreference).HasMaxLength(32);
             user.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<CachedImage>(image =>
+        {
+            image.Property(i => i.Url).HasMaxLength(2048);
+            image.Property(i => i.ContentType).HasMaxLength(128);
+            image.HasIndex(i => i.Url).IsUnique();
         });
 
         modelBuilder.Entity<ListedArtist>(artist =>

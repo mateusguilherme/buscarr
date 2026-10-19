@@ -201,6 +201,34 @@ namespace Buscarr.Server.Data.Migrations
                     b.ToTable("SearchCandidates");
                 });
 
+            modelBuilder.Entity("Buscarr.Server.Images.CachedImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Url")
+                        .IsUnique();
+
+                    b.ToTable("CachedImages");
+                });
+
             modelBuilder.Entity("Buscarr.Server.Import.QuarantinedAlbum", b =>
                 {
                     b.Property<int>("Id")

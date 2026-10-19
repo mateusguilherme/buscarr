@@ -3,6 +3,7 @@ using Buscarr.Server.Deezer;
 using Buscarr.Server.Downloads;
 using Buscarr.Server.Endpoints;
 using Buscarr.Server.FanartTv;
+using Buscarr.Server.Images;
 using Buscarr.Server.Import;
 using Buscarr.Server.Lists;
 using Buscarr.Server.MusicBrainz;
@@ -38,6 +39,7 @@ builder.Services.AddDbContext<BuscarrDbContext>(options =>
 builder.Services.AddScoped<UserStore>();
 builder.Services.AddScoped<ArtistListStore>();
 builder.Services.AddSingleton<ArtistImages>();
+builder.Services.AddSingleton(new ImageCache(new HttpClient { Timeout = TimeSpan.FromSeconds(20) }));
 builder.Services.AddSingleton(services => new AlbumCovers(
     services.GetRequiredService<DeezerClient>(),
     services.GetRequiredService<SpotifyClient>(),
@@ -97,6 +99,7 @@ app.MapAuthEndpoints();
 app.MapArtistEndpoints();
 app.MapSettingsEndpoints();
 app.MapServerSettingsEndpoints();
+app.MapImageEndpoints();
 app.MapListEndpoints();
 app.MapDownloadEndpoints();
 app.MapQuarantineEndpoints();

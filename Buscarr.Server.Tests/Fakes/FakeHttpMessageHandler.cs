@@ -20,6 +20,14 @@ public sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponse
     public static HttpResponseMessage Json(string json, HttpStatusCode status = HttpStatusCode.OK) =>
         new(status) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
+    public static HttpResponseMessage Bytes(byte[] bytes, string contentType)
+    {
+        var content = new ByteArrayContent(bytes);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+    }
+
     public static HttpResponseMessage Status(HttpStatusCode status) => new(status);
 
     protected override Task<HttpResponseMessage> SendAsync(

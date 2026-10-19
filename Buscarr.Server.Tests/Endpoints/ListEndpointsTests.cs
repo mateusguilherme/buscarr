@@ -41,7 +41,15 @@ public class ListEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(
-            [new ArtistCard(BuscarrApiFactory.NirvanaId, "Nirvana", null, null, BuscarrApiFactory.NirvanaImage, true)],
+            [
+                new ArtistCard(
+                    BuscarrApiFactory.NirvanaId,
+                    "Nirvana",
+                    null,
+                    null,
+                    $"/api/images?url={Uri.EscapeDataString(BuscarrApiFactory.NirvanaImage)}",
+                    true),
+            ],
             artists);
     }
 
@@ -61,7 +69,7 @@ public class ListEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Busca
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(
-            "https://cdn-images.dzcdn.net/images/artist/n1/250x250-000000-80-0-0.jpg",
+            "/api/images?url=https%3A%2F%2Fcdn-images.dzcdn.net%2Fimages%2Fartist%2Fn1%2F250x250-000000-80-0-0.jpg",
             Assert.Single(artists!).Image);
     }
 
