@@ -6,16 +6,28 @@ import { Header } from './Header';
 import { SearchIcon } from './icons';
 import { t } from './i18n';
 
+function normalize(text: string) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+}
+
 export function SearchPage({ user, onLogout }: { user: User; onLogout: () => void }) {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [message, setMessage] = useState('');
+  const [filter, setFilter] = useState('');
   const listing = !searchParams.get('q');
+  const visible =
+    listing && filter ? artists.filter((artist) => normalize(artist.name).includes(normalize(filter))) : artists;
 
   useEffect(() => {
     const query = searchParams.get('q') ?? '';
     let ignore = false;
+
+    setFilter('');
 
     async function search() {
       setArtists([]);
@@ -103,6 +115,7 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
               required
               autoFocus
               defaultValue={searchParams.get('q') ?? ''}
+              onChange={(e) => setFilter(e.target.value)}
             />
             <button className="button-primary">{t.search.search}</button>
           </div>
@@ -113,9 +126,9 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
             {message}
           </p>
         )}
-        {artists.length > 0 && (
+        {visible.length > 0 && (
           <ul className="artist-list">
-            {artists.map((artist) => (
+            {visible.map((artist) => (
               <ArtistItem
                 key={artist.id}
                 artist={artist}

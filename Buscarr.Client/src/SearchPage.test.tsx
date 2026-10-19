@@ -125,6 +125,61 @@ describe('SearchPage', () => {
     expect(screen.queryByText('Caetano Veloso')).toBeNull();
   });
 
+  it('filtra a lista em tempo real enquanto digita, sem buscar no servidor', async () => {
+    const fetchMock = mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    await userEvent.type(screen.getByPlaceholderText('Nome do artista'), 'nir');
+
+    expect(screen.getByText('Nirvana')).toBeDefined();
+    expect(screen.queryByText('Rancore')).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignora acentos e maiúsculas ao filtrar a lista', async () => {
+    mockFetch({
+      status: 200,
+      body: [
+        ...listed,
+        { id: '0383dadf', name: 'Mônica Salmaso', disambiguation: null, area: null, image: null, listed: true },
+      ],
+    });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    await userEvent.type(screen.getByPlaceholderText('Nome do artista'), 'MONICA');
+
+    expect(screen.getByText('Mônica Salmaso')).toBeDefined();
+    expect(screen.queryByText('Nirvana')).toBeNull();
+    expect(screen.queryByText('Rancore')).toBeNull();
+  });
+
+  it('mostra a lista toda de novo ao apagar o filtro', async () => {
+    mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+    const input = screen.getByPlaceholderText('Nome do artista');
+    await userEvent.type(input, 'nir');
+
+    await userEvent.clear(input);
+
+    expect(screen.getByText('Nirvana')).toBeDefined();
+    expect(screen.getByText('Rancore')).toBeDefined();
+  });
+
+  it('não filtra os resultados da busca pelo texto digitado', async () => {
+    mockFetch(
+      { status: 200, body: [] },
+      { status: 200, body: [{ id: '5b11f4ce', name: 'Nirvana', disambiguation: null, area: null }] },
+    );
+    renderSearchPage();
+
+    await search('banda de grunge');
+
+    expect(await screen.findByText('Nirvana')).toBeDefined();
+  });
+
   it('busca só pelo nome, sem filtros', async () => {
     const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200, body: [] });
     renderSearchPage();
