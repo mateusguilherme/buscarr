@@ -71,13 +71,18 @@ public static class MusicBrainzJson
         return release;
     }
 
-    public static Dictionary<string, object> WithArtistCredit(Dictionary<string, object> release, params string[] names)
+    public static Dictionary<string, object> WithArtistCredit(Dictionary<string, object> release, params string[] names) =>
+        WithArtistCredit(release, [.. names.Select(name => (name, name))]);
+
+    public static Dictionary<string, object> WithArtistCredit(
+        Dictionary<string, object> release,
+        params (string Id, string Name)[] credits)
     {
-        release["artist-credit"] = names.Select((name, index) => new
+        release["artist-credit"] = credits.Select((credit, index) => new
         {
-            name,
-            joinphrase = index == names.Length - 1 ? "" : index == names.Length - 2 ? " & " : ", ",
-            artist = new { id = name, name },
+            name = credit.Name,
+            joinphrase = index == credits.Length - 1 ? "" : index == credits.Length - 2 ? " & " : ", ",
+            artist = new { id = credit.Id, name = credit.Name },
         });
 
         return release;

@@ -456,8 +456,8 @@ public sealed class RequestGeneratorTests : IDisposable
             1,
             WithArtistCredit(
                 WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: false), ("CD", 1)),
-                "Maru2D",
-                "Nirvana"));
+                ("nirvana", "Nirvana"),
+                ("maru2d", "Maru2D")));
         _deezerAlbums.Add(("Maru2D", "Do Corre", "https://cdn-images.dzcdn.net/images/cover/m1/250x250-000000-80-0-0.jpg"));
 
         await _generator.GenerateAsync();
@@ -474,8 +474,8 @@ public sealed class RequestGeneratorTests : IDisposable
             1,
             WithArtistCredit(
                 WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: false), ("CD", 1)),
-                "Maru2D",
-                "Nirvana"));
+                ("nirvana", "Nirvana"),
+                ("maru2d", "Maru2D")));
         _spotifyAlbums.Add(("Maru2D", "Do Corre", "https://i.scdn.co/image/m1"));
 
         await _generator.GenerateAsync();
@@ -587,14 +587,14 @@ public sealed class RequestGeneratorTests : IDisposable
             2,
             WithArtistCredit(
                 WithMedia(WithCoverArt(Release("Do Corre", "2025-03-27", "2025-03-27"), "r1", "g1", front: true), ("CD", 1)),
-                "Maru2D",
-                "Nirvana"),
+                ("nirvana", "Nirvana"),
+                ("maru2d", "Maru2D")),
             WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r2", "g2", front: true), ("CD", 12)));
 
         await _generator.GenerateAsync();
 
         var requests = await _db.DownloadRequests.OrderBy(r => r.ReleaseGroupId).ToListAsync();
-        Assert.Equal(["Maru2D & Nirvana", "Nirvana"], requests.Select(r => r.Credit));
+        Assert.Equal(["Nirvana & Maru2D", "Nirvana"], requests.Select(r => r.Credit));
     }
 
     [Fact]
@@ -605,15 +605,15 @@ public sealed class RequestGeneratorTests : IDisposable
             1,
             WithArtistCredit(
                 WithMedia(WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: true), ("CD", 12)),
-                "Maru2D",
-                "Nirvana"));
+                ("nirvana", "Nirvana"),
+                ("maru2d", "Maru2D")));
         _db.DownloadRequests.Add(Request("g1", trackCount: 12, state: DownloadState.NotFound));
         await _db.SaveChangesAsync();
 
         await _generator.GenerateAsync();
 
         var request = Assert.Single(await _db.DownloadRequests.ToListAsync());
-        Assert.Equal("Maru2D & Nirvana", request.Credit);
+        Assert.Equal("Nirvana & Maru2D", request.Credit);
     }
 
     [Fact]

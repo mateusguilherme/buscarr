@@ -124,7 +124,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                         WithMedia(
                             WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false),
                             ("CD", 12)),
-                        "Nirvana")))
+                        (BuscarrApiFactory.NirvanaId, "Nirvana"))))
                 : FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);
         own.Deezer.Respond = _ => FakeHttpMessageHandler.Json(
             DeezerJson.Albums(("Nirvana", "Nevermind", "https://cdn-images.dzcdn.net/nevermind.jpg")));
@@ -148,7 +148,7 @@ public class ArtistEndpointsTests(BuscarrApiFactory factory) : IClassFixture<Bus
                         WithMedia(
                             WithCoverArt(Release("Nevermind", "1991-09-24", "1991-09-24"), "r1", "g1", front: false),
                             ("CD", 12)),
-                        "Nirvana")))
+                        (BuscarrApiFactory.NirvanaId, "Nirvana"))))
                 : FakeHttpMessageHandler.Status(HttpStatusCode.NotFound);
         var client = await own.CreateLoggedInClientAsync();
 

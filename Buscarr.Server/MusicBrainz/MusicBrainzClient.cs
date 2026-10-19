@@ -59,6 +59,8 @@ public sealed class MusicBrainzClient(HttpClient http, TimeProvider time)
 
         var albums = releases
             .Where(release => release.ReleaseGroup?.Id is not null)
+            .Where(release => release.ArtistCredit.FirstOrDefault()?.Artist?.Id is not { } mainArtist
+                || mainArtist == artistId)
             .GroupBy(release => release.ReleaseGroup!.Id)
             .Select(group => (
                 First: group.Where(release => release.IsOriginalRelease).MinBy(release => release.Date, StringComparer.Ordinal)

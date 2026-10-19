@@ -262,6 +262,22 @@ public class MusicBrainzClientTests
     }
 
     [Fact]
+    public async Task ReleasesAsync_LeavesOutReleasesWhereTheArtistIsNotTheMainCredit()
+    {
+        var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
+            2,
+            WithArtistCredit(
+                Release("Another Nail for Your Coffin", "2024-06-06", "2024-06-06"),
+                "Lamb of God",
+                "Kublai Khan TX"),
+            WithArtistCredit(Release("Balancing Act", "2017-09-29", "2017-09-29"), "Kublai Khan TX"))));
+
+        var releases = await client.ReleasesAsync(Contact, "Kublai Khan TX");
+
+        Assert.Equal(["Balancing Act"], releases.Select(r => r.First.Title));
+    }
+
+    [Fact]
     public async Task ReleasesAsync_LeavesOutReleasesWithoutACategory()
     {
         var (client, _) = CreateClient(_ => FakeHttpMessageHandler.Json(Releases(
