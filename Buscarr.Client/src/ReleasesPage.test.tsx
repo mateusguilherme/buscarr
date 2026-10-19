@@ -40,7 +40,7 @@ describe('ReleasesPage', () => {
     );
     renderPage({ name: 'Nirvana' });
 
-    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Lançamentos de Nirvana' })).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Nirvana' })).toBeDefined();
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Menu' })).toBeDefined();
     expect(await screen.findByText('Nevermind')).toBeDefined();
     expect(screen.getByText('1991')).toBeDefined();

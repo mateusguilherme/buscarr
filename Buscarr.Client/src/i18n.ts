@@ -228,7 +228,6 @@ const ptBR = {
   },
   releases: {
     show: 'Lançamentos',
-    title: (name: string) => `Lançamentos de ${name}`,
     loading: 'Carregando…',
     empty: 'Nenhum lançamento encontrado.',
     request: 'Baixar',
@@ -486,7 +485,6 @@ const en: Messages = {
   },
   releases: {
     show: 'Releases',
-    title: (name) => `Releases of ${name}`,
     loading: 'Loading…',
     empty: 'No releases found.',
     request: 'Download',

@@ -75,7 +75,7 @@ export function ReleasesPage() {
 
   return (
     <>
-      <Header title={state?.name ? t.releases.title(state.name) : t.releases.show} />
+      <Header title={state?.name ?? t.releases.show} />
 
       <main className="page">
         <Link to={state?.from ?? '/'} className="back">
