@@ -22,6 +22,8 @@ describe('SettingsPage', () => {
     mockFetch({ status: 200, body: { edition: 'remastered', quality: 'mp3-320' } }, { status: 403 });
     renderSettingsPage();
 
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Configurações' })).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Menu' })).toBeDefined();
     expect((await radio(/^A remasterizada/)).checked).toBe(true);
     expect((await radio(/^A original/)).checked).toBe(false);
     expect(screen.getByText('Se o álbum não tiver essa edição, fica a original.')).toBeDefined();

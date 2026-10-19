@@ -46,11 +46,34 @@ describe('SearchPage', () => {
     expect(screen.queryByRole('button', { name: 'Buscar' })).toBeNull();
   });
 
-  it('leva às configurações pelo cabeçalho', () => {
+  it('mostra só o logo no cabeçalho, sem o nome', () => {
     mockFetch({ status: 200, body: [] });
     renderSearchPage();
 
+    expect(screen.getByRole('link', { name: 'buscarr' }).textContent).toBe('');
+  });
+
+  it('agrupa Downloads, Configurações e Sair num menu', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderSearchPage();
+
+    expect(screen.queryByRole('link', { name: 'Configurações' })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+
+    expect(screen.getByRole('link', { name: 'Downloads' }).getAttribute('href')).toBe('/downloads');
     expect(screen.getByRole('link', { name: 'Configurações' }).getAttribute('href')).toBe('/settings');
+    expect(screen.getByRole('button', { name: 'Sair' })).toBeDefined();
+  });
+
+  it('fecha o menu ao clicar fora', async () => {
+    mockFetch({ status: 200, body: [] });
+    renderSearchPage();
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+
+    await userEvent.click(document.body);
+
+    expect(screen.queryByRole('link', { name: 'Configurações' })).toBeNull();
   });
 
   it('mostra a lista de artistas na home, sem página de lista separada', async () => {
@@ -207,7 +230,6 @@ describe('SearchPage', () => {
     expect(list.className).toContain('card-grid');
     expect(list.className).toContain('artist-grid');
     expect(within(list).getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
-    expect(screen.getByRole('main').className).toContain('page-wide');
   });
 
   it('não foca o campo de busca ao abrir a home', async () => {
@@ -473,11 +495,12 @@ describe('SearchPage', () => {
     expect(await screen.findByText('Nenhum artista encontrado.')).toBeDefined();
   });
 
-  it('sai da conta pelo botão Sair', async () => {
+  it('sai da conta pelo botão Sair do menu', async () => {
     const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200 });
     const onLogout = vi.fn();
     renderSearchPage({ onLogout });
 
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
     await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
 
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });

@@ -40,7 +40,8 @@ describe('ReleasesPage', () => {
     );
     renderPage({ name: 'Nirvana' });
 
-    expect(screen.getByRole('heading', { name: 'Lançamentos de Nirvana' })).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Lançamentos de Nirvana' })).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Menu' })).toBeDefined();
     expect(await screen.findByText('Nevermind')).toBeDefined();
     expect(screen.getByText('1991')).toBeDefined();
     expect(screen.getByText('12 faixas')).toBeDefined();
@@ -86,7 +87,6 @@ describe('ReleasesPage', () => {
 
     expect(lists.every((list) => list.className.includes('card-grid'))).toBe(true);
     expect(screen.getAllByRole('listitem').every((item) => item.className.includes('grid-card'))).toBe(true);
-    expect(screen.getByRole('main').className).toContain('page-wide');
   });
 
   it('troca a capa quebrada pelo ícone de disco', async () => {
@@ -136,7 +136,7 @@ describe('ReleasesPage', () => {
     mockFetch({ status: 200, body: [] });
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Lançamentos' })).toBeDefined();
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Lançamentos' })).toBeDefined();
     expect(screen.getByRole('link', { name: 'Voltar' }).getAttribute('href')).toBe('/');
 
     await screen.findByText('Nenhum lançamento encontrado.');

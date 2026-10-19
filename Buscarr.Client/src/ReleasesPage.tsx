@@ -75,15 +75,13 @@ export function ReleasesPage() {
 
   return (
     <>
-      <Header />
+      <Header title={state?.name ? t.releases.title(state.name) : t.releases.show} />
 
-      <main className="page page-wide">
+      <main className="page">
         <Link to={state?.from ?? '/'} className="back">
           <ArrowLeftIcon />
           {t.common.back}
         </Link>
-
-        <h1 className="page-title">{state?.name ? t.releases.title(state.name) : t.releases.show}</h1>
 
         {error && (
           <p className="alert" role="alert">

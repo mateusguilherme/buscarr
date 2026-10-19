@@ -37,6 +37,7 @@ const ptBR = {
     tagline: 'Encontre o artista certo.',
   },
   search: {
+    menu: 'Menu',
     logout: 'Sair',
     settings: 'Configurações',
     downloads: 'Downloads',
@@ -294,6 +295,7 @@ const en: Messages = {
     tagline: 'Find the right artist.',
   },
   search: {
+    menu: 'Menu',
     logout: 'Sign out',
     settings: 'Settings',
     downloads: 'Downloads',

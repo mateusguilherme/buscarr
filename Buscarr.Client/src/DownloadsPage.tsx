@@ -95,15 +95,13 @@ export function DownloadsPage() {
 
   return (
     <>
-      <Header />
+      <Header title={t.downloads.title} />
 
       <main className="page">
         <Link to="/" className="back">
           <ArrowLeftIcon />
           {t.common.back}
         </Link>
-
-        <h1 className="page-title">{t.downloads.title}</h1>
 
         {error && (
           <p className="alert" role="alert">

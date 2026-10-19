@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router';
-import { findArtists, getList, logout, type Artist } from './api';
+import { findArtists, getList, type Artist } from './api';
 import { ArtistItem } from './ArtistItem';
 import { Header } from './Header';
 import { ArrowLeftIcon, SearchIcon } from './icons';
@@ -94,18 +94,9 @@ export function SearchPage({ onLogout }: { onLogout: () => void }) {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await logout();
-      onLogout();
-    } catch (err) {
-      setMessage((err as Error).message);
-    }
-  }
-
   return (
     <>
-      <Header>
+      <Header onLogout={onLogout}>
         <form key={location.search} className="header-search" role="search" onSubmit={handleSearch}>
           <div className="search-bar">
             <SearchIcon />
@@ -119,18 +110,9 @@ export function SearchPage({ onLogout }: { onLogout: () => void }) {
             />
           </div>
         </form>
-        <Link to="/downloads" className="header-link">
-          {t.search.downloads}
-        </Link>
-        <Link to="/settings" className="header-link">
-          {t.search.settings}
-        </Link>
-        <button className="button-ghost button-small" onClick={handleLogout}>
-          {t.search.logout}
-        </button>
       </Header>
 
-      <main className="page page-wide">
+      <main className="page">
         {!listing && (
           <Link to="/" className="back">
             <ArrowLeftIcon />

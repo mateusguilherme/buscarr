@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -223,7 +223,21 @@ describe('DownloadsPage', () => {
     mockFetch({ status: 200, body: [] });
     renderPage();
 
+    expect(within(screen.getByRole('banner')).getByRole('heading', { name: 'Downloads' })).toBeDefined();
     expect(await screen.findByText('Nenhum download ainda. Adicione artistas à lista.')).toBeDefined();
+  });
+
+  it('mostra o menu no cabeçalho e sai da conta por ele', async () => {
+    const fetchMock = mockFetch({ status: 200, body: [] }, { status: 200, body: [] }, { status: 200 });
+    renderPage();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Menu' }));
+
+    expect(screen.getByRole('link', { name: 'Configurações' }).getAttribute('href')).toBe('/settings');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sair' }));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
   });
 
   it('mostra o upgrade pendente de um álbum aceito em mp3', async () => {

@@ -72,15 +72,13 @@ export function SettingsPage() {
 
   return (
     <>
-      <Header />
+      <Header title={t.settings.title} />
 
       <main className="page">
         <Link to="/" className="back">
           <ArrowLeftIcon />
           {t.common.back}
         </Link>
-
-        <h1 className="page-title">{t.settings.title}</h1>
 
         {error && (
           <p className="alert" role="alert">
