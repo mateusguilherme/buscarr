@@ -11,14 +11,14 @@ public sealed class DeezerClient(HttpClient http)
     private const string ArtistUrl = "https://api.deezer.com/artist";
     private const string PlaceholderHash = "d41d8cd98f00b204e9800998ecf8427e";
 
-    public async Task<string?> ArtistImageAsync(string id)
+    public async Task<(string Url, int Fans)?> ArtistImageAsync(string id)
     {
         try
         {
             var artist = await http.GetFromJsonAsync<DeezerArtist>($"{ArtistUrl}/{Uri.EscapeDataString(id)}");
             var picture = Biggest(artist?.PictureBig, artist?.PictureMedium);
 
-            return string.IsNullOrEmpty(picture) ? null : picture;
+            return picture is null ? null : (picture, artist!.Fans);
         }
         catch (Exception e)
         {
@@ -112,6 +112,9 @@ public sealed class DeezerClient(HttpClient http)
 
         [JsonPropertyName("picture_medium")]
         public string? PictureMedium { get; init; }
+
+        [JsonPropertyName("nb_fan")]
+        public int Fans { get; init; }
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

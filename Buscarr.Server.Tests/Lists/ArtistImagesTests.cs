@@ -17,7 +17,7 @@ public class ArtistImagesTests
 
     private bool _spotifyHasImages = true;
     private bool _deezerHasPicture = true;
-    private readonly Dictionary<string, string> _deezerPictures = [];
+    private readonly Dictionary<string, (string Picture, int Fans)> _deezerPictures = [];
     private readonly Dictionary<string, string> _spotifyImages = [];
 
     [Fact]
@@ -60,9 +60,23 @@ public class ArtistImagesTests
     }
 
     [Fact]
+    public async Task FindAsync_PrefersTheMostPopularPageOfASource()
+    {
+        _deezerPictures["111"] = ("https://cdn-images.dzcdn.net/images/artist/errada/500x500-000000-80-0-0.jpg", 35);
+        _deezerPictures["222"] = (DeezerPhoto, 300_367);
+        var artist = ArtistWith(
+            "https://www.deezer.com/artist/111",
+            "https://www.deezer.com/artist/222");
+
+        var image = await Images().FindAsync(artist);
+
+        Assert.Equal(DeezerPhoto, image);
+    }
+
+    [Fact]
     public async Task FindAsync_TriesEveryDeezerLinkUntilOneHasAPicture()
     {
-        _deezerPictures["222"] = DeezerPhoto;
+        _deezerPictures["222"] = (DeezerPhoto, 0);
         var artist = ArtistWith(
             "https://www.deezer.com/artist/111",
             "https://www.deezer.com/artist/222");
@@ -140,9 +154,10 @@ public class ArtistImagesTests
         {
             var id = request.RequestUri.AbsolutePath["/artist/".Length..];
 
-            if (_deezerPictures.TryGetValue(id, out var picture))
+            if (_deezerPictures.TryGetValue(id, out var profile))
             {
-                return FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture));
+                return FakeHttpMessageHandler.Json(
+                    DeezerJson.ArtistProfile("AJULLIACOSTA", profile.Picture, fans: profile.Fans));
             }
 
             return FakeHttpMessageHandler.Json(_deezerHasPicture && _deezerPictures.Count == 0

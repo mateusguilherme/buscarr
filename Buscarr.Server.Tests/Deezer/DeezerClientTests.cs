@@ -109,16 +109,16 @@ public sealed class DeezerClientTests
     }
 
     [Fact]
-    public async Task ArtistImageAsync_ReturnsThePictureOfTheArtistPage()
+    public async Task ArtistImageAsync_ReturnsThePictureAndFansOfTheArtistPage()
     {
         var picture = "https://cdn-images.dzcdn.net/images/artist/abc/250x250-000000-80-0-0.jpg";
         var handler = new FakeHttpMessageHandler(_ =>
-            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture)));
+            FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture, fans: 300_367)));
         var client = new DeezerClient(new HttpClient(handler));
 
         var image = await client.ArtistImageAsync("52654632");
 
-        Assert.Equal(picture, image);
+        Assert.Equal((picture, 300_367), image);
         var request = Assert.Single(handler.Requests);
         Assert.Equal("https://api.deezer.com/artist/52654632", request.Uri.ToString());
     }
@@ -131,7 +131,7 @@ public sealed class DeezerClientTests
             FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", "medium.jpg", big)));
         var client = new DeezerClient(new HttpClient(handler));
 
-        Assert.Equal(big, await client.ArtistImageAsync("52654632"));
+        Assert.Equal(big, (await client.ArtistImageAsync("52654632"))?.Url);
     }
 
     [Fact]

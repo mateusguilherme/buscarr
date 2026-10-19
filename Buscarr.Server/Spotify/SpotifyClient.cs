@@ -96,7 +96,7 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
         }
     }
 
-    public async Task<string?> ArtistImageAsync(string id)
+    public async Task<(string Url, int Followers)?> ArtistImageAsync(string id)
     {
         if (!IsConfigured)
         {
@@ -113,7 +113,9 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
             var artist = await response.Content.ReadFromJsonAsync<ArtistProfile>();
             var url = artist is null ? null : Large(artist.Images);
 
-            return url is null || url.Contains(AlbumArtAvatar, StringComparison.Ordinal) ? null : url;
+            return url is null || url.Contains(AlbumArtAvatar, StringComparison.Ordinal)
+                ? null
+                : (url, artist!.Followers?.Total ?? 0);
         }
         catch (Exception e)
         {
@@ -185,6 +187,14 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
     private sealed class ArtistProfile
     {
         public List<AlbumImage> Images { get; init; } = [];
+
+        public FollowerCount? Followers { get; init; }
+    }
+
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    private sealed class FollowerCount
+    {
+        public int Total { get; init; }
     }
 
     [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]

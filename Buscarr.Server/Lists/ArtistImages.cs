@@ -9,20 +9,30 @@ public sealed class ArtistImages(FanartTvClient fanartTv, DeezerClient deezer, S
 {
     public async Task<string?> FindAsync(Artist artist)
     {
+        var pictures = new List<(string Url, int Popularity)>();
+
         foreach (var deezerId in artist.DeezerIds)
         {
             if (await deezer.ArtistImageAsync(deezerId) is { } picture)
             {
-                return picture;
+                pictures.Add(picture);
             }
         }
 
-        foreach (var spotifyId in artist.SpotifyIds)
+        if (pictures.Count == 0)
         {
-            if (await spotify.ArtistImageAsync(spotifyId) is { } photo)
+            foreach (var spotifyId in artist.SpotifyIds)
             {
-                return photo;
+                if (await spotify.ArtistImageAsync(spotifyId) is { } photo)
+                {
+                    pictures.Add(photo);
+                }
             }
+        }
+
+        if (pictures.Count > 0)
+        {
+            return pictures.MaxBy(picture => picture.Popularity).Url;
         }
 
         if (await FanartTvImageAsync(artist.Id) is { } image)

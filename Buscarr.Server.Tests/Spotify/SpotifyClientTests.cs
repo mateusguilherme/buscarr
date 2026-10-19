@@ -127,16 +127,16 @@ public sealed class SpotifyClientTests
     }
 
     [Fact]
-    public async Task ArtistImageAsync_ReturnsTheLargeImageOfTheArtistPage()
+    public async Task ArtistImageAsync_ReturnsTheLargeImageAndFollowersOfTheArtistPage()
     {
         var image = "https://i.scdn.co/image/artista";
         var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
             ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
-            : FakeHttpMessageHandler.Json(SpotifyJson.Artist("AJULLIACOSTA", image)));
+            : FakeHttpMessageHandler.Json(SpotifyJson.Artist("AJULLIACOSTA", image, followers: 4_816)));
 
         var result = await Client(handler).ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd");
 
-        Assert.Equal($"{image}?size=640", result);
+        Assert.Equal(($"{image}?size=640", 4_816), result);
         Assert.Equal(
             "https://api.spotify.com/v1/artists/0eHkGhhUyp3LZdtZjaA8gd",
             handler.Requests[1].Uri.ToString());
@@ -167,7 +167,7 @@ public sealed class SpotifyClientTests
 
         var result = await Client(handler).ArtistImageAsync("0eHkGhhUyp3LZdtZjaA8gd");
 
-        Assert.Equal("https://i.scdn.co/image/media", result);
+        Assert.Equal("https://i.scdn.co/image/media", result?.Url);
     }
 
     [Fact]

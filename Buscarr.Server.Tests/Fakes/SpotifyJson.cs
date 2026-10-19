@@ -12,10 +12,11 @@ public static class SpotifyJson
             expires_in = expiresIn,
         });
 
-    public static string Artist(string name, string image) =>
+    public static string Artist(string name, string image, int followers = 0) =>
         JsonSerializer.Serialize(new
         {
             name,
+            followers = new { total = followers },
             images = new object[]
             {
                 new { url = $"{image}?size=640", width = 640, height = 640 },
