@@ -126,7 +126,6 @@ export function SearchPage({ user, onLogout }: { user: User; onLogout: () => voi
               name="q"
               placeholder={t.search.artistName}
               required
-              autoFocus
               defaultValue={searchParams.get('q') ?? ''}
               onChange={(e) => setFilter(e.target.value)}
               onKeyDown={handleEscape}

@@ -196,6 +196,14 @@ describe('SearchPage', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('não foca o campo de busca ao abrir a home', async () => {
+    mockFetch({ status: 200, body: listed });
+    renderSearchPage();
+    await screen.findByText('Nirvana');
+
+    expect(document.activeElement).not.toBe(screen.getByPlaceholderText('Nome do artista'));
+  });
+
   it('tira o foco do campo com Esc quando não há texto', async () => {
     mockFetch({ status: 200, body: listed });
     renderSearchPage();
