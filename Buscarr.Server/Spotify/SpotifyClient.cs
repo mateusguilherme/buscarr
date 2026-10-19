@@ -13,6 +13,7 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
     private const string TokenUrl = "https://accounts.spotify.com/api/token";
     private const string SearchUrl = "https://api.spotify.com/v1/search";
     private const string ArtistsUrl = "https://api.spotify.com/v1/artists";
+    private const string AlbumArtAvatar = "/image/ab67616d";
     private static readonly TimeSpan ExpiryMargin = TimeSpan.FromMinutes(1);
 
     private (string Value, long Timestamp, TimeSpan Life)? _token;
@@ -110,8 +111,9 @@ public sealed class SpotifyClient(HttpClient http, Func<ServerSettings> settings
             using var response = await http.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var artist = await response.Content.ReadFromJsonAsync<ArtistProfile>();
+            var url = artist is null ? null : Large(artist.Images);
 
-            return artist is null ? null : Large(artist.Images);
+            return url is null || url.Contains(AlbumArtAvatar, StringComparison.Ordinal) ? null : url;
         }
         catch (Exception e)
         {

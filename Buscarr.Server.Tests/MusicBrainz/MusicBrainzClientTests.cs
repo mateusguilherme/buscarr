@@ -184,7 +184,7 @@ public class MusicBrainzClientTests
 
         var artist = await client.ArtistAsync(Contact, "a1", fresh: true);
 
-        Assert.Equal("abc", artist.SpotifyId);
+        Assert.Equal(["abc"], artist.SpotifyIds);
         Assert.Equal(2, handler.Requests.Count);
     }
 
@@ -202,7 +202,7 @@ public class MusicBrainzClientTests
 
         var artist = await client.ArtistAsync(Contact, "a1");
 
-        Assert.Equal("abc", artist.SpotifyId);
+        Assert.Equal(["abc"], artist.SpotifyIds);
         Assert.Equal(2, handler.Requests.Count);
     }
 

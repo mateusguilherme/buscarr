@@ -9,11 +9,11 @@ public record Artist(string Id, string Name, Area? Area = null, string? Disambig
     [JsonPropertyName("relations")]
     public List<UrlRelation> Relations { get; init; } = [];
 
-    public string? DeezerId => StreamingId("deezer.com/artist/");
+    public IEnumerable<string> DeezerIds => StreamingIds("deezer.com/artist/");
 
-    public string? SpotifyId => StreamingId("open.spotify.com/artist/");
+    public IEnumerable<string> SpotifyIds => StreamingIds("open.spotify.com/artist/");
 
-    private string? StreamingId(string marker)
+    private IEnumerable<string> StreamingIds(string marker)
     {
         foreach (var relation in Relations)
         {
@@ -28,9 +28,7 @@ public record Artist(string Id, string Name, Area? Area = null, string? Disambig
             var id = url[(start + marker.Length)..];
             var end = id.IndexOfAny(['/', '?']);
 
-            return end < 0 ? id : id[..end];
+            yield return end < 0 ? id : id[..end];
         }
-
-        return null;
     }
 }

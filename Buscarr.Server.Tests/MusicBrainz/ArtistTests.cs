@@ -17,8 +17,25 @@ public sealed class ArtistTests
             ],
         };
 
-        Assert.Equal("52654632", artist.DeezerId);
-        Assert.Equal("0eHkGhhUyp3LZdtZjaA8gd", artist.SpotifyId);
+        Assert.Equal(["52654632"], artist.DeezerIds);
+        Assert.Equal(["0eHkGhhUyp3LZdtZjaA8gd"], artist.SpotifyIds);
+    }
+
+    [Fact]
+    public void StreamingIds_KeepEveryLinkInOrder()
+    {
+        var artist = new Artist("a1", "Seether")
+        {
+            Relations =
+            [
+                Relation("https://open.spotify.com/artist/5ZAm84INxpjY5dmaZjxo32"),
+                Relation("https://open.spotify.com/artist/6B5c4sch27tWHAGdarpPaW"),
+                Relation("https://www.deezer.com/artist/1189"),
+            ],
+        };
+
+        Assert.Equal(["5ZAm84INxpjY5dmaZjxo32", "6B5c4sch27tWHAGdarpPaW"], artist.SpotifyIds);
+        Assert.Equal(["1189"], artist.DeezerIds);
     }
 
     [Fact]
@@ -33,17 +50,17 @@ public sealed class ArtistTests
             ],
         };
 
-        Assert.Equal("52654632", artist.DeezerId);
-        Assert.Equal("0eHkGhhUyp3LZdtZjaA8gd", artist.SpotifyId);
+        Assert.Equal(["52654632"], artist.DeezerIds);
+        Assert.Equal(["0eHkGhhUyp3LZdtZjaA8gd"], artist.SpotifyIds);
     }
 
     [Fact]
-    public void StreamingIds_AreNullWithoutTheRelations()
+    public void StreamingIds_AreEmptyWithoutTheRelations()
     {
         var artist = new Artist("a1", "Project46");
 
-        Assert.Null(artist.DeezerId);
-        Assert.Null(artist.SpotifyId);
+        Assert.Empty(artist.DeezerIds);
+        Assert.Empty(artist.SpotifyIds);
     }
 
     private static UrlRelation Relation(string resource) =>

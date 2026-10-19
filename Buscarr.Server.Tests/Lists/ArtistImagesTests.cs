@@ -17,6 +17,8 @@ public class ArtistImagesTests
 
     private bool _spotifyHasImages = true;
     private bool _deezerHasPicture = true;
+    private readonly Dictionary<string, string> _deezerPictures = [];
+    private readonly Dictionary<string, string> _spotifyImages = [];
 
     [Fact]
     public async Task FindAsync_PrefersTheDeezerPhoto()
@@ -58,6 +60,34 @@ public class ArtistImagesTests
     }
 
     [Fact]
+    public async Task FindAsync_TriesEveryDeezerLinkUntilOneHasAPicture()
+    {
+        _deezerPictures["222"] = DeezerPhoto;
+        var artist = ArtistWith(
+            "https://www.deezer.com/artist/111",
+            "https://www.deezer.com/artist/222");
+
+        var image = await Images().FindAsync(artist);
+
+        Assert.Equal(DeezerPhoto, image);
+    }
+
+    [Fact]
+    public async Task FindAsync_SkipsASpotifyPageWhoseAvatarIsAlbumArt()
+    {
+        _deezerHasPicture = false;
+        _spotifyImages["saron"] = "https://i.scdn.co/image/ab67616d0000b273b7fb7e7d0d9bae0889e299c9";
+        _spotifyImages["seether"] = SpotifyPhoto;
+        var artist = ArtistWith(
+            "https://open.spotify.com/artist/saron",
+            "https://open.spotify.com/artist/seether");
+
+        var image = await Images().FindAsync(artist);
+
+        Assert.Equal($"{SpotifyPhoto}?size=640", image);
+    }
+
+    [Fact]
     public async Task FindAsync_FallsBackToFanartWhenThereAreNoStreamingLinks()
     {
         var artist = ArtistWith();
@@ -94,14 +124,28 @@ public class ArtistImagesTests
 
         if (host == "api.spotify.com")
         {
-            return FakeHttpMessageHandler.Json(_spotifyHasImages
+            var id = request.RequestUri.AbsolutePath["/v1/artists/".Length..];
+
+            if (_spotifyImages.TryGetValue(id, out var image))
+            {
+                return FakeHttpMessageHandler.Json(SpotifyJson.Artist("AJULLIACOSTA", image));
+            }
+
+            return FakeHttpMessageHandler.Json(_spotifyHasImages && _spotifyImages.Count == 0
                 ? SpotifyJson.Artist("AJULLIACOSTA", SpotifyPhoto)
                 : """{"name":"AJULLIACOSTA","images":[]}""");
         }
 
         if (host == "api.deezer.com")
         {
-            return FakeHttpMessageHandler.Json(_deezerHasPicture
+            var id = request.RequestUri.AbsolutePath["/artist/".Length..];
+
+            if (_deezerPictures.TryGetValue(id, out var picture))
+            {
+                return FakeHttpMessageHandler.Json(DeezerJson.ArtistProfile("AJULLIACOSTA", picture));
+            }
+
+            return FakeHttpMessageHandler.Json(_deezerHasPicture && _deezerPictures.Count == 0
                 ? DeezerJson.ArtistProfile("AJULLIACOSTA", DeezerPhoto)
                 : DeezerJson.NotFound());
         }

@@ -143,6 +143,19 @@ public sealed class SpotifyClientTests
     }
 
     [Fact]
+    public async Task ArtistImageAsync_IgnoresAnAvatarThatIsAlbumArt()
+    {
+        var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
+            ? FakeHttpMessageHandler.Json(SpotifyJson.Token())
+            : FakeHttpMessageHandler.Json(SpotifyJson.Artist(
+                "Saron Gas",
+                ("https://i.scdn.co/image/ab67616d0000b273b7fb7e7d0d9bae0889e299c9", 640),
+                ("https://i.scdn.co/image/ab67616d00001e02b7fb7e7d0d9bae0889e299c9", 300))));
+
+        Assert.Null(await Client(handler).ArtistImageAsync("5ZAm84INxpjY5dmaZjxo32"));
+    }
+
+    [Fact]
     public async Task ArtistImageAsync_TakesTheLargestImageWhenNoneIsLargeEnough()
     {
         var handler = new FakeHttpMessageHandler(request => request.RequestUri!.Host == "accounts.spotify.com"
